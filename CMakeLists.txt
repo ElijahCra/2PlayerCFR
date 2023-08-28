@@ -8,4 +8,8 @@ add_subdirectory(Game)
 target_include_directories(Game PUBLIC)
 
 
+add_compile_options(-Wall -Wextra -Wpedantic)
+
 add_executable(2PlayerCFR main.cpp)
+
+target_link_libraries(2PlayerCFR Game)

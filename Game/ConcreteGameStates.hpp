@@ -13,7 +13,7 @@ class PreFlopChance : public GameState {
 public:
     void enter(Game* game, Action action) override;
     void transition(Game* game, Action action) override;
-    void exit(Game* game) override {}
+    void exit(Game* game, Action action) override {}
     static GameState& getInstance();
 
 private:
@@ -27,7 +27,7 @@ public:
 
     void enter(Game* game, Action action) override {}
     void transition(Game* game, Action action) override;
-    void exit(Game* game) override {}
+    void exit(Game* game, Action action) override {}
     static GameState& getInstance();
 
 private:

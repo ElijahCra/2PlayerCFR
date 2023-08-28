@@ -3,9 +3,11 @@
 //
 
 #include "ConcreteGameStates.hpp"
+#include <iostream>
 
 void PreFlopChance::transition(Game *game, Action action = Action::None) {
-    game->setState(PreFlopAction::getInstance());
+    game->setState(PreFlopAction::getInstance(), Action::None);
+    std::cout << "transitioned from preflop chance \n";
 }
 
 GameState& PreFlopChance::getInstance()
@@ -15,9 +17,9 @@ GameState& PreFlopChance::getInstance()
 }
 
 void PreFlopChance::enter(Game *game, Action action) {
-    constexpr int ChanceAN = Game::getRootChanceActionNum();
+    constexpr int ChanceAN = getRootChanceActionNum();
     game->mChanceProbability = 1.0 / (double) ChanceAN;
-    for (int i = 0; i < game->CardNum; ++i) {
+    for (int i = 0; i < CardNum; ++i) {
         game->mCards[i] = i;
     }
     // shuffle cards
@@ -30,14 +32,15 @@ void PreFlopChance::enter(Game *game, Action action) {
         a = (int) a / (c1 + 1);
     }
     //deal player cards
-    for (int i = 0; i < game->PlayerNum; ++i) {
+    for (int i = 0; i < PlayerNum; ++i) {
         game->mInfoSet[i][0] = game->mCards[2 * i];
         game->mInfoSet[i][1] = game->mCards[(2 * i) + 1];
     }
+    std::cout << game->mInfoSet[1][0];
 }
 
 void PreFlopAction::transition(Game *game, Action action) {
-    if (game->raises >= game->reRaises){
+    if (game->raises >= reRaises){
     }
 }
 

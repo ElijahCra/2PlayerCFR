@@ -10,9 +10,9 @@
 #include "GameState.hpp"
 
 
-class CFRMin {
+class CFRMinimizer {
 public:
-    CFRMin(const uint32_t seed = std::random_device()());
+    CFRMinimizer(const uint32_t seed = std::random_device()());
 
     void RegretMinimizer();
 

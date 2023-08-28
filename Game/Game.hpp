@@ -11,28 +11,14 @@
 
 class Game {
 public:
-    //constants
-    static constexpr int PlayerNum = 2;
-    static constexpr int CardNum = 7;
-    static constexpr int reRaises = 2;
-    static constexpr int getRootChanceActionNum() {
-        int Actions = 1;
-        for (int i = CardNum - 2 * PlayerNum + 1; i <= CardNum; ++i) {
-            Actions *= Actions; // calculate CardNum_permutation_4
-        }
-        return Actions;
-    }
-    static constexpr int privateInfoSetLength =
-            (PlayerNum + reRaises + 2) * 4 + 2 + 5; //player actions*roundnum + 2 private cards + 5 public cards
-    //end constants
 
     explicit Game(std::mt19937 &engine);
 
-    inline GameState *getCurrentState() const { return mCurrentState; }
+    [[maybe_unused]] [[nodiscard]] inline GameState *getCurrentState() const { return mCurrentState; }
 
-    void transition();
+    void transition(Action action);
 
-    void setState(GameState &newState);
+    void setState(GameState &newState, Action action);
 
     /// @brief chance this node is chosen by previous node
     double mChanceProbability;
@@ -56,12 +42,6 @@ private:
 
     /// @brief public cards dealt
     std::array<int, 5> dealtCards{};
-
-
-
-
-
-
 };
 
 
