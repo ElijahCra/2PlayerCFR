@@ -6,11 +6,13 @@
 #define INC_2PLAYERCFR_CFRMIN_HPP
 
 #include <random>
+#include "Game.hpp"
+#include "GameState.hpp"
 
 
 class CFRMin {
 public:
-    CFRMin();
+    CFRMin(const uint32_t seed = std::random_device()());
 
     void RegretMinimizer();
 

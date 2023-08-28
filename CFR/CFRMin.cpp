@@ -3,3 +3,7 @@
 //
 
 #include "CFRMin.hpp"
+
+CFRMin::CFRMin(const uint32_t seed) : mRNG(seed){
+
+}
