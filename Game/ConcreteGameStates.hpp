@@ -8,30 +8,30 @@
 #include "GameState.hpp"
 #include "Game.hpp"
 
+
 class PreFlopChance : public GameState {
 public:
-    PreFlopChance();
-    void enter(Game* game) override;
-    void transition(Game* game) override;
+    void enter(Game* game, Action action) override;
+    void transition(Game* game, Action action) override;
     void exit(Game* game) override {}
     static GameState& getInstance();
 
 private:
-    //PreFlopChance() {}
+    PreFlopChance() = default;
     PreFlopChance(const PreFlopChance& other);
     PreFlopChance& operator=(const PreFlopChance& other);
 };
 
 class PreFlopAction : public GameState {
 public:
-    PreFlopAction() = delete;
-    void enter(Game* game) override {}
-    void transition(Game* game) override;
+
+    void enter(Game* game, Action action) override {}
+    void transition(Game* game, Action action) override;
     void exit(Game* game) override {}
     static GameState& getInstance();
 
 private:
-
+    PreFlopAction() = default;
     PreFlopAction(const PreFlopAction& other);
     PreFlopAction& operator=(const PreFlopAction& other);
 };

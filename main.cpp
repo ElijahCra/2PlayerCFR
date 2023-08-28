@@ -8,8 +8,8 @@ int main() {
 
     auto RNG = std::mt19937(seed);
 
-    Game game = Game(RNG);
+    //Game game = Game(RNG);
 
-    game.transition();
+    //game.transition(A);
     std::cout << "Hello, World!" << std::endl;
 }

@@ -4,12 +4,7 @@
 
 #include "ConcreteGameStates.hpp"
 
-PreFlopChance::PreFlopChance() {
-
-}
-
-void PreFlopChance::transition(Game *game) {
-    // Off -> Low
+void PreFlopChance::transition(Game *game, Action action = Action::None) {
     game->setState(PreFlopAction::getInstance());
 }
 
@@ -19,12 +14,34 @@ GameState& PreFlopChance::getInstance()
     return singleton;
 }
 
-void PreFlopChance::enter(Game *light) {}
-
-void PreFlopAction::transition(Game *game) {
-    // Off -> Low
-    game->setState();
+void PreFlopChance::enter(Game *game, Action action) {
+    constexpr int ChanceAN = Game::getRootChanceActionNum();
+    game->mChanceProbability = 1.0 / (double) ChanceAN;
+    for (int i = 0; i < game->CardNum; ++i) {
+        game->mCards[i] = i;
+    }
+    // shuffle cards
+    int a = (int) action;
+    for (int c1 = (int) game->mCards.size() - 1; c1 > 0; --c1) {
+        const int c2 = a % (c1 + 1);
+        const int tmp = game->mCards[c1];
+        game->mCards[c1] = game->mCards[c2];
+        game->mCards[c2] = tmp;
+        a = (int) a / (c1 + 1);
+    }
+    //deal player cards
+    for (int i = 0; i < game->PlayerNum; ++i) {
+        game->mInfoSet[i][0] = game->mCards[2 * i];
+        game->mInfoSet[i][1] = game->mCards[(2 * i) + 1];
+    }
 }
+
+void PreFlopAction::transition(Game *game, Action action) {
+    if (game->raises >= game->reRaises){
+    }
+}
+
+
 
 GameState& PreFlopAction::getInstance()
 {
@@ -110,3 +127,4 @@ GameState& Terminal::getInstance()
     static Terminal singleton;
     return singleton;
 }*/
+
