@@ -5,7 +5,7 @@
 #include "ConcreteGameStates.hpp"
 #include <iostream>
 
-void PreFlopChance::transition(Game *game, Action action = Action::None) {
+void PreFlopChance::transition(Game *game, Action action) {
     game->setState(PreFlopAction::getInstance(), Action::None);
     std::cout << "transitioned from preflop chance \n";
 }
@@ -39,12 +39,20 @@ void PreFlopChance::enter(Game *game, Action action) {
     std::cout << game->mInfoSet[1][0];
 }
 
-void PreFlopAction::transition(Game *game, Action action) {
-    if (game->raises >= reRaises){
-    }
+void PreFlopChance::exit(Game *game, Action action) {
+    ++game->mCurrentPlayer;
 }
 
+void PreFlopAction::transition(Game *game, Action action) {
+    if (Action::Check == action) { //p1 call small blind previous
+        game->setState(FlopChance)
 
+        game->setState(PreFlopAction::getInstance(), Action::None);
+    }
+    else if(game->raises >= reRaises){
+
+    }
+}
 
 GameState& PreFlopAction::getInstance()
 {
@@ -52,7 +60,7 @@ GameState& PreFlopAction::getInstance()
     return singleton;
 }
 
-/*void FlopChance::transition(Game *game) {
+void FlopChance::transition(Game *game) {
     // Off -> Low
     game->setState(FlopAction::getInstance());
 }
@@ -62,6 +70,7 @@ GameState& FlopChance::getInstance()
     static FlopChance singleton;
     return singleton;
 }
+
 
 void FlopAction::transition(Game *game) {
     // Off -> Low
@@ -129,5 +138,5 @@ GameState& Terminal::getInstance()
 {
     static Terminal singleton;
     return singleton;
-}*/
+}
 

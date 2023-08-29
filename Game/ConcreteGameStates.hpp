@@ -13,7 +13,7 @@ class PreFlopChance : public GameState {
 public:
     void enter(Game* game, Action action) override;
     void transition(Game* game, Action action) override;
-    void exit(Game* game, Action action) override {}
+    void exit(Game* game, Action action) override;
     static GameState& getInstance();
 
 private:
@@ -36,96 +36,97 @@ private:
     PreFlopAction& operator=(const PreFlopAction& other);
 };
 
-/*class FlopChance : public GameState {
+class FlopChance : public GameState {
 public:
-    void enter(Game* game) {}
-    void transition(Game* game);
-    void exit(Game* game) {}
+    void enter(Game* game, Action action);
+    void transition(Game* game, Action action);
+    void exit(Game* game, Action action);
     static GameState& getInstance();
 
 private:
-    FlopChance() {}
+    FlopChance() = default;
     FlopChance(const FlopChance& other);
     FlopChance& operator=(const FlopChance& other);
 };
 
+
 class FlopAction : public GameState {
 public:
-    void enter(Game* game) {}
-    void transition(Game* game);
-    void exit(Game* game) {}
+    void enter(Game* game, Action action);
+    void transition(Game* game, Action action);
+    void exit(Game* game, Action action);
     static GameState& getInstance();
 
 private:
-    FlopAction() {}
+    FlopAction() = default;
     FlopAction(const FlopAction& other);
     FlopAction& operator=(const FlopAction& other);
 };
 
 class TurnChance : public GameState {
 public:
-    void enter(Game* game) {}
-    void transition(Game* game);
-    void exit(Game* game) {}
+    void enter(Game* game, Action action);
+    void transition(Game* game, Action action);
+    void exit(Game* game, Action action);
     static GameState& getInstance();
 
 private:
-    TurnChance() {}
+    TurnChance() = default;
     TurnChance(const TurnChance& other);
     TurnChance& operator=(const TurnChance& other);
 };
 
 class TurnAction : public GameState {
 public:
-    void enter(Game* game) {}
-    void transition(Game* game);
-    void exit(Game* game) {}
+    void enter(Game* game, Action action);
+    void transition(Game* game, Action action);
+    void exit(Game* game, Action action);
     static GameState& getInstance();
 
 private:
-    TurnAction() {}
+    TurnAction() = default;
     TurnAction(const TurnAction& other);
     TurnAction& operator=(const TurnAction& other);
 };
 
 class RiverChance : public GameState {
 public:
-    void enter(Game* game) {}
-    void transition(Game* game);
-    void exit(Game* game) {}
+    void enter(Game* game, Action action);
+    void transition(Game* game, Action action);
+    void exit(Game* game, Action action);
     static GameState& getInstance();
 
 private:
-    RiverChance() {}
+    RiverChance() = default;
     RiverChance(const RiverChance& other);
     RiverChance& operator=(const RiverChance& other);
 };
 
 class RiverAction : public GameState {
 public:
-    void enter(Game* game) {}
-    void transition(Game* game);
-    void exit(Game* game) {}
+    void enter(Game* game, Action action);
+    void transition(Game* game, Action action);
+    void exit(Game* game, Action action);
     static GameState& getInstance();
 
 private:
-    RiverAction() {}
+    RiverAction() = default;
     RiverAction(const TurnChance& other);
     RiverAction& operator=(const TurnChance& other);
 };
 
 class Terminal : public GameState {
 public:
-    void enter(Game* game) {}
-    void transition(Game* game);
-    void exit(Game* game) {}
+    void enter(Game* game, Action action);
+    void transition(Game* game, Action action);
+    void exit(Game* game, Action action);
     static GameState& getInstance();
 
 private:
-    Terminal() {}
+    Terminal() = default;
     Terminal(const Terminal& other);
     Terminal& operator=(const Terminal& other);
-};*/
+};
 
 
 

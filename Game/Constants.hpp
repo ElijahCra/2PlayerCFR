@@ -27,8 +27,10 @@ static constexpr int privateInfoSetLength =
 
 enum class Action : int {
     None = -1,
-    CheckFold,
-    BetCall,
+    Check,
+    Fold,
+    Bet,
+    Call,
     Reraise,
     Num
 };

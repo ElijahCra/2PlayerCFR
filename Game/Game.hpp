@@ -14,7 +14,7 @@ public:
 
     explicit Game(std::mt19937 &engine);
 
-    [[maybe_unused]] [[nodiscard]] inline GameState *getCurrentState() const { return mCurrentState; }
+    inline GameState *getCurrentState() const { return mCurrentState; }
 
     void transition(Action action);
 
@@ -37,7 +37,7 @@ private:
     std::mt19937& mRNG;
 
     /// @brief array of payoff, 1 per player final is the pot
-    std::array<double, PlayerNum + 1> mUtilities;
+    std::array<double, PlayerNum + 1> mUtilities{};
     /// @brief acting player
 
     /// @brief public cards dealt
