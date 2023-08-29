@@ -24,21 +24,21 @@ public:
     double mChanceProbability;
 
     std::array<int, CardNum> mCards;
-
+/// @brief acting player
     int mCurrentPlayer;
     /// @brief number of times raise/reraise has been played this round
-    uint8_t raises;
+    uint8_t mRaises;
 
     std::array<std::array<uint8_t,privateInfoSetLength>, PlayerNum> mInfoSet{};
-
+/// @brief array of payoff, 1 per player final is the pot
+    std::array<double, PlayerNum + 1> mUtilities{};
 private:
     GameState* mCurrentState;
 
     std::mt19937& mRNG;
 
-    /// @brief array of payoff, 1 per player final is the pot
-    std::array<double, PlayerNum + 1> mUtilities{};
-    /// @brief acting player
+
+
 
     /// @brief public cards dealt
     std::array<int, 5> dealtCards{};

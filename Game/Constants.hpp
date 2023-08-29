@@ -11,7 +11,7 @@ static constexpr int PlayerNum = 2;
 
 static constexpr int CardNum = 7;
 
-static constexpr int reRaises = 2;
+static constexpr int maxRaises = 2;
 
 static constexpr int getRootChanceActionNum() {
     int Actions = 1;
@@ -22,7 +22,7 @@ static constexpr int getRootChanceActionNum() {
 }
 
 static constexpr int privateInfoSetLength =
-        (PlayerNum + reRaises + 2) * 4 + 2 + 5; //player actions*roundnum + 2 private cards + 5 public cards
+        (PlayerNum + maxRaises + 2) * 4 + 2 + 5; //player actions*roundnum + 2 private cards + 5 public cards
 
 
 enum class Action : int {

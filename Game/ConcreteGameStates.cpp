@@ -36,6 +36,11 @@ void PreFlopChance::enter(Game *game, Action action) {
         game->mInfoSet[i][0] = game->mCards[2 * i];
         game->mInfoSet[i][1] = game->mCards[(2 * i) + 1];
     }
+
+    //ante up
+    game->mUtilities[0] = -0.5;
+    game->mUtilities[1] = -1;
+    game->mUtilities[2] = 1.5;
     std::cout << game->mInfoSet[1][0];
 }
 
@@ -43,13 +48,25 @@ void PreFlopChance::exit(Game *game, Action action) {
     ++game->mCurrentPlayer;
 }
 
+void PreFlopAction::enter(Game *game, Action action) {
+    if (Action::Call == action) {
+        if (game->mRaises == 0) { //first action call
+            game->mUtilities[0] += -0.5;
+            game->mUtilities[2] += 0.5;
+        }
+}
+
+
+/// p0 call p1 reraise p0 reraise p1 reraise p0 call
 void PreFlopAction::transition(Game *game, Action action) {
-    if (Action::Check == action) { //p1 call small blind previous
-        game->setState(FlopChance)
+    if (Action::Call == action) {
+
+    else if (Action::Check == action) { //p1 call small blind previous
+            game->setState(FlopChance::getInstance(), Action::None);}
 
         game->setState(PreFlopAction::getInstance(), Action::None);
     }
-    else if(game->raises >= reRaises){
+    else if(game->mRaises >= maxRaises){
 
     }
 }
