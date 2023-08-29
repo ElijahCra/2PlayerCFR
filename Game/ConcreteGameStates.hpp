@@ -15,105 +15,104 @@ public:
     void transition(Game* game, Action action) override;
     void exit(Game* game, Action action) override;
     static GameState& getInstance();
-
 private:
     PreFlopChance() = default;
     PreFlopChance(const PreFlopChance& other);
     PreFlopChance& operator=(const PreFlopChance& other);
 };
 
-class PreFlopActionP0FacingBet : public GameState {
-public:
 
+class PreFlopActionNoBet : public GameState {
+public:
     void enter(Game* game, Action action) override;
     void transition(Game* game, Action action) override;
     void exit(Game* game, Action action) override;
     static GameState& getInstance();
-
 private:
-    PreFlopActionP0FacingBet() = default;
-    PreFlopAction(const PreFlopAction& other);
-    PreFlopAction& operator=(const PreFlopAction& other);
+    PreFlopActionNoBet() = default;
+    PreFlopActionNoBet(const PreFlopActionNoBet& other);
+    PreFlopActionNoBet& operator=(const PreFlopActionNoBet& other);
 };
 
-class PreFlopActionP0FacingNoBet : public GameState {
+
+class PreFlopActionBet : public GameState {
+public:
+    void enter(Game* game, Action action) override;
+    void transition(Game* game, Action action) override;
+    void exit(Game* game, Action action) override;
+    static GameState& getInstance();
+private:
+    PreFlopActionBet() = default;
+    PreFlopActionBet(const PreFlopActionBet& other);
+    PreFlopActionBet& operator=(const PreFlopActionBet& other);
+};
+
+
+class FlopChance : public GameState {
 public:
     void enter(Game* game, Action action);
     void transition(Game* game, Action action);
     void exit(Game* game, Action action);
     static GameState& getInstance();
-
 private:
-    PreFlopActionP0FacingNoBet() = default;
+    FlopChance() = default;
     FlopChance(const FlopChance& other);
     FlopChance& operator=(const FlopChance& other);
 };
 
 
-class PreFlopActionP1FacingBet : public GameState {
+
+/*class PostFlopActionP0NoBet : public GameState {
 public:
     void enter(Game* game, Action action);
     void transition(Game* game, Action action);
     void exit(Game* game, Action action);
     static GameState& getInstance();
-
 private:
-    PreFlopActionP1FacingBet() = default;
-    FlopAction(const FlopAction& other);
-    FlopAction& operator=(const FlopAction& other);
+    PostFlopActionP0NoBet() = default;
+    PostFlopActionP0NoBet(const PostFlopActionP0NoBet& other);
+    PostFlopActionP0NoBet& operator=(const PostFlopActionP0NoBet& other);
 };
 
-class PreFlopActionP1FacingNoBet : public GameState {
+
+class PostFlopActionP0Bet : public GameState {
+public:
+    void enter(Game* game, Action action) override;
+    void transition(Game* game, Action action) override;
+    void exit(Game* game, Action action) override;
+    static GameState& getInstance();
+private:
+    PostFlopActionP0Bet() = default;
+    PostFlopActionP0Bet(const PostFlopActionP0Bet& other);
+    PostFlopActionP0Bet& operator=(const PostFlopActionP0Bet& other);
+};
+
+
+class PostFlopActionP1Bet : public GameState {
 public:
     void enter(Game* game, Action action);
     void transition(Game* game, Action action);
     void exit(Game* game, Action action);
     static GameState& getInstance();
-
 private:
-    TurnChance() = default;
-    TurnChance(const TurnChance& other);
-    TurnChance& operator=(const TurnChance& other);
+    PostFlopActionP1Bet() = default;
+    PostFlopActionP1Bet(const PostFlopActionP1Bet& other);
+    PostFlopActionP1Bet& operator=(const PostFlopActionP1Bet& other);
 };
 
-class TurnAction : public GameState {
+
+class PostFlopActionP1NoBet : public GameState {
 public:
     void enter(Game* game, Action action);
     void transition(Game* game, Action action);
     void exit(Game* game, Action action);
     static GameState& getInstance();
-
 private:
-    TurnAction() = default;
-    TurnAction(const TurnAction& other);
-    TurnAction& operator=(const TurnAction& other);
-};
+    PostFlopActionP1NoBet() = default;
+    PostFlopActionP1NoBet(const PostFlopActionP1NoBet& other);
+    PostFlopActionP1NoBet& operator=(const PostFlopActionP1NoBet& other);
+};*/
 
-class RiverChance : public GameState {
-public:
-    void enter(Game* game, Action action);
-    void transition(Game* game, Action action);
-    void exit(Game* game, Action action);
-    static GameState& getInstance();
-
-private:
-    RiverChance() = default;
-    RiverChance(const RiverChance& other);
-    RiverChance& operator=(const RiverChance& other);
-};
-
-class RiverAction : public GameState {
-public:
-    void enter(Game* game, Action action);
-    void transition(Game* game, Action action);
-    void exit(Game* game, Action action);
-    static GameState& getInstance();
-
-private:
-    RiverAction() = default;
-    RiverAction(const TurnChance& other);
-    RiverAction& operator=(const TurnChance& other);
-};
 
 class Terminal : public GameState {
 public:
@@ -121,14 +120,11 @@ public:
     void transition(Game* game, Action action);
     void exit(Game* game, Action action);
     static GameState& getInstance();
-
 private:
     Terminal() = default;
     Terminal(const Terminal& other);
     Terminal& operator=(const Terminal& other);
 };
-
-
 
 
 #endif //INC_2PLAYERCFR_CONCRETEGAMESTATES_HPP

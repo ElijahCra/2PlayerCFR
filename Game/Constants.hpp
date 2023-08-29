@@ -11,7 +11,7 @@ static constexpr int PlayerNum = 2;
 
 static constexpr int CardNum = 7;
 
-static constexpr int maxRaises = 2;
+static constexpr int maxRaises = 1;
 
 static constexpr int getRootChanceActionNum() {
     int Actions = 1;
@@ -29,7 +29,7 @@ enum class Action : int {
     None = -1,
     Check,
     Fold,
-    Bet,
+    Raise,
     Call,
     Reraise,
     Num

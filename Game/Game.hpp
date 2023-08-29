@@ -20,28 +20,38 @@ public:
 
     void setState(GameState &newState, Action action);
 
+
+
     /// @brief chance this node is chosen by previous node
     double mChanceProbability;
 
+    ///@brief deck of cards
     std::array<int, CardNum> mCards;
-/// @brief acting player
+
+    /// @brief acting player
     int mCurrentPlayer;
-    /// @brief number of times raise/reraise has been played this round
+
+    /// @brief number of actions played this round
     uint8_t mRaises;
 
     std::array<std::array<uint8_t,privateInfoSetLength>, PlayerNum> mInfoSet{};
-/// @brief array of payoff, 1 per player final is the pot
+
+    /// @brief array of payoff, 1 per player final is the pot
     std::array<double, PlayerNum + 1> mUtilities{};
+
+
 private:
+    ///@brief
     GameState* mCurrentState;
 
+    ///@brief
     std::mt19937& mRNG;
-
-
-
 
     /// @brief public cards dealt
     std::array<int, 5> dealtCards{};
+
+    ///@brief actions available at this point in the game
+    std::array<int,4> mActions{-1};
 };
 
 
