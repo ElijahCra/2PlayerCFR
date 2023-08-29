@@ -49,11 +49,16 @@ void PreFlopChance::exit(Game *game, Action action) {
 }
 
 void PreFlopAction::enter(Game *game, Action action) {
+
+}
+
+void PreFlopAction::exit(Game *game, Action action) {
     if (Action::Call == action) {
         if (game->mRaises == 0) { //first action call
             game->mUtilities[0] += -0.5;
             game->mUtilities[2] += 0.5;
         }
+    }
 }
 
 

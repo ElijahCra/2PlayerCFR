@@ -22,7 +22,7 @@ private:
     PreFlopChance& operator=(const PreFlopChance& other);
 };
 
-class PreFlopAction : public GameState {
+class PreFlopActionP0FacingBet : public GameState {
 public:
 
     void enter(Game* game, Action action) override;
@@ -31,12 +31,12 @@ public:
     static GameState& getInstance();
 
 private:
-    PreFlopAction() = default;
+    PreFlopActionP0FacingBet() = default;
     PreFlopAction(const PreFlopAction& other);
     PreFlopAction& operator=(const PreFlopAction& other);
 };
 
-class FlopChance : public GameState {
+class PreFlopActionP0FacingNoBet : public GameState {
 public:
     void enter(Game* game, Action action);
     void transition(Game* game, Action action);
@@ -44,13 +44,13 @@ public:
     static GameState& getInstance();
 
 private:
-    FlopChance() = default;
+    PreFlopActionP0FacingNoBet() = default;
     FlopChance(const FlopChance& other);
     FlopChance& operator=(const FlopChance& other);
 };
 
 
-class FlopAction : public GameState {
+class PreFlopActionP1FacingBet : public GameState {
 public:
     void enter(Game* game, Action action);
     void transition(Game* game, Action action);
@@ -58,12 +58,12 @@ public:
     static GameState& getInstance();
 
 private:
-    FlopAction() = default;
+    PreFlopActionP1FacingBet() = default;
     FlopAction(const FlopAction& other);
     FlopAction& operator=(const FlopAction& other);
 };
 
-class TurnChance : public GameState {
+class PreFlopActionP1FacingNoBet : public GameState {
 public:
     void enter(Game* game, Action action);
     void transition(Game* game, Action action);
