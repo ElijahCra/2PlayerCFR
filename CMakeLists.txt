@@ -10,4 +10,5 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 
 add_executable(2PlayerCFR main.cpp)
 target_include_directories(Game PUBLIC)
-target_link_libraries(2PlayerCFR Game)
+target_include_directories(Utility PUBLIC)
+target_link_libraries(2PlayerCFR Game Utility)

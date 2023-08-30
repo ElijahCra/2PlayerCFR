@@ -22,6 +22,7 @@ private:
 };
 
 
+
 class PreFlopActionNoBet : public GameState {
 public:
     void enter(Game* game, Action action) override;
@@ -35,6 +36,7 @@ private:
 };
 
 
+
 class PreFlopActionBet : public GameState {
 public:
     void enter(Game* game, Action action) override;
@@ -46,6 +48,7 @@ private:
     PreFlopActionBet(const PreFlopActionBet& other);
     PreFlopActionBet& operator=(const PreFlopActionBet& other);
 };
+
 
 
 class FlopChance : public GameState {

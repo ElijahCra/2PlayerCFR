@@ -1,17 +1,24 @@
 #include <iostream>
 
 #include "Game/Game.hpp"
-#include "Game/ConcreteGameStates.hpp"
 #include <random>
+#include "Util/Utility.hpp"
+
 int main() {
 
-    const uint32_t seed = std::random_device()();
+    uint32_t seed = std::random_device()();
 
     std::mt19937 RNG(seed);
+
     Game game = Game(RNG);
 
-    Action A = Action::None;
-    game.transition(A);
+    game.transition(Action::None);
+
+    Utility::initLookup();
+
+    int* cards = new int[7] {1,2,3,4,5,6,7};
+    Utility::LookupHand(cards);
+
 
     std::cout << "Hello, World!" << std::endl;
 }

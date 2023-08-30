@@ -20,8 +20,6 @@ public:
 
     void setState(GameState &newState, Action action);
 
-
-
     /// @brief chance this node is chosen by previous node
     double mChanceProbability;
 
@@ -39,13 +37,12 @@ public:
     /// @brief array of payoff, 1 per player final is the pot
     std::array<double, PlayerNum + 1> mUtilities{};
 
+    ///@brief
+    std::mt19937& mRNG;
 
 private:
     ///@brief
     GameState* mCurrentState;
-
-    ///@brief
-    std::mt19937& mRNG;
 
     /// @brief public cards dealt
     std::array<int, 5> dealtCards{};
