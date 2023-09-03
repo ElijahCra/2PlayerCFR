@@ -9,15 +9,20 @@
 class Utility {
 
 public:
+
     static bool initLookup();
 
     static int LookupHand(int* pCards);
 
     static int HR[32487834];
 
+    Utility() = delete;
+
 
 
 private:
+
+
 
 
 };
