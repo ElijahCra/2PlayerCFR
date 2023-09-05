@@ -5,6 +5,7 @@
 #include "ConcreteGameStates.hpp"
 #include <iostream>
 #include <algorithm>
+#include <vector>
 
 
 
@@ -21,9 +22,7 @@ void PreFlopChance::enter(Game *game, Action action) {
         game->mInfoSet[i][1] = game->mCards[(2 * i) + 1];
     }
     //ante up
-    game->mUtilities[0] = -0.5;
-    game->mUtilities[1] = -1;
-    game->mUtilities[2] = 1.5;
+    game->addMoney();
     std::cout << game->mInfoSet[2][0];
 }
 
@@ -35,6 +34,10 @@ void PreFlopChance::transition(Game *game, Action action) {
 GameState& PreFlopChance::getInstance() {
     static PreFlopChance singleton;
     return singleton;
+}
+
+std::vector<Action> PreFlopChance::getActions(Game *game) {
+    return std::vector<Action> {};
 }
 
 void PreFlopChance::exit(Game *game, Action action) {
@@ -49,7 +52,6 @@ void PreFlopActionNoBet::enter(Game *game, Action action) {
         game->mChanceProbability = 1.0 / (double) ChanceAN;
     }
     else if (Action::Call == action) {
-        //todo
         game->mChanceProbability = 0;
     }
 }
@@ -76,17 +78,26 @@ GameState& PreFlopActionNoBet::getInstance()
     return singleton;
 }
 
+std::vector<Action> PreFlopActionNoBet::getActions(Game *game) {
+    if (0 == game->mCurrentPlayer) {
+        return std::vector<Action>{Action::Call, Action::Raise,Action::Fold}; //small blind: call, raise, fold
+    }
+    else {
+        return std::vector<Action> {Action::Check, Action::Raise}; //big blind: check, raise
+    }
+}
+
 void PreFlopActionNoBet::exit(Game *game, Action action) {
     if (Action::Call == action) {
-        game->mUtilities[0] += -0.5;
-        game->mUtilities[2] += 0.5;
+        game->addMoney(0.5);
     }
     else if (Action::Raise == action) {
-        game->mUtilities[game->mCurrentPlayer] += -1.5;
-        game->mUtilities[2] += 1.5;
+        game->addMoney(1.5);
+        ++game->mRaises;
     }
     else if (Action::Check == action){}
 
+    ++game->mCurrentPlayer;
 }
 
 
@@ -101,7 +112,7 @@ void PreFlopActionBet::transition(Game *game, Action action) {
         game->setState(Terminal::getInstance(), action);
     }
     else if (Action::Reraise == action) { //previous player raises we reraise -> PFB player has to decide then -> FC
-        if (maxRaises <= game->mRaises){
+        if (maxRaises < game->mRaises){
             throw std::logic_error("reraised more than allowed in preflopactionbet");
         }
         game->setState(PreFlopActionBet::getInstance(), action);
@@ -115,19 +126,23 @@ GameState& PreFlopActionBet::getInstance()
     return singleton;
 }
 
+std::vector<Action> PreFlopActionBet::getActions(Game *game) {
+    return std::vector<Action> {Action::Call, Action::Fold, Action::Reraise};
+}
+
 void PreFlopActionBet::exit(Game *game, Action action) {
     if (Action::Call == action) {
-        game->mUtilities[game->mCurrentPlayer] += -1;
-        game->mUtilities[2] += 1;
+        game->addMoney(1.0);
     }
     else if (Action::Reraise == action){
-        game->mUtilities[game->mCurrentPlayer] += -2;
-        game->mUtilities[2] += 2;
+        game->addMoney(2.0);
+        ++game->mRaises;
     }
-    else if (Action::Fold == action){
-
-    }
+    else if (Action::Fold == action){}
+    ++game->mCurrentPlayer
 }
+
+
 
 void FlopChance::enter(Game *game, Action action) {}
 
@@ -145,16 +160,20 @@ GameState& FlopChance::getInstance()
 void FlopChance::exit(Game *game, Action action) {}
 
 
-void Terminal::enter(Game *game, Action action) {}
+void Terminal::enter(Game *game, Action action) {
 
-void Terminal::transition(Game *game, Action action) {
-    //Game::payoff();
 }
+
+void Terminal::transition(Game *game, Action action) {}
 
 GameState& Terminal::getInstance()
 {
     static Terminal singleton;
     return singleton;
+}
+
+std::vector<Action> Terminal::getActions(Game *game) {
+    return std::vector<Action> {};
 }
 
 void Terminal::exit(Game *game, Action action) {}

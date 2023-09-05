@@ -14,13 +14,13 @@ bool Utility::initLookup() {
     // Load the HandRanks.DAT file and map it into the HR array
     printf("Loading HandRanks.DAT file...\n");
     memset(HR, 0, sizeof(HR));
-    FILE * fin = fopen("HandRanks.dat", "rb");
-    if (!fin) {
+    FILE * fin = fopen("/Users/elijahcrain/CLionProjects/2PlayerCFR/Utility/HandRanks.dat", "rb");
+    if (fin == nullptr) {
         std::cout << "did not open properly \n";
         return false;
     }
 
-    //size_t bytesread = fread(HR, sizeof(HR), 1, fin);	// get the HandRank Array
+    size_t bytesread = fread(HR, sizeof(HR), 1, fin);	// get the HandRank Array
     fclose(fin);
     printf("complete.\n\n");
     return true;

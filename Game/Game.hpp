@@ -20,6 +20,11 @@ public:
 
     void setState(GameState &newState, Action action);
 
+    void addMoney();
+    void addMoney(float amount);
+
+    std::vector<Action> getActions();
+
     /// @brief chance this node is chosen by previous node
     double mChanceProbability;
 
@@ -29,18 +34,19 @@ public:
     /// @brief acting player
     int mCurrentPlayer;
 
-    /// @brief number of actions played this round
+    /// @brief number of raises + reraises played this round
     uint8_t mRaises;
 
+    ///
     std::array<std::array<uint8_t,privateInfoSetLength>, PlayerNum> mInfoSet{};
-
-    /// @brief array of payoff, 1 per player final is the pot
-    std::array<double, PlayerNum + 1> mUtilities{};
 
     ///@brief
     std::mt19937& mRNG;
 
 private:
+    /// @brief array of payoff, 1 per player final is the pot
+    std::array<float, PlayerNum + 1> mUtilities{};
+
     ///@brief
     GameState* mCurrentState;
 

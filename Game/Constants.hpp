@@ -7,24 +7,6 @@
 
 class Game;
 
-static constexpr int PlayerNum = 2;
-
-static constexpr int CardNum = 7;
-
-static constexpr int maxRaises = 1;
-
-static constexpr int getRootChanceActionNum() {
-    int Actions = 1;
-    for (int i = CardNum - 2 * PlayerNum + 1; i <= CardNum; ++i) {
-        Actions *= Actions; // calculate CardNum_permutation_4
-    }
-    return Actions;
-}
-
-static constexpr int privateInfoSetLength =
-        (PlayerNum + maxRaises + 2) * 4 + 2 + 5; //player actions*roundnum + 2 private cards + 5 public cards
-
-
 enum class Action : int {
     None = -1,
     Check,
@@ -34,6 +16,27 @@ enum class Action : int {
     Reraise,
     Num
 };
+
+
+static constexpr int PlayerNum = 2;
+
+static constexpr int CardNum = 7;
+
+static constexpr int maxRaises = 2;
+
+static constexpr int getRootChanceActionNum() {
+    int Actions = 1;
+    for (int i = CardNum - (2 * PlayerNum + 1); i <= CardNum; ++i) {
+        Actions *= Actions; // calculate CardNum_permutation_4
+    }
+    return Actions;
+}
+
+static constexpr int privateInfoSetLength =
+        (PlayerNum + maxRaises + 2) * 4 + 2 + 5; //player actions*roundnum + 2 private cards + 5 public cards
+
+
+
 
 
 #endif //INC_2PLAYERCFR_CONSTANTS_HPP
