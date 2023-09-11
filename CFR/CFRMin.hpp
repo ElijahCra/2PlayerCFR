@@ -24,10 +24,10 @@ public:
 private:
 
     /// @brief recursively traverse game tree (depth-first)
-    /// @param probActingContribution probability of reaching current history given only the acting players contribution from all previous histories
-    /// @param probNotActingContr probability of reaching current history given only non acting players contribution from all previous histories
+    /// @param probActingContribution probability of reaching current history given only P0 (bb) players contribution from all previous histories
+    /// @param probNotActingContr probability of reaching current history given only P1 (sb) players contribution from all previous histories
     /// @param probChance probability of reaching current history given only the chance contributions
-    double VanillaCFR(const Game& game, int playerNum, double probActing, double probNotActing, double probChance);
+    double VanillaCFR(const Game& game, int playerNum, double probP0, double probP1, double probChance);
 
 
 
