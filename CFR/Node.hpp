@@ -31,9 +31,11 @@ private:
     void calcAverageStrategy();
 
     double *mStrategy;
+    double *mCumStrategy;
+    double *mCumRegret;
+
     double *mAverageStrategy;
-    double *mStrategySum;
-    double *mRegretSum;
+
     int *mNormalizingSum;
     const int mActionNum;
     bool mAlreadyCalculated;

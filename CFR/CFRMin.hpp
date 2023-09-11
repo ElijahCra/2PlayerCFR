@@ -22,7 +22,15 @@ public:
 
 
 private:
-    double VanillaCFR(const Game& game, int playerNum, double reachCF, double reachSoloCF);
+
+    /// @brief recursively traverse game tree (depth-first)
+    /// @param probActingContribution probability of reaching current history given only the acting players contribution from all previous histories
+    /// @param probNotActingContr probability of reaching current history given only non acting players contribution from all previous histories
+    /// @param probChance probability of reaching current history given only the chance contributions
+    double VanillaCFR(const Game& game, int playerNum, double probActing, double probNotActing, double probChance);
+
+
+
     std::mt19937 mRNG;
 
     std::unordered_map<std::string, Node *> mNodeMap;

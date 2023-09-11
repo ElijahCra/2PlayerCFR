@@ -5,22 +5,22 @@
 #include "Node.hpp"
 
 Node::Node(const int actionNum) : mActionNum(actionNum), mAlreadyCalculated(false), mNeedToUpdateStrategy(false) {
-    mRegretSum = new double[actionNum];
+    mCumRegret = new double[actionNum];
     mStrategy = new double[actionNum];
-    mStrategySum = new double[actionNum];
+    mCumStrategy = new double[actionNum];
     mAverageStrategy = new double[actionNum];
     for (int a = 0; a < actionNum; ++a) {
-        mRegretSum[a] = 0.0;
+        mCumRegret[a] = 0.0;
         mStrategy[a] = 1.0 / (double) actionNum;
-        mStrategySum[a] = 0.0;
+        mCumStrategy[a] = 0.0;
         mAverageStrategy[a] = 0.0;
     }
 }
 
 Node::~Node() {
-    delete[] mRegretSum;
+    delete[] mCumRegret;
     delete[] mStrategy;
-    delete[] mStrategySum;
+    delete[] mCumStrategy;
     delete[] mAverageStrategy;
 }
 
@@ -41,7 +41,7 @@ void Node::updateStrategy() {
     }
     double normalizingSum = 0.0;
     for (int a = 0; a < mActionNum; ++a) {
-        mStrategy[a] = mRegretSum[a] > 0 ? mRegretSum[a] : 0;
+        mStrategy[a] = mCumRegret[a] > 0 ? mCumRegret[a] : 0;
         normalizingSum += mStrategy[a];
     }
     for (int a = 0; a < mActionNum; ++a) {
@@ -55,19 +55,19 @@ void Node::updateStrategy() {
 
 void Node::strategySum(const double *strategy, const double realizationWeight) {
     for (int a = 0; a < mActionNum; ++a) {
-        mStrategySum[a] += realizationWeight * strategy[a];
+        mCumStrategy[a] += realizationWeight * strategy[a];
     }
     mAlreadyCalculated = false;
 }
 
 
 double Node::regretSum(const int action) const {
-    return mRegretSum[action];
+    return mCumRegret[action];
 }
 
 
 void Node::regretSum(const int action, const double value) {
-    mRegretSum[action] = value;
+    mCumRegret[action] = value;
     mNeedToUpdateStrategy = true;
 }
 
@@ -89,11 +89,11 @@ void Node::calcAverageStrategy() {
     }
     double normalizingSum = 0.0;
     for (int a = 0; a < mActionNum; ++a) {
-        normalizingSum += mStrategySum[a];
+        normalizingSum += mCumStrategy[a];
     }
     for (int a = 0; a < mActionNum; ++a) {
         if (normalizingSum > 0) {
-            mAverageStrategy[a] = mStrategySum[a] / normalizingSum;
+            mAverageStrategy[a] = mCumStrategy[a] / normalizingSum;
         } else {
             mAverageStrategy[a] = 1.0 / (double) mActionNum;
         }

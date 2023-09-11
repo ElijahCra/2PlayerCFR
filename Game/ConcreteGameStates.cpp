@@ -24,6 +24,8 @@ void PreFlopChance::enter(Game *game, Action action) {
     //ante up
     game->addMoney();
     std::cout << game->mInfoSet[2][0];
+
+    game->setActions(std::vector<Action> {});
 }
 
 void PreFlopChance::transition(Game *game, Action action) {
@@ -34,6 +36,10 @@ void PreFlopChance::transition(Game *game, Action action) {
 GameState& PreFlopChance::getInstance() {
     static PreFlopChance singleton;
     return singleton;
+}
+
+GameStates type() {
+    return GameStates::PreFlopChance;
 }
 
 std::vector<Action> PreFlopChance::getActions(Game *game) {
