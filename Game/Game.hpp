@@ -23,7 +23,9 @@ public:
     void addMoney();
     void addMoney(float amount);
 
-    std::vector<Action> getActions();
+     std::vector<Action> getActions() const;
+
+     void setActions(std::vector<Action> actionVec);
 
     /// @brief chance this node is chosen by previous node
     double mChanceProbability;
@@ -54,7 +56,7 @@ private:
     std::array<int, 5> dealtCards{};
 
     ///@brief actions available at this point in the game
-    std::array<int,4> mActions{-1};
+    std::vector<Action> mActions{};
 };
 
 

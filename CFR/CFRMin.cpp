@@ -22,7 +22,7 @@ void CFRMin::Train(int iterations) {
 
     for (int i = 0; i < iterations; ++i) {
         for (int p = 0; p < PlayerNum; ++p) {
-            utils[p] = VanillaCFR(*mGame, p, 1.0, 1.0);
+            utils[p] = VanillaCFR(*mGame, p, 1.0, 1.0, 1.0/getRootChanceActionNum());
             for (auto & itr : mNodeMap) {
                 itr.second->updateStrategy();
             }
@@ -31,7 +31,31 @@ void CFRMin::Train(int iterations) {
 }
 
 
-double CFRMin::VanillaCFR(const Game& game, int playerNum, double reachCF, double reachSoloCF) {
+double CFRMin::VanillaCFR(const Game& game, int playerNum, double probP0, double probP1, double probChance) {
     ++mNodeCount;
+
+    const std::vector<Action> actions = game.getActions();
+
+    if (GameStates::PreFlopChance == game.getCurrentState()->type()) {
+        double nodeVal;
+        //sample all chance outcomes
+        Game copiedGame(game);
+        copiedGame.transition(Action::None);
+        nodeVal = VanillaCFR(copiedGame, playerNum, probP0, probP1, 1.0 / getRootChanceActionNum());
+
+        return nodeVal;
+    }
+
+    else if (GameStates::PreFlopActionNoBet == game.getCurrentState()->type()){ //Preflop Action
+        double value = 0;
+        double cfValue[3] {0};
+
+        for (int i =0; i<actions.size(); ++i) {
+            Game copiedGame(game);
+            copiedGame.transition(actions[i]);
+            cfValue[i] = VanillaCFR(copiedGame, playerNum, probP0, probP1, probChance);
+        }
+
+    }
 
 }
