@@ -4,99 +4,60 @@
 
 #include "Node.hpp"
 
-Node::Node(const int actionNum) : mActionNum(actionNum), mAlreadyCalculated(false), mNeedToUpdateStrategy(false) {
-    mRegretSum = new double[actionNum];
-    mStrategy = new double[actionNum];
-    mStrategySum = new double[actionNum];
-    mAverageStrategy = new double[actionNum];
+Node::Node(const int actionNum) : actionNum(actionNum){
+    regretSum = new double[actionNum];
+    strategy = new double[actionNum];
+    strategySum = new double[actionNum];
+    averageStrategy = new double[actionNum];
     for (int a = 0; a < actionNum; ++a) {
-        mRegretSum[a] = 0.0;
-        mStrategy[a] = 1.0 / (double) actionNum;
-        mStrategySum[a] = 0.0;
-        mAverageStrategy[a] = 0.0;
+        regretSum[a] = 0.0;
+        strategy[a] = 1.0 / (double) actionNum;
+        strategySum[a] = 0.0;
+        averageStrategy[a] = 0.0;
     }
 }
 
 Node::~Node() {
-    delete[] mRegretSum;
-    delete[] mStrategy;
-    delete[] mStrategySum;
-    delete[] mAverageStrategy;
+    delete[] regretSum;
+    delete[] strategy;
+    delete[] strategySum;
+    delete[] averageStrategy;
 }
 
-const double *Node::strategy() {
-    return mStrategy;
+const double *Node::getStrategy() {
+    return strategy;
 }
 
-const double *Node::averageStrategy() {
-    if (!mAlreadyCalculated) {
+const double *Node::getAverageStrategy() {
         calcAverageStrategy();
-    }
-    return mAverageStrategy;
+    return averageStrategy;
 }
 
-void Node::updateStrategy() {
-    if (!mNeedToUpdateStrategy) {
-        return;
-    }
-    double normalizingSum = 0.0;
-    for (int a = 0; a < mActionNum; ++a) {
-        mStrategy[a] = mRegretSum[a] > 0 ? mRegretSum[a] : 0;
-        normalizingSum += mStrategy[a];
-    }
-    for (int a = 0; a < mActionNum; ++a) {
-        if (normalizingSum > 0) {
-            mStrategy[a] /= normalizingSum;
-        } else {
-            mStrategy[a] = 1.0 / (double) mActionNum;
-        }
-    }
-}
-
-void Node::strategySum(const double *strategy, const double realizationWeight) {
-    for (int a = 0; a < mActionNum; ++a) {
-        mStrategySum[a] += realizationWeight * strategy[a];
-    }
-    mAlreadyCalculated = false;
+int Node::getActionNum() const {
+    return actionNum;
 }
 
 
-double Node::regretSum(const int action) const {
-    return mRegretSum[action];
-}
-
-
-void Node::regretSum(const int action, const double value) {
-    mRegretSum[action] = value;
-    mNeedToUpdateStrategy = true;
-}
-
-
-uint8_t Node::actionNum() const {
-    return mActionNum;
-}
-
-/// @brief Calculate the average strategy across all training iterations
 void Node::calcAverageStrategy() {
     // if average strategy has already been calculated, do nothing to reduce the calculation time
-    if (mAlreadyCalculated) {
+    if (!updateStrategy) {
         return;
     }
 
     // calculate average strategy
-    for (int a = 0; a < mActionNum; ++a) {
-        mAverageStrategy[a] = 0.0;
+    for (int a = 0; a < actionNum; ++a) {
+        averageStrategy[a] = 0.0;
     }
     double normalizingSum = 0.0;
-    for (int a = 0; a < mActionNum; ++a) {
-        normalizingSum += mStrategySum[a];
+    for (int a = 0; a < actionNum; ++a) {
+        normalizingSum += strategySum[a];
     }
-    for (int a = 0; a < mActionNum; ++a) {
+    for (int a = 0; a < actionNum; ++a) {
         if (normalizingSum > 0) {
-            mAverageStrategy[a] = mStrategySum[a] / normalizingSum;
+            averageStrategy[a] = strategySum[a] / normalizingSum;
         } else {
-            mAverageStrategy[a] = 1.0 / (double) mActionNum;
+            averageStrategy[a] = 1.0 / (double) actionNum;
         }
     }
-    mAlreadyCalculated = true;
+    updateStrategy = false;
 }

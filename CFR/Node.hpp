@@ -14,31 +14,32 @@ public:
     Node(const int actionNum);
     ~Node();
 
-    const double* strategy();
+    const double* getStrategy();
 
-    const double *averageStrategy();
+    int getActionNum() const;
 
-    void strategySum(const double *strategy, double realizationWeight);
+    const double* getAverageStrategy();
 
-    void updateStrategy();
-
-    double regretSum(int action) const;
-
-    void regretSum(int action, double value);
-
-    uint8_t actionNum() const;
 private:
     void calcAverageStrategy();
 
-    double *mStrategy;
-    double *mAverageStrategy;
-    double *mStrategySum;
-    double *mRegretSum;
-    int *mNormalizingSum;
-    const int mActionNum;
-    bool mAlreadyCalculated;
-    bool mNeedToUpdateStrategy;
+    ///@brief number of actions available at this node
+    const int actionNum;
 
+    ///@brief array of cumulative counterfactual regret for each action over all iterations
+    double* regretSum;
+
+    ///@brief array of probability of taking each action, strategy of acting player at this node, values should add to 1.
+    double* strategy;
+
+    ///@brief array of cumulative probability of taking each action over all iterations
+    double* strategySum;
+
+    ///@brief array of calculated average strategy over all iterations;
+    double* averageStrategy;
+
+    ///@brief whether or not this nodes strategy should be updated
+    bool updateStrategy;
 };
 
 
