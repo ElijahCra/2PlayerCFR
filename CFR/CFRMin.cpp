@@ -22,7 +22,7 @@ void CFRMin::Train(int iterations) {
 
     for (int i = 0; i < iterations; ++i) {
         for (int p = 0; p < PlayerNum; ++p) {
-            utils[p] = VanillaCFR(*mGame, p, 1.0, 1.0);
+            utils[p] = VanillaCFR(*mGame, p, 1.0, 1.0, 1.0/getRootChanceActionNum());
             for (auto & itr : mNodeMap) {
                 itr.second->updateStrategy();
             }
@@ -36,20 +36,16 @@ double CFRMin::VanillaCFR(const Game& game, int playerNum, double probP0, double
 
     const std::vector<Action> actions = game.getActions();
 
-    if (GameStates::Terminal == game.getCurrentState()->type()) {
-        return payoff();
-    }
-    else if (GameStates::PreFlopChance == game.getCurrentState()->type()){
+    if (GameStates::PreFlopChance == game.getCurrentState()->type()) {
         double nodeVal;
         //sample all chance outcomes
-       Game copiedGame(game);
-       for (auto action : actions){
-           copiedGame.transition(action);
-           nodeVal =  VanillaCFR(copiedGame, playerNum, probP0, probP1, 1.0/getRootChanceActionNum());
-       }
-       return nodeVal;
+        Game copiedGame(game);
+        copiedGame.transition(Action::None);
+        nodeVal = VanillaCFR(copiedGame, playerNum, probP0, probP1, 1.0 / getRootChanceActionNum());
 
+        return nodeVal;
     }
+
     else if (GameStates::PreFlopActionNoBet == game.getCurrentState()->type()){ //Preflop Action
         double value = 0;
         double cfValue[3] {0};

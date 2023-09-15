@@ -11,7 +11,7 @@
 
 class Node {
 public:
-    Node(const int actionNum);
+    Node(const Action actionNum);
     ~Node();
 
     const double* strategy();
@@ -30,11 +30,11 @@ public:
 private:
     void calcAverageStrategy();
 
-    double *mStrategy;
-    double *mCumStrategy;
-    double *mCumRegret;
+    double *mStrats;
+    double *mStrateSums;
+    double *mInstRegretSums;
 
-    double *mAverageStrategy;
+    double *mAverageStra;
 
     int *mNormalizingSum;
     const int mActionNum;
