@@ -13,8 +13,7 @@ enum class Action : int {
     Fold,
     Raise,
     Call,
-    Reraise,
-    Num
+    Reraise
 };
 
 enum class GameStates : int {
@@ -31,9 +30,10 @@ static constexpr int CardNum = 7;
 
 static constexpr int maxRaises = 2;
 
+///@brief how many unique deals are possible
 static constexpr int getRootChanceActionNum() {
 
-    //cardNum choose 2 * cardNum-2 choose 2
+    //(cardNum choose 2) * (cardNum-2 choose 2)
 
     if (CardNum == 7) {
         int Actions = 36*21;
@@ -47,8 +47,9 @@ static constexpr int getRootChanceActionNum() {
     }
 }
 
-static constexpr int privateInfoSetLength =
-        (PlayerNum + maxRaises + 2) * 4 + 2 + 5; //player actions*roundnum + 2 private cards + 5 public cards
+/// @brief  player actions*roundnum + 2 private cards + 5 public cards
+static constexpr int privateInfoSetLength = (PlayerNum + maxRaises + 2) * 4 + 2 + 5;
+
 
 
 

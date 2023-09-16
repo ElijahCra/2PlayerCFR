@@ -23,9 +23,9 @@ public:
     void addMoney();
     void addMoney(float amount);
 
-     std::vector<Action> getActions() const;
+    Action* getActions() const;
 
-     void setActions(std::vector<Action> actionVec);
+     void setActions(Action actionArray[]);
 
     /// @brief chance this node is chosen by previous node
     double mChanceProbability;
@@ -39,13 +39,16 @@ public:
     /// @brief number of raises + reraises played this round
     uint8_t mRaises;
 
-    ///
-    std::array<std::array<uint8_t,privateInfoSetLength>, PlayerNum> mInfoSet{};
-
-    ///@brief
+    ///@brief rng engine, mersienne twister
     std::mt19937& mRNG;
 
+    ///@brief probability this node was chosen by the previous node ie probability of taking action leading to this node
+    double nodeProbability;
+
 private:
+    /// @brief the players private info set, contains their cards public cards and all actions played
+    std::array<std::array<uint8_t,privateInfoSetLength>, PlayerNum> mInfoSet{};
+
     /// @brief array of payoff, 1 per player final is the pot
     std::array<float, PlayerNum + 1> mUtilities{};
 
@@ -56,7 +59,7 @@ private:
     std::array<int, 5> dealtCards{};
 
     ///@brief actions available at this point in the game
-    std::vector<Action> mActions{};
+    Action* mActions;
 };
 
 

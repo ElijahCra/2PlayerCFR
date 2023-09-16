@@ -31,30 +31,42 @@ void CFRMin::Train(int iterations) {
 }
 
 
-double CFRMin::VanillaCFR(const Game& game, int playerNum, double probP0, double probP1, double probChance) {
+double CFRMin::ChanceCFR(const Game& game, int playerNum, double probP0, double probP1, double probChance) {
     ++mNodeCount;
 
-    const std::vector<Action> actions = game.getActions();
+    Action const * const actions  = game.getActions();
+
+    int const actionNum = sizeof(*actions) / sizeof(Action);
 
     if (GameStates::PreFlopChance == game.getCurrentState()->type()) {
-        double nodeVal;
-        //sample all chance outcomes
+        double weightedUtil;
+        //sample one chance outcomes
         Game copiedGame(game);
         copiedGame.transition(Action::None);
-        nodeVal = VanillaCFR(copiedGame, playerNum, probP0, probP1, 1.0 / getRootChanceActionNum());
+        weightedUtil = ChanceCFR(copiedGame, playerNum, probP0, probP1, 1.0 / getRootChanceActionNum());
 
-        return nodeVal;
+        return weightedUtil;
     }
 
-    else if (GameStates::PreFlopActionNoBet == game.getCurrentState()->type()){ //Preflop Action
-        double value = 0;
-        double cfValue[3] {0};
+    else { //Decision Node
+        double weightedUtil;
 
-        for (int i =0; i<actions.size(); ++i) {
+        for (int i =0; i<actionNum; ++i) {
             Game copiedGame(game);
             copiedGame.transition(actions[i]);
-            cfValue[i] = VanillaCFR(copiedGame, playerNum, probP0, probP1, probChance);
+            weightedUtil = game.nodeProbability * ChanceCFR(copiedGame, playerNum, probP0, probP1, probChance);
         }
+
+        /// do regret calculation and matching based on the returned weightedUtil
+        double regret[3];
+
+        for (int i=0; i<actionNum; ++i) {
+            reget[i] = probP0 or probP1 * (weightedUtil/game.strategy[i] - weightedUtil)
+        }
+
+
+
+        return weightedUtil;
 
     }
 

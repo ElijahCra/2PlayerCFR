@@ -14,7 +14,6 @@ public:
     void enter(Game* game, Action action) override;
     void transition(Game* game, Action action) override;
     void exit(Game* game, Action action) override;
-    //std::vector<Action> getActions(Game* game) override;
     static GameState& getInstance();
     GameStates type();
 
@@ -32,7 +31,7 @@ public:
     void transition(Game* game, Action action) override;
     void exit(Game* game, Action action) override;
     static GameState& getInstance();
-    //std::vector<Action> getActions(Game* game) override;
+
 private:
     PreFlopActionNoBet() = default;
     PreFlopActionNoBet(const PreFlopActionNoBet& other);
@@ -47,7 +46,7 @@ public:
     void transition(Game* game, Action action) override;
     void exit(Game* game, Action action) override;
     static GameState& getInstance();
-    //std::vector<Action> getActions(Game* game) override;
+
 private:
     PreFlopActionBet() = default;
     PreFlopActionBet(const PreFlopActionBet& other);
@@ -62,7 +61,7 @@ public:
     void transition(Game* game, Action action);
     void exit(Game* game, Action action);
     static GameState& getInstance();
-    //std::vector<Action> getActions(Game* game) override;
+
 private:
     FlopChance() = default;
     FlopChance(const FlopChance& other);

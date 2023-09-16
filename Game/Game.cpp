@@ -33,11 +33,11 @@ void Game::addMoney(float amount) {
     mUtilities[2] += amount;
 }
 
-std::vector<Action> Game::getActions() const{
+Action* Game::getActions() const{
     return mActions;
 }
 
-void Game::setActions(std::vector<Action> actionVec) {
-    mActions = actionVec;
+void Game::setActions(Action actionArray[]) {
+    mActions = actionArray;
 }
 

@@ -20,6 +20,8 @@ public:
 
     const double* getAverageStrategy();
 
+    void updateStrategy();
+
 private:
     void calcAverageStrategy();
 
@@ -39,7 +41,7 @@ private:
     double* averageStrategy;
 
     ///@brief whether or not this nodes strategy should be updated
-    bool updateStrategy;
+    bool updateStrategyFlag;
 };
 
 
