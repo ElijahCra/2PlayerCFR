@@ -15,7 +15,7 @@ public:
     void transition(Game* game, Action action) override;
     void exit(Game* game, Action action) override;
     static GameState& getInstance();
-    GameStates type();
+    std::string type();
 
 private:
     PreFlopChance() = default;
@@ -31,6 +31,7 @@ public:
     void transition(Game* game, Action action) override;
     void exit(Game* game, Action action) override;
     static GameState& getInstance();
+    std::string type();
 
 private:
     PreFlopActionNoBet() = default;
@@ -46,6 +47,7 @@ public:
     void transition(Game* game, Action action) override;
     void exit(Game* game, Action action) override;
     static GameState& getInstance();
+    std::string type();
 
 private:
     PreFlopActionBet() = default;
@@ -55,6 +57,7 @@ private:
 
 
 
+/*
 class FlopChance : public GameState {
 public:
     void enter(Game* game, Action action);
@@ -68,9 +71,7 @@ private:
     FlopChance& operator=(const FlopChance& other);
 };
 
-
-
-/*class PostFlopActionP0NoBet : public GameState {
+class PostFlopActionP0NoBet : public GameState {
 public:
     void enter(Game* game, Action action);
     void transition(Game* game, Action action);
@@ -121,14 +122,14 @@ private:
     PostFlopActionP1NoBet& operator=(const PostFlopActionP1NoBet& other);
 };*/
 
-
 class Terminal : public GameState {
 public:
-    void enter(Game* game, Action action);
-    void transition(Game* game, Action action);
-    void exit(Game* game, Action action);
+    void enter(Game* game, Action action) override;
+    void transition(Game* game, Action action) override;
+    void exit(Game* game, Action action) override;
     static GameState& getInstance();
-    //std::vector<Action> getActions(Game* game) override;
+    std::string type();
+
 private:
     Terminal() = default;
     Terminal(const Terminal& other);

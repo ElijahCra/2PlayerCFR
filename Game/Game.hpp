@@ -14,7 +14,7 @@ public:
 
     explicit Game(std::mt19937 &engine);
 
-    inline GameState *getCurrentState() const { return mCurrentState; }
+    [[nodiscard]] inline GameState *getCurrentState() const { return mCurrentState; }
 
     void transition(Action action);
 
@@ -45,9 +45,10 @@ public:
     ///@brief probability this node was chosen by the previous node ie probability of taking action leading to this node
     double nodeProbability;
 
-private:
     /// @brief the players private info set, contains their cards public cards and all actions played
-    std::array<std::array<uint8_t,privateInfoSetLength>, PlayerNum> mInfoSet{};
+    std::array<std::string, PlayerNum> mInfoSet{};
+private:
+
 
     /// @brief array of payoff, 1 per player final is the pot
     std::array<float, PlayerNum + 1> mUtilities{};

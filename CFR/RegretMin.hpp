@@ -2,8 +2,8 @@
 // Created by Elijah Crain on 8/27/23.
 //
 
-#ifndef INC_2PLAYERCFR_CFRMIN_HPP
-#define INC_2PLAYERCFR_CFRMIN_HPP
+#ifndef INC_2PLAYERCFR_REGRETMIN_HPP
+#define INC_2PLAYERCFR_REGRETMIN_HPP
 
 #include <random>
 #include "../Game/Game.hpp"
@@ -11,11 +11,11 @@
 #include "Node.hpp"
 
 
-class CFRMin {
+class RegretMin {
 public:
-    explicit CFRMin(const uint32_t seed = std::random_device()());
+    explicit RegretMin(const uint32_t seed = std::random_device()());
 
-    ~CFRMin();
+    ~RegretMin();
 
     void Train(int iterations);
 

@@ -40,7 +40,7 @@ int Node::getActionNum() const {
 
 void Node::calcAverageStrategy() {
     // if average strategy has already been calculated, do nothing to reduce the calculation time
-    if (!updateStrategy) {
+    if (!updateStrategyFlag) {
         return;
     }
 
@@ -59,5 +59,5 @@ void Node::calcAverageStrategy() {
             averageStrategy[a] = 1.0 / (double) actionNum;
         }
     }
-    updateStrategy = false;
+    updateStrategyFlag = false;
 }

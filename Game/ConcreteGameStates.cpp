@@ -25,7 +25,7 @@ void PreFlopChance::enter(Game *game, Action action) {
     game->addMoney();
     std::cout << game->mInfoSet[2][0];
 
-    Action availActions[3] = {Action::Call, Action::Fold, Action::Raise};
+    Action availActions[1] = {Action::None};
 
     game->setActions(availActions);
 }
@@ -40,16 +40,12 @@ GameState& PreFlopChance::getInstance() {
     return singleton;
 }
 
-GameStates type() {
-    return GameStates::PreFlopChance;
-}
-
-Action* PreFlopChance::getActions(Game *game) {
-    return std::vector<Action> {};
-}
-
 void PreFlopChance::exit(Game *game, Action action) {
     ++game->mCurrentPlayer;
+}
+
+std::string PreFlopChance::type() {
+    return std::string{"chance"};
 }
 
 
@@ -58,6 +54,10 @@ void PreFlopActionNoBet::enter(Game *game, Action action) {
     if (Action::None == action) {
         constexpr int ChanceAN = getRootChanceActionNum();
         game->mChanceProbability = 1.0 / (double) ChanceAN;
+
+        Action availActions[3] = {Action::Call, Action::Raise,Action::Fold};
+        game->setActions(availActions);
+
     }
     else if (Action::Call == action) {
         game->mChanceProbability = 0;
@@ -72,7 +72,7 @@ void PreFlopActionNoBet::transition(Game *game, Action action) {
         game->setState(Terminal::getInstance(), action);
     }
     else if (Action::Check == action) { //second action bb checks -> post flop chance node
-        game->setState(FlopChance::getInstance(), action);
+        game->setState(Terminal::getInstance(), action);
     }
     else if (Action::Raise == action) { //first action small blind raises
         game->setState(PreFlopActionBet::getInstance(), action);
@@ -86,14 +86,10 @@ GameState& PreFlopActionNoBet::getInstance()
     return singleton;
 }
 
-std::vector<Action> PreFlopActionNoBet::getActions(Game *game) {
-    if (0 == game->mCurrentPlayer) {
-        return std::vector<Action>{Action::Call, Action::Raise,Action::Fold}; //small blind: call, raise, fold
-    }
-    else {
-        return std::vector<Action> {Action::Check, Action::Raise}; //big blind: check, raise
-    }
+std::string PreFlopActionNoBet::type(){
+    return std::string{"action"};
 }
+
 
 void PreFlopActionNoBet::exit(Game *game, Action action) {
     if (Action::Call == action) {
@@ -114,7 +110,7 @@ void PreFlopActionBet::enter(Game *game, Action action) {}
 
 void PreFlopActionBet::transition(Game *game, Action action) {
     if (Action::Call == action) { //previous player raises this player calls -> FC
-        game->setState(FlopChance::getInstance(), action);
+        game->setState(Terminal::getInstance(), action);
     }
     else if (Action::Fold == action) { //previous player raises this player folds -> FC
         game->setState(Terminal::getInstance(), action);
@@ -134,9 +130,11 @@ GameState& PreFlopActionBet::getInstance()
     return singleton;
 }
 
-std::vector<Action> PreFlopActionBet::getActions(Game *game) {
-    return std::vector<Action> {Action::Call, Action::Fold, Action::Reraise};
+
+std::string PreFlopActionBet::type(){
+    return std::string{"action"};
 }
+
 
 void PreFlopActionBet::exit(Game *game, Action action) {
     if (Action::Call == action) {
@@ -147,25 +145,8 @@ void PreFlopActionBet::exit(Game *game, Action action) {
         ++game->mRaises;
     }
     else if (Action::Fold == action){}
-    ++game->mCurrentPlayer
+    ++game->mCurrentPlayer;
 }
-
-
-
-void FlopChance::enter(Game *game, Action action) {}
-
-void FlopChance::transition(Game *game, Action action) {
-
-    game->setState(Terminal::getInstance(), Action::None);
-}
-
-GameState& FlopChance::getInstance()
-{
-    static FlopChance singleton;
-    return singleton;
-}
-
-void FlopChance::exit(Game *game, Action action) {}
 
 
 void Terminal::enter(Game *game, Action action) {
@@ -180,9 +161,26 @@ GameState& Terminal::getInstance()
     return singleton;
 }
 
-std::vector<Action> Terminal::getActions(Game *game) {
-    return std::vector<Action> {};
+std::string Terminal::type(){
+    return std::string{"terminal"};
 }
 
 void Terminal::exit(Game *game, Action action) {}
 
+
+/*
+void FlopChance::enter(Game *game, Action action) {}
+
+void FlopChance::transition(Game *game, Action action) {
+
+    game->setState(Terminal::getInstance(), Action::None);
+}
+
+GameState& FlopChance::getInstance()
+{
+    static FlopChance singleton;
+    return singleton;
+}
+
+void FlopChance::exit(Game *game, Action action) {}
+*/

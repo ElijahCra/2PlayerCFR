@@ -14,7 +14,8 @@ public:
     virtual void transition(Game* game, Action action) = 0;
     virtual void exit(Game* game, Action action) = 0;
     virtual ~GameState() = default;
-    virtual GameStates type();
+    virtual std::string type() = 0;
+
 private:
 
 };
