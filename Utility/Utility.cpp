@@ -20,7 +20,7 @@ bool Utility::initLookup() {
         return false;
     }
 
-    size_t bytesread = fread(HR, sizeof(HR), 1, fin);	// get the HandRank Array
+    //size_t bytesread = fread(HR, sizeof(HR), 1, fin);	// get the HandRank Array
     fclose(fin);
     printf("complete.\n\n");
     return true;
@@ -36,4 +36,18 @@ int Utility::LookupHand(int* pCards)
     p = Utility::HR[p + *pCards++];
     p = Utility::HR[p + *pCards++];
     return Utility::HR[p + *pCards++];
+}
+
+int Utility::getWinner(int *p0Cards, int *p1Cards) {
+    int hand0Val = Utility::LookupHand(p0Cards);
+    int hand1Val = Utility::LookupHand(p1Cards);
+
+    //return the winner or tie if they are same value
+    if (hand0Val == hand1Val) {
+        return 2;
+    }
+    else if(hand0Val > hand1Val) {
+        return 0;
+    }
+    else {return 1;}
 }

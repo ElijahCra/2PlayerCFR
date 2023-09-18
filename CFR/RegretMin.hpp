@@ -13,7 +13,7 @@
 
 class RegretMin {
 public:
-    explicit RegretMin(const uint32_t seed = std::random_device()());
+    explicit RegretMin(uint32_t seed = std::random_device()());
 
     ~RegretMin();
 
@@ -30,7 +30,7 @@ private:
 
     std::mt19937 mRNG;
 
-    std::unordered_map<std::string, Node *> mNodeMap;
+    std::unordered_map<std::string, Node* > mNodeMap;
 
     Game *mGame;
 
@@ -39,4 +39,4 @@ private:
 };
 
 
-#endif //INC_2PLAYERCFR_CFRMIN_HPP
+#endif //INC_2PLAYERCFR_REGRETMIN_HPP

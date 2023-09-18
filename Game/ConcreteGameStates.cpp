@@ -5,7 +5,7 @@
 #include "ConcreteGameStates.hpp"
 #include <iostream>
 #include <algorithm>
-#include <vector>
+#include <span>
 
 
 
@@ -25,8 +25,7 @@ void PreFlopChance::enter(Game *game, Action action) {
     game->addMoney();
     std::cout << game->mInfoSet[2][0];
 
-    Action availActions[1] = {Action::None};
-
+    std::vector<Action> availActions {Action::None};
     game->setActions(availActions);
 }
 
@@ -53,14 +52,17 @@ std::string PreFlopChance::type() {
 void PreFlopActionNoBet::enter(Game *game, Action action) {
     if (Action::None == action) {
         constexpr int ChanceAN = getRootChanceActionNum();
-        game->mChanceProbability = 1.0 / (double) ChanceAN;
+        game->mNodeProbability = 1.0 / (double) ChanceAN;
 
-        Action availActions[3] = {Action::Call, Action::Raise,Action::Fold};
+        std::vector<Action> availActions {Action::Call, Action::Raise, Action::Fold};
         game->setActions(availActions);
 
     }
     else if (Action::Call == action) {
-        game->mChanceProbability = 0;
+        game->mNodeProbability = 0;
+
+        std::vector<Action> availActions {Action::Check, Action::Raise};
+        game->setActions(availActions);
     }
 }
 
@@ -68,11 +70,8 @@ void PreFlopActionNoBet::transition(Game *game, Action action) {
     if (Action::Call == action) { //first action small-blind calls/limps
         game->setState(PreFlopActionNoBet::getInstance(), action);
     }
-    else if (Action::Fold == action) { //first action small-blind folds
-        game->setState(Terminal::getInstance(), action);
-    }
-    else if (Action::Check == action) { //second action bb checks -> post flop chance node
-        game->setState(Terminal::getInstance(), action);
+    else if (Action::Fold == action or Action::Check == action) { //first action small-blind folds
+        game->setState(Terminal::getInstance(), action);          // or second action bb checks -> post flop chance node
     }
     else if (Action::Raise == action) { //first action small blind raises
         game->setState(PreFlopActionBet::getInstance(), action);
@@ -106,14 +105,24 @@ void PreFlopActionNoBet::exit(Game *game, Action action) {
 
 
 
-void PreFlopActionBet::enter(Game *game, Action action) {}
+void PreFlopActionBet::enter(Game *game, Action action) {
+    if (Action::Raise == action) {
+        game->setActions(std::vector<Action> {Action::Reraise, Action::Call, Action::Fold});
+    }
+    else if (Action::Reraise == action){
+        if (game->mRaises >= maxRaises) {
+            game->setActions(std::vector<Action>{Action::Call, Action::Fold});
+        }
+        else{
+            game->setActions(std::vector<Action>{Action::Call, Action::Fold, Action::Reraise});
+        }
+
+    }
+}
 
 void PreFlopActionBet::transition(Game *game, Action action) {
-    if (Action::Call == action) { //previous player raises this player calls -> FC
-        game->setState(Terminal::getInstance(), action);
-    }
-    else if (Action::Fold == action) { //previous player raises this player folds -> FC
-        game->setState(Terminal::getInstance(), action);
+    if (Action::Call == action or Action::Fold == action) { //previous player raises this player calls -> FC
+        game->setState(Terminal::getInstance(), action);    //or previous player raises this player folds -> FC
     }
     else if (Action::Reraise == action) { //previous player raises we reraise -> PFB player has to decide then -> FC
         if (maxRaises < game->mRaises){
@@ -150,7 +159,8 @@ void PreFlopActionBet::exit(Game *game, Action action) {
 
 
 void Terminal::enter(Game *game, Action action) {
-
+    game->setActions(std::vector<Action>{Action::None});
+    std::copy(game->dealtCards.begin(), game->dealtCards.begin()+5, game->dealtCards.begin());
 }
 
 void Terminal::transition(Game *game, Action action) {}

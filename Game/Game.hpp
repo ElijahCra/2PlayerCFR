@@ -14,21 +14,18 @@ public:
 
     explicit Game(std::mt19937 &engine);
 
-    [[nodiscard]] inline GameState *getCurrentState() const { return mCurrentState; }
+    inline GameState *getCurrentState() const { return mCurrentState; }
 
     void transition(Action action);
 
     void setState(GameState &newState, Action action);
 
     void addMoney();
-    void addMoney(float amount);
+    void addMoney(double amount);
 
-    Action* getActions() const;
+    std::vector<Action> getActions() const;
 
-     void setActions(Action actionArray[]);
-
-    /// @brief chance this node is chosen by previous node
-    double mChanceProbability;
+     void setActions(std::vector<Action> actionVec);
 
     ///@brief deck of cards
     std::array<int, CardNum> mCards;
@@ -43,24 +40,31 @@ public:
     std::mt19937& mRNG;
 
     ///@brief probability this node was chosen by the previous node ie probability of taking action leading to this node
-    double nodeProbability;
+    double mNodeProbability;
 
-    /// @brief the players private info set, contains their cards public cards and all actions played
-    std::array<std::string, PlayerNum> mInfoSet{};
-private:
-
-
-    /// @brief array of payoff, 1 per player final is the pot
-    std::array<float, PlayerNum + 1> mUtilities{};
-
-    ///@brief
-    GameState* mCurrentState;
+    double getUtility(int payoffPlayer) const;
 
     /// @brief public cards dealt
     std::array<int, 5> dealtCards{};
 
+
+    void setInfoSet(int player, int card, int cardIndex);
+
+    void setInfoSet(int player, Action action);
+private:
+    /// @brief the players private info set, contains their cards public cards and all actions played
+    std::array<std::string, PlayerNum> mInfoSet{};
+
+    /// @brief array of payoff, 1 per player final is the pot
+    std::array<double, PlayerNum + 1> mUtilities{};
+
+    ///@brief
+    GameState* mCurrentState;
+
+
+
     ///@brief actions available at this point in the game
-    Action* mActions;
+    std::vector<Action> mActions;
 };
 
 

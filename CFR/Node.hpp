@@ -14,6 +14,7 @@ public:
     Node(const int actionNum);
     ~Node();
 
+
     const double* getStrategy();
 
     int getActionNum() const;

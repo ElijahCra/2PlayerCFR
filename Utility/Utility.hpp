@@ -18,6 +18,8 @@ public:
 
     Utility() = delete;
 
+    static int getWinner(int *p0Cards, int *p1Cards);
+
 
 
 private:
