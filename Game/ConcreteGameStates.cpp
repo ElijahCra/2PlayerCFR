@@ -5,7 +5,8 @@
 #include "ConcreteGameStates.hpp"
 #include <iostream>
 #include <algorithm>
-#include <span>
+#include "../Utility/Utility.hpp"
+
 
 
 
@@ -18,8 +19,9 @@ void PreFlopChance::enter(Game *game, Action action) {
 
     //deal player cards
     for (int i = 0; i < PlayerNum; ++i) {
-        game->mInfoSet[i][0] = game->mCards[2 * i];
-        game->mInfoSet[i][1] = game->mCards[(2 * i) + 1];
+        for (int j=0; j <2; ++j) {
+
+        }
     }
     //ante up
     game->addMoney();

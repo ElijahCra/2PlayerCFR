@@ -59,15 +59,16 @@ double RegretMin::ChanceCFR(const Game& game, int playerNum, double probP0, doub
         }
 
         /// do regret calculation and matching based on the returned weightedUtil
-        Node *node = mNodeMap[game.mInfoSet[game.mCurrentPlayer]];
+        Node *node = mNodeMap[game.getInfoSet(game.mCurrentPlayer)];
         if (node == nullptr) {
             node = new Node(actionNum);
-            mNodeMap[game.mInfoSet[game.mCurrentPlayer]] = node;
+            mNodeMap[game.getInfoSet(game.mCurrentPlayer)] = node;
         }
 
+        double regret[3];
         for (int i=0; auto action : actions) {
             if (0 == playerNum) {
-                node.regret[i] = probP1 * probChance * (weightedUtil / node->getStrategy()[i] - weightedUtil);
+                regret[i] = probP1 * probChance * (weightedUtil / node->getStrategy()[i] - weightedUtil);
             }
             else {
                 regret[i] = probP0 * probChance * (weightedUtil / node->getStrategy()[i] - weightedUtil);

@@ -8,6 +8,7 @@
 #include "GameState.hpp"
 #include <random>
 #include <array>
+#include <string>
 
 class Game {
 public:
@@ -42,26 +43,29 @@ public:
     ///@brief probability this node was chosen by the previous node ie probability of taking action leading to this node
     double mNodeProbability;
 
-    double getUtility(int payoffPlayer) const;
+    double getUtility(int payoffPlayer);
 
-    /// @brief public cards dealt
-    std::array<int, 5> dealtCards{};
+    void updateInfoSet(int player, int card, int cardIndex);
 
+    void updateInfoSet(Action action);
 
-    void setInfoSet(int player, int card, int cardIndex);
+    std::string getInfoSet(int player) const;
 
-    void setInfoSet(int player, Action action);
+    static std::string cardIntToStr(int card);
+    static std::string actionToStr(Action action);
 private:
+
+    int foldingPlayer;
+    int winner;
+
     /// @brief the players private info set, contains their cards public cards and all actions played
     std::array<std::string, PlayerNum> mInfoSet{};
 
     /// @brief array of payoff, 1 per player final is the pot
     std::array<double, PlayerNum + 1> mUtilities{};
 
-    ///@brief
+    ///@brief current gamestate i.e. preflop chance or preflopnobet
     GameState* mCurrentState;
-
-
 
     ///@brief actions available at this point in the game
     std::vector<Action> mActions;

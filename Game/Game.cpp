@@ -5,10 +5,12 @@
 #include "Game.hpp"
 
 #include <utility>
+#include <stdexcept>
 #include "ConcreteGameStates.hpp"
 #include "../Utility/Utility.hpp"
 
-Game::Game(std::mt19937 &engine) : mRNG(engine), mNodeProbability(1.0), mCurrentPlayer(-1), mCards(), mRaises(0), mUtilities(), mActions()
+Game::Game(std::mt19937 &engine) : mRNG(engine), mNodeProbability(1.0), mCurrentPlayer(-1), mCards(), mRaises(0), mUtilities(), mActions(),
+                                   mInfoSet({"00000000000000","00000000000000"}), winner(-1)
 {
     mCurrentState = &PreFlopChance::getInstance();
     mCurrentState->enter(this,Action::None);
@@ -43,23 +45,14 @@ void Game::setActions(std::vector<Action> actionVec) {
     mActions = std::move(actionVec);
 }
 
-double Game::getUtility(int payoffPlayer) const{
+double Game::getUtility(int payoffPlayer) {
 
-    int p0Cards[7];
-    p0Cards[0] = stoi(mInfoSet[0].substr(0,2));
-    p0Cards[1] = stoi(mInfoSet[0].substr(2,2));
-    for (int i=2; i<7; ++i) {
-        p0Cards[i] = dealtCards[i-2];
+    std::string lastAction = mInfoSet[0].substr(mInfoSet[0].size()-1,2);
+    if ("fo" == lastAction) {
+        winner = 1 - foldingPlayer;
     }
 
-    int p1Cards[7];
-    p1Cards[0] = stoi(mInfoSet[1].substr(0,2));
-    p1Cards[1] = stoi(mInfoSet[1].substr(2,2));
-    for (int i=2; i<7; ++i) {
-        p1Cards[i] = dealtCards[i-2];
-    }
 
-    int winner = Utility::getWinner(p0Cards, p1Cards);
 
     if (3 == winner) {
         return mUtilities[2]/2.0 + mUtilities[payoffPlayer];
@@ -67,16 +60,58 @@ double Game::getUtility(int payoffPlayer) const{
     else if(payoffPlayer == winner) {
         return mUtilities[2] + mUtilities[payoffPlayer];
     }
+    else if(-1 == winner) {
+        throw std::logic_error("game winner not updated from initialization");
+    }
     else {
         return mUtilities[payoffPlayer];
     }
 }
 
-void Game::setInfoSet(int player, Action action) {
+void Game::updateInfoSet(Action action) {
+    for (int i = 0; i < PlayerNum; ++i) {
+        mInfoSet[i].append(actionToStr(action));
+        if (Action::Fold == action) {
+            foldingPlayer = mCurrentPlayer;
+        }
+    }
 
 }
 
-void Game::setInfoSet(int player, int card, int cardIndex) {
+void Game::updateInfoSet(int player, int card, int cardIndex) {
+    mInfoSet[player].replace(cardIndex,2, cardIntToStr(card));
+}
+
+std::string Game::getInfoSet(int player) const{
+    return mInfoSet[player];
+}
+
+std::string Game::cardIntToStr(int card) {
+    if (card < 10) {
+        return '0'+std::to_string(card);
+    }
+    else {
+        return std::to_string(card);
+    }
+}
+
+std::string Game::actionToStr(Action action) {
+    if (Action::Check == action) {
+        return {"Ch"};
+    }
+    else if (Action::Fold == action) {
+        return {"Fo"};
+    }
+    else if (Action::Raise == action) {
+        return {"Ra"};
+    }
+    else if (Action::Call == action) {
+        return {"Ca"};
+    }
+    else if (Action::Reraise == action) {
+        return {"Re"};
+    }
+    else {throw std::logic_error("cannot convert that action to str");}
 
 }
 

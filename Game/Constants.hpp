@@ -9,11 +9,11 @@ class Game;
 
 enum class Action : int {
     None = -1,
-    Check,
-    Fold,
-    Raise,
-    Call,
-    Reraise
+    Check = 0,
+    Fold = 1,
+    Raise = 2,
+    Call = 3,
+    Reraise = 4
 };
 
 enum class GameStates : int {
