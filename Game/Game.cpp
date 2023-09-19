@@ -9,7 +9,7 @@
 #include "ConcreteGameStates.hpp"
 #include "../Utility/Utility.hpp"
 
-Game::Game(std::mt19937 &engine) : mRNG(engine), mNodeProbability(1.0), mCurrentPlayer(-1), mCards(), mRaises(0), mUtilities(), mActions(),
+Game::Game(std::mt19937 &engine) : mRNG(engine), mNodeProbability(1.0), mCurrentPlayer(1), mCards(), mRaises(0), mUtilities(), mActions(),
                                    mInfoSet({"00000000000000","00000000000000"}), winner(-1)
 {
     mCurrentState = &PreFlopChance::getInstance();
@@ -47,14 +47,7 @@ void Game::setActions(std::vector<Action> actionVec) {
 
 double Game::getUtility(int payoffPlayer) {
 
-    std::string lastAction = mInfoSet[0].substr(mInfoSet[0].size()-1,2);
-    if ("fo" == lastAction) {
-        winner = 1 - foldingPlayer;
-    }
-
-
-
-    if (3 == winner) {
+    if (2 == winner) {
         return mUtilities[2]/2.0 + mUtilities[payoffPlayer];
     }
     else if(payoffPlayer == winner) {
@@ -71,15 +64,12 @@ double Game::getUtility(int payoffPlayer) {
 void Game::updateInfoSet(Action action) {
     for (int i = 0; i < PlayerNum; ++i) {
         mInfoSet[i].append(actionToStr(action));
-        if (Action::Fold == action) {
-            foldingPlayer = mCurrentPlayer;
-        }
     }
 
 }
 
 void Game::updateInfoSet(int player, int card, int cardIndex) {
-    mInfoSet[player].replace(cardIndex,2, cardIntToStr(card));
+    mInfoSet[player].replace(cardIndex*2,2, cardIntToStr(card));
 }
 
 std::string Game::getInfoSet(int player) const{
@@ -113,5 +103,9 @@ std::string Game::actionToStr(Action action) {
     }
     else {throw std::logic_error("cannot convert that action to str");}
 
+}
+
+void Game::updatePlayer(){
+    mCurrentPlayer = 1 - mCurrentPlayer;
 }
 

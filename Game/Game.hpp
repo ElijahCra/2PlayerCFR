@@ -49,15 +49,16 @@ public:
 
     void updateInfoSet(Action action);
 
+    void updatePlayer();
+
     std::string getInfoSet(int player) const;
 
     static std::string cardIntToStr(int card);
     static std::string actionToStr(Action action);
-private:
 
-    int foldingPlayer;
     int winner;
 
+private:
     /// @brief the players private info set, contains their cards public cards and all actions played
     std::array<std::string, PlayerNum> mInfoSet{};
 

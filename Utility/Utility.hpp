@@ -10,13 +10,13 @@ class Utility {
 
 public:
 
+    Utility();
+
     static bool initLookup();
 
     static int LookupHand(int* pCards);
 
     static int HR[32487834];
-
-    Utility() = delete;
 
     static int getWinner(int *p0Cards, int *p1Cards);
 

@@ -9,7 +9,6 @@
 
 
 
-
 void PreFlopChance::enter(Game *game, Action action) {
     for (int i = 0; i < CardNum; ++i) {
         game->mCards[i] = i;
@@ -18,14 +17,13 @@ void PreFlopChance::enter(Game *game, Action action) {
     std::shuffle(game->mCards.begin(),game->mCards.end(), game->mRNG);
 
     //deal player cards
-    for (int i = 0; i < PlayerNum; ++i) {
-        for (int j=0; j <2; ++j) {
-
+    for (int player = 0; player < PlayerNum; ++player) {
+        for (int index=0; index <2; ++index) {
+            game->updateInfoSet(player,game->mCards[index+2*player],index);
         }
     }
     //ante up
     game->addMoney();
-    std::cout << game->mInfoSet[2][0];
 
     std::vector<Action> availActions {Action::None};
     game->setActions(availActions);
@@ -41,9 +39,7 @@ GameState& PreFlopChance::getInstance() {
     return singleton;
 }
 
-void PreFlopChance::exit(Game *game, Action action) {
-    ++game->mCurrentPlayer;
-}
+void PreFlopChance::exit(Game *game, Action action) {}
 
 std::string PreFlopChance::type() {
     return std::string{"chance"};
@@ -61,7 +57,7 @@ void PreFlopActionNoBet::enter(Game *game, Action action) {
 
     }
     else if (Action::Call == action) {
-        game->mNodeProbability = 0;
+        game->mNodeProbability = 0; //todo fix this
 
         std::vector<Action> availActions {Action::Check, Action::Raise};
         game->setActions(availActions);
@@ -101,8 +97,8 @@ void PreFlopActionNoBet::exit(Game *game, Action action) {
         ++game->mRaises;
     }
     else if (Action::Check == action){}
+    game->updatePlayer();
 
-    ++game->mCurrentPlayer;
 }
 
 
@@ -118,7 +114,6 @@ void PreFlopActionBet::enter(Game *game, Action action) {
         else{
             game->setActions(std::vector<Action>{Action::Call, Action::Fold, Action::Reraise});
         }
-
     }
 }
 
@@ -150,19 +145,33 @@ std::string PreFlopActionBet::type(){
 void PreFlopActionBet::exit(Game *game, Action action) {
     if (Action::Call == action) {
         game->addMoney(1.0);
+        game->updatePlayer();
     }
     else if (Action::Reraise == action){
         game->addMoney(2.0);
         ++game->mRaises;
+        game->updatePlayer();
     }
     else if (Action::Fold == action){}
-    ++game->mCurrentPlayer;
+
 }
 
 
 void Terminal::enter(Game *game, Action action) {
+    if (Action::Fold == action){
+        game->winner = 1 - game->mCurrentPlayer;
+    }
     game->setActions(std::vector<Action>{Action::None});
-    std::copy(game->dealtCards.begin(), game->dealtCards.begin()+5, game->dealtCards.begin());
+
+    std::array<int,7> p0cards{game->mCards[0],game->mCards[1]};
+    std::array<int,7> p1cards{game->mCards[2],game->mCards[3]};
+
+    std::copy(game->mCards.begin()+4,game->mCards.begin()+9,p0cards.begin()+2);
+    std::copy(game->mCards.begin()+4,game->mCards.begin()+9,p1cards.begin()+2);
+
+
+    game->winner = Utility::getWinner(p0cards.begin(),p1cards.begin());
+
 }
 
 void Terminal::transition(Game *game, Action action) {}

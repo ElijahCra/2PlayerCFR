@@ -5,9 +5,14 @@
 #include "Utility.hpp"
 #include <iostream>
 
+Utility::Utility() {
+    initLookup();
+}
+
 int Utility::HR[32487834];
 
 bool Utility::initLookup() {
+
     printf("Testing the Two Plus Two 7-Card Evaluator\n");
     printf("-----------------------------------------\n\n");
 
@@ -44,7 +49,7 @@ int Utility::getWinner(int *p0Cards, int *p1Cards) {
 
     //return the winner or tie if they are same value
     if (hand0Val == hand1Val) {
-        return 2;
+        return 3;
     }
     else if(hand0Val > hand1Val) {
         return 0;
