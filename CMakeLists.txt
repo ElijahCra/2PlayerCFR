@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 add_subdirectory(Game)
 add_subdirectory(Utility)
 add_subdirectory(CFR)
+add_subdirectory(Test)
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 

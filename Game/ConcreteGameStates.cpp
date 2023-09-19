@@ -49,16 +49,10 @@ std::string PreFlopChance::type() {
 
 void PreFlopActionNoBet::enter(Game *game, Action action) {
     if (Action::None == action) {
-        constexpr int ChanceAN = getRootChanceActionNum();
-        game->mNodeProbability = 1.0 / (double) ChanceAN;
-
-        std::vector<Action> availActions {Action::Call, Action::Raise, Action::Fold};
+        std::vector<Action> availActions {Action::Fold,Action::Raise, Action::Call};
         game->setActions(availActions);
-
     }
     else if (Action::Call == action) {
-        game->mNodeProbability = 0; //todo fix this
-
         std::vector<Action> availActions {Action::Check, Action::Raise};
         game->setActions(availActions);
     }
@@ -105,14 +99,14 @@ void PreFlopActionNoBet::exit(Game *game, Action action) {
 
 void PreFlopActionBet::enter(Game *game, Action action) {
     if (Action::Raise == action) {
-        game->setActions(std::vector<Action> {Action::Reraise, Action::Call, Action::Fold});
+        game->setActions(std::vector<Action> {Action::Fold, Action::Call, Action::Reraise});
     }
     else if (Action::Reraise == action){
         if (game->mRaises >= maxRaises) {
-            game->setActions(std::vector<Action>{Action::Call, Action::Fold});
+            game->setActions(std::vector<Action>{Action::Fold, Action::Call});
         }
         else{
-            game->setActions(std::vector<Action>{Action::Call, Action::Fold, Action::Reraise});
+            game->setActions(std::vector<Action>{ Action::Fold, Action::Call,Action::Reraise});
         }
     }
 }
@@ -160,6 +154,7 @@ void PreFlopActionBet::exit(Game *game, Action action) {
 void Terminal::enter(Game *game, Action action) {
     if (Action::Fold == action){
         game->winner = 1 - game->mCurrentPlayer;
+        return;
     }
     game->setActions(std::vector<Action>{Action::None});
 

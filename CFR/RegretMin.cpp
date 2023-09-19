@@ -3,7 +3,7 @@
 //
 
 #include "RegretMin.hpp"
-#include "../Game/Game.hpp"
+
 
 
 RegretMin::RegretMin(const uint32_t seed) : mRNG(seed), mNodeCount(0) {
@@ -32,8 +32,7 @@ double RegretMin::ChanceCFR(const Game& game, int playerNum, double probP0, doub
     ++mNodeCount;
 
     if ("terminal" == game.getCurrentState()->type()){
-        const double payoff = game.getUtility(playerNum);
-        return payoff;
+        return game.getUtility(playerNum);
     }
 
      std::vector<Action> const actions  = game.getActions();
@@ -52,20 +51,23 @@ double RegretMin::ChanceCFR(const Game& game, int playerNum, double probP0, doub
     else if ("action" == game.getCurrentState()->type()) { //Decision Node
         double weightedUtil;
 
-        for (const Action& action : actions) {
-            Game copiedGame(game);
-            copiedGame.transition(action);
-            weightedUtil = game.mNodeProbability * ChanceCFR(copiedGame, playerNum, probP0, probP1, probChance);
-        }
-
-        /// do regret calculation and matching based on the returned weightedUtil
         Node *node = mNodeMap[game.getInfoSet(game.mCurrentPlayer)];
         if (node == nullptr) {
-            node = new Node(actionNum);
+            node = new Node(static_cast<int>(actions.size()));
             mNodeMap[game.getInfoSet(game.mCurrentPlayer)] = node;
         }
 
-        double regret[3];
+        for (int i=0; const Action& action : actions) {
+            Game copiedGame(game);
+            copiedGame.transition(action);
+            weightedUtil = node->getStrategy()[i] * ChanceCFR(copiedGame, playerNum, probP0, probP1, probChance);
+            ++i;
+        }
+
+        /// do regret calculation and matching based on the returned weightedUtil
+
+
+        double regret[3]{0};
         for (int i=0; auto action : actions) {
             if (0 == playerNum) {
                 regret[i] = probP1 * probChance * (weightedUtil / node->getStrategy()[i] - weightedUtil);
@@ -73,16 +75,9 @@ double RegretMin::ChanceCFR(const Game& game, int playerNum, double probP0, doub
             else {
                 regret[i] = probP0 * probChance * (weightedUtil / node->getStrategy()[i] - weightedUtil);
             }
-
-
             ++i;
         }
-    }
-
-
-
         return weightedUtil;
-
     }
-
 }
+

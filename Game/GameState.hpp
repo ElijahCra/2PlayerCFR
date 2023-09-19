@@ -7,6 +7,7 @@
 
 #include "Constants.hpp"
 #include <vector>
+#include <string>
 
 class GameState{
 public:

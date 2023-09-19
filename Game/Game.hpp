@@ -8,7 +8,7 @@
 #include "GameState.hpp"
 #include <random>
 #include <array>
-#include <string>
+
 
 class Game {
 public:
@@ -40,10 +40,7 @@ public:
     ///@brief rng engine, mersienne twister
     std::mt19937& mRNG;
 
-    ///@brief probability this node was chosen by the previous node ie probability of taking action leading to this node
-    double mNodeProbability;
-
-    double getUtility(int payoffPlayer);
+    double getUtility(int payoffPlayer) const;
 
     void updateInfoSet(int player, int card, int cardIndex);
 

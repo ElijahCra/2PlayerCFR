@@ -7,9 +7,8 @@
 #include <utility>
 #include <stdexcept>
 #include "ConcreteGameStates.hpp"
-#include "../Utility/Utility.hpp"
 
-Game::Game(std::mt19937 &engine) : mRNG(engine), mNodeProbability(1.0), mCurrentPlayer(1), mCards(), mRaises(0), mUtilities(), mActions(),
+Game::Game(std::mt19937 &engine) : mRNG(engine), mCurrentPlayer(1), mCards(), mRaises(0), mUtilities(), mActions(),
                                    mInfoSet({"00000000000000","00000000000000"}), winner(-1)
 {
     mCurrentState = &PreFlopChance::getInstance();
@@ -45,7 +44,7 @@ void Game::setActions(std::vector<Action> actionVec) {
     mActions = std::move(actionVec);
 }
 
-double Game::getUtility(int payoffPlayer) {
+double Game::getUtility(int payoffPlayer) const{
 
     if (2 == winner) {
         return mUtilities[2]/2.0 + mUtilities[payoffPlayer];

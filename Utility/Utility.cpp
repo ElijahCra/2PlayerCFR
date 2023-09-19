@@ -4,6 +4,7 @@
 
 #include "Utility.hpp"
 #include <iostream>
+#include <cstring>
 
 Utility::Utility() {
     initLookup();
