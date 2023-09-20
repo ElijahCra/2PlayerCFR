@@ -8,8 +8,14 @@
 #include <stdexcept>
 #include "ConcreteGameStates.hpp"
 
-Game::Game(std::mt19937 &engine) : mRNG(engine), mCurrentPlayer(1), mCards(), mRaises(0), mUtilities(), mActions(),
-                                   mInfoSet({"00000000000000","00000000000000"}), winner(-1)
+Game::Game(std::mt19937 &engine) : mRNG(engine),
+                                   mCurrentPlayer(1),
+                                   mCards(),
+                                   mRaises(0),
+                                   mUtilities(),
+                                   mActions(),
+                                   mInfoSet({"00000000000000aa","00000000000000aa"}),
+                                   winner(-1)
 {
     mCurrentState = &PreFlopChance::getInstance();
     mCurrentState->enter(this,Action::None);
@@ -46,7 +52,7 @@ void Game::setActions(std::vector<Action> actionVec) {
 
 double Game::getUtility(int payoffPlayer) const{
 
-    if (2 == winner) {
+    if (3 == winner) {
         return mUtilities[2]/2.0 + mUtilities[payoffPlayer];
     }
     else if(payoffPlayer == winner) {
@@ -68,7 +74,7 @@ void Game::updateInfoSet(Action action) {
 }
 
 void Game::updateInfoSet(int player, int card, int cardIndex) {
-    mInfoSet[player].replace(cardIndex*2,2, cardIntToStr(card));
+    mInfoSet[player].replace(cardIndex*2,0, cardIntToStr(card));
 }
 
 std::string Game::getInfoSet(int player) const{

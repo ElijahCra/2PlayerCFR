@@ -6,7 +6,8 @@
 
 
 
-RegretMin::RegretMin(const uint32_t seed) : mRNG(seed), mNodeCount(0) {
+RegretMin::RegretMin(const uint32_t seed) : mRNG(seed),
+                                            mNodeCount(0) {
     mGame = new Game(mRNG);
 }
 

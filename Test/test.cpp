@@ -17,13 +17,35 @@ TEST(HelloTest, BasicAssertions) {
 TEST(HelloTest, GameTests) {
 
     auto rng = std::mt19937(std::random_device()());
-    Game* game = new Game(rng);
+    Game* game1 = new Game(rng);
     // Expect equality.
-    EXPECT_EQ(game->getCurrentState()->type(), "chance");
+    EXPECT_EQ(game1->getCurrentState()->type(), "chance");
 
-    game->transition(Action::None);
-    EXPECT_EQ(game->getCurrentState()->type(), "action");
+    game1->transition(Action::None);
+    EXPECT_EQ(game1->getCurrentState()->type(), "action");
+    game1->transition(Action::Fold);
+    EXPECT_EQ(game1->getCurrentState()->type(),"terminal");
 
-    EXPECT_ANY_THROW(game->transition(Action::None));
+    auto rng2 = std::mt19937(std::random_device()());
+    Game* game2 = new Game(rng2);
 
+    game2->transition(Action::None);
+    game2->transition(Action::Call);
+    game2->transition(Action::Check);
+
+    EXPECT_EQ(game1->getCurrentState()->type(), "terminal");
+
+    auto seed = std::random_device()();
+    auto rng3 = std::mt19937(std::random_device()());
+    Game* game3 = new Game(rng3);
+    game3->transition(Action::None);
+    std::cout << game3->getInfoSet(1);
+    //game3->transition(Action::Raise);
+    //game3->transition(Action::Reraise);
+
+    RegretMin minimizer(seed);
+
+    double weiUtil = minimizer.ChanceCFR(*game3,0,1.0,1.0,1.0);
+
+    EXPECT_EQ(weiUtil,3.0);
 }

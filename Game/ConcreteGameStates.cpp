@@ -10,7 +10,7 @@
 
 
 void PreFlopChance::enter(Game *game, Action action) {
-    for (int i = 0; i < CardNum; ++i) {
+    for (int i = 1; i <+ CardNum; ++i) {
         game->mCards[i] = i;
     }
     // shuffle cards
@@ -30,8 +30,11 @@ void PreFlopChance::enter(Game *game, Action action) {
 }
 
 void PreFlopChance::transition(Game *game, Action action) {
-    game->setState(PreFlopActionNoBet::getInstance(), Action::None);
-    std::cout << "transitioned from preflop chance \n";
+    if (Action::None == action) {
+        game->setState(PreFlopActionNoBet::getInstance(), Action::None);
+    }
+    else {throw std::logic_error("wrong action for preflopchance");}
+    //std::cout << "transitioned from preflop chance \n";
 }
 
 GameState& PreFlopChance::getInstance() {
@@ -69,6 +72,7 @@ void PreFlopActionNoBet::transition(Game *game, Action action) {
         game->setState(PreFlopActionBet::getInstance(), action);
     }
     else {throw std::logic_error("wrong action for preflopnobet");}
+    //std::cout << "transitioned from preflop no bet \n";
 }
 
 GameState& PreFlopActionNoBet::getInstance()
@@ -122,6 +126,8 @@ void PreFlopActionBet::transition(Game *game, Action action) {
         game->setState(PreFlopActionBet::getInstance(), action);
     }
     else {throw std::logic_error("wrong action for preflopbet");}
+
+    //std::cout << "transitioned from preflop bet \n";
 }
 
 GameState& PreFlopActionBet::getInstance()
@@ -152,6 +158,7 @@ void PreFlopActionBet::exit(Game *game, Action action) {
 
 
 void Terminal::enter(Game *game, Action action) {
+    std::cout << "entering terminal\n";
     if (Action::Fold == action){
         game->winner = 1 - game->mCurrentPlayer;
         return;
@@ -169,7 +176,9 @@ void Terminal::enter(Game *game, Action action) {
 
 }
 
-void Terminal::transition(Game *game, Action action) {}
+void Terminal::transition(Game *game, Action action) {
+     throw std::logic_error("cant transition from terminal unless??(reset?)");
+}
 
 GameState& Terminal::getInstance()
 {
