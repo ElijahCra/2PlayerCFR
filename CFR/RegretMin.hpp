@@ -27,7 +27,7 @@ public:
     double ChanceCFR(const Game& game, int playerNum, double probP0, double probP1, double probChance);
 
 private:
-    static Utility util;
+    Utility util;
 
     std::mt19937 mRNG;
 

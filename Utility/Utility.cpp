@@ -5,6 +5,9 @@
 #include "Utility.hpp"
 #include <iostream>
 #include <cstring>
+#include <filesystem>
+
+bool Utility::initialized = false;
 
 Utility::Utility() {
     initLookup();
@@ -13,6 +16,11 @@ Utility::Utility() {
 int Utility::HR[32487834];
 
 bool Utility::initLookup() {
+
+    if (Utility::initialized) {
+        return Utility::initialized;
+    }
+
 
     printf("Testing the Two Plus Two 7-Card Evaluator\n");
     printf("-----------------------------------------\n\n");
@@ -26,9 +34,10 @@ bool Utility::initLookup() {
         return false;
     }
 
-    //size_t bytesread = fread(HR, sizeof(HR), 1, fin);	// get the HandRank Array
+    fread(HR, sizeof(HR), 1, fin);	// get the HandRank Array
     fclose(fin);
     printf("complete.\n\n");
+    initialized = true;
     return true;
 
 }
@@ -41,18 +50,16 @@ int Utility::LookupHand(int* pCards)
     p = Utility::HR[p + *pCards++];
     p = Utility::HR[p + *pCards++];
     p = Utility::HR[p + *pCards++];
-    return Utility::HR[p + *pCards++];
+    return Utility::HR[p + *pCards];
 }
 
-void LookupSingleHands()
-{
+int Utility::LookupSingleHands() {
     printf("Looking up individual hands...\n\n");
 
     // Create a 7-card poker hand (each card gets a value between 1 and 52)
     int cards[] = { 2, 6, 12, 14, 23, 26, 29 };
     int retVal = Utility::LookupHand(cards);
-    printf("Category: %d\n", retVal >> 12);
-    printf("Salt: %d\n", retVal & 0x00000FFF);
+    return retVal;
 }
 
 

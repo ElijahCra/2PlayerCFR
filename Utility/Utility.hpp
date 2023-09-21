@@ -22,6 +22,9 @@ public:
 
     static void EnumerateAll7CardHands();
 
+    static int LookupSingleHands();
+
+    static bool initialized;
 private:
 
 

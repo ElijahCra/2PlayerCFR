@@ -9,8 +9,9 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <fstream>
 
-TEST(HelloTest, GameTests) {
+TEST(GameTests, Test1) {
 
     Utility::initLookup();
 
@@ -36,8 +37,20 @@ TEST(HelloTest, GameTests) {
 
 }
 
-TEST(HelloTest, CFRTests) {
+TEST(UtilityTests, Test1) {
     Utility::initLookup();
+    int cards10[] = { 1, 2, 3, 4, 5, 6, 7 };
+    Utility::EnumerateAll7CardHands();
+    int val1 = Utility::LookupSingleHands();
+    EXPECT_EQ(val1,4145);
+    int val2 = Utility::LookupHand(cards10);
+    EXPECT_EQ(val2,267968);
+
+}
+
+
+TEST(RegretMinTests, Test1) {
+    //Utility::initLookup();
     uint64_t seed = 1234;
     auto rng3 = std::mt19937(seed);
     Game* game3 = new Game(rng3);
@@ -64,17 +77,9 @@ TEST(HelloTest, CFRTests) {
     std::cout << game3->winner << "\n";
 
 
-    int cards10[] = { 1, 2, 3, 4, 5, 6, 7 };
-    Utility::EnumerateAll7CardHands();
-    EXPECT_EQ(Utility::LookupHand(cards10),10);
+
 
     EXPECT_EQ(weiUtil,0.0);
-
-
-
-    std::filesystem::path cwd = std::filesystem::current_path() / "filename.txt";
-    std::ofstream file(cwd.string());
-    file.close();
 
 
 }
