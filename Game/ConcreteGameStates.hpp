@@ -16,7 +16,6 @@ public:
     void transition(Game* game, Action action) override;
     void exit(Game* game, Action action) override;
     static GameState& getInstance();
-    std::string type();
 
 private:
     PreFlopChance() = default;

@@ -18,7 +18,7 @@ public:
 
     static int HR[32487834];
 
-    static int getWinner(int *p0Cards, int *p1Cards);
+    static const int getWinner(int *p0Cards, int *p1Cards);
 
 
 

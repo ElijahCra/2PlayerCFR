@@ -9,13 +9,14 @@
 #include "ConcreteGameStates.hpp"
 
 Game::Game(std::mt19937 &engine) : mRNG(engine),
-                                   mCurrentPlayer(1),
+                                   mCurrentPlayer(0),
                                    mCards(),
                                    mRaises(0),
                                    mUtilities(),
                                    mActions(),
-                                   mInfoSet({"00000000000000aa","00000000000000aa"}),
-                                   winner(-1)
+                                   mInfoSet({"00000000000000","00000000000000"}),
+                                   winner(-1),
+                                   type("chance")
 {
     mCurrentState = &PreFlopChance::getInstance();
     mCurrentState->enter(this,Action::None);
@@ -114,3 +115,10 @@ void Game::updatePlayer(){
     mCurrentPlayer = 1 - mCurrentPlayer;
 }
 
+void Game::setType(std::string type1) {
+    type = std::move(type1);
+}
+
+std::string Game::getType() const{
+    return type;
+}

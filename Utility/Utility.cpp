@@ -44,7 +44,7 @@ int Utility::LookupHand(int* pCards)
     return Utility::HR[p + *pCards++];
 }
 
-int Utility::getWinner(int *p0Cards, int *p1Cards) {
+const int Utility::getWinner(int *p0Cards, int *p1Cards) {
     int hand0Val = Utility::LookupHand(p0Cards);
     int hand1Val = Utility::LookupHand(p1Cards);
 

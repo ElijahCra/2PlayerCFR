@@ -32,7 +32,7 @@ void RegretMin::Train(int iterations) {
 double RegretMin::ChanceCFR(const Game& game, int playerNum, double probP0, double probP1, double probChance) {
     ++mNodeCount;
 
-    if ("terminal" == game.getCurrentState()->type()){
+    if ("terminal" == game.getType()){
         return game.getUtility(playerNum);
     }
 
@@ -40,7 +40,7 @@ double RegretMin::ChanceCFR(const Game& game, int playerNum, double probP0, doub
 
     int const actionNum = static_cast<int>(actions.size());
 
-    if ("chance" == game.getCurrentState()->type()) {
+    if ("chance" == game.getType()) {
         double weightedUtil;
         //sample one chance outcomes
         Game copiedGame(game);
@@ -49,7 +49,7 @@ double RegretMin::ChanceCFR(const Game& game, int playerNum, double probP0, doub
 
         return weightedUtil;
     }
-    else if ("action" == game.getCurrentState()->type()) { //Decision Node
+    else if ("action" == game.getType()) { //Decision Node
         double weightedUtil;
 
         Node *node = mNodeMap[game.getInfoSet(game.mCurrentPlayer)];

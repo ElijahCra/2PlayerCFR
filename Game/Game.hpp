@@ -55,7 +55,13 @@ public:
 
     int winner;
 
+    void setType(std::string type);
+    std::string getType() const;
+
+
+
 private:
+    std::string type;
     /// @brief the players private info set, contains their cards public cards and all actions played
     std::array<std::string, PlayerNum> mInfoSet{};
 

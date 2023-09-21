@@ -10,8 +10,8 @@
 
 
 void PreFlopChance::enter(Game *game, Action action) {
-    for (int i = 1; i <+ CardNum; ++i) {
-        game->mCards[i] = i;
+    for (int i = 1; i <= CardNum; ++i) {
+        game->mCards[i-1] = i;
     }
     // shuffle cards
     std::shuffle(game->mCards.begin(),game->mCards.end(), game->mRNG);
@@ -24,9 +24,6 @@ void PreFlopChance::enter(Game *game, Action action) {
     }
     //ante up
     game->addMoney();
-
-    std::vector<Action> availActions {Action::None};
-    game->setActions(availActions);
 }
 
 void PreFlopChance::transition(Game *game, Action action) {
@@ -42,11 +39,12 @@ GameState& PreFlopChance::getInstance() {
     return singleton;
 }
 
-void PreFlopChance::exit(Game *game, Action action) {}
+void PreFlopChance::exit(Game *game, Action action) {
+    game->setActions(std::vector<Action>{Action::None});
+    game->updatePlayer();
 
-std::string PreFlopChance::type() {
-    return std::string{"chance"};
 }
+
 
 
 
@@ -59,6 +57,7 @@ void PreFlopActionNoBet::enter(Game *game, Action action) {
         std::vector<Action> availActions {Action::Check, Action::Raise};
         game->setActions(availActions);
     }
+    game->setType("action");
 }
 
 void PreFlopActionNoBet::transition(Game *game, Action action) {
@@ -81,21 +80,22 @@ GameState& PreFlopActionNoBet::getInstance()
     return singleton;
 }
 
-std::string PreFlopActionNoBet::type(){
-    return std::string{"action"};
-}
+
 
 
 void PreFlopActionNoBet::exit(Game *game, Action action) {
     if (Action::Call == action) {
         game->addMoney(0.5);
+
     }
     else if (Action::Raise == action) {
         game->addMoney(1.5);
         ++game->mRaises;
     }
     else if (Action::Check == action){}
+
     game->updatePlayer();
+    game->updateInfoSet(action);
 
 }
 
@@ -137,47 +137,42 @@ GameState& PreFlopActionBet::getInstance()
 }
 
 
-std::string PreFlopActionBet::type(){
-    return std::string{"action"};
-}
-
 
 void PreFlopActionBet::exit(Game *game, Action action) {
     if (Action::Call == action) {
         game->addMoney(1.0);
-        game->updatePlayer();
     }
     else if (Action::Reraise == action){
         game->addMoney(2.0);
         ++game->mRaises;
-        game->updatePlayer();
     }
     else if (Action::Fold == action){}
-
+    game->updateInfoSet(action);
+    game->updatePlayer();
 }
 
 
 void Terminal::enter(Game *game, Action action) {
-    std::cout << "entering terminal\n";
-    if (Action::Fold == action){
-        game->winner = 1 - game->mCurrentPlayer;
-        return;
-    }
+    game->setType("terminal");
     game->setActions(std::vector<Action>{Action::None});
 
+    //determine winner
+
+|    if (Action::Fold == action){
+        game->winner = game->mCurrentPlayer;
+        return;
+    }
     std::array<int,7> p0cards{game->mCards[0],game->mCards[1]};
     std::array<int,7> p1cards{game->mCards[2],game->mCards[3]};
 
     std::copy(game->mCards.begin()+4,game->mCards.begin()+9,p0cards.begin()+2);
     std::copy(game->mCards.begin()+4,game->mCards.begin()+9,p1cards.begin()+2);
 
-
     game->winner = Utility::getWinner(p0cards.begin(),p1cards.begin());
-
 }
 
 void Terminal::transition(Game *game, Action action) {
-     throw std::logic_error("cant transition from terminal unless??(reset?)");
+     throw std::logic_error("cant transition from terminal unless?(reset?)");
 }
 
 GameState& Terminal::getInstance()
@@ -186,9 +181,6 @@ GameState& Terminal::getInstance()
     return singleton;
 }
 
-std::string Terminal::type(){
-    return std::string{"terminal"};
-}
 
 void Terminal::exit(Game *game, Action action) {}
 
