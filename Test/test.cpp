@@ -6,7 +6,13 @@
 #include "../Game/Game.hpp"
 #include "../CFR/RegretMin.hpp"
 
+#include <filesystem>
+#include <iostream>
+#include <string>
+
 TEST(HelloTest, GameTests) {
+
+    Utility::initLookup();
 
     auto rng = std::mt19937(std::random_device()());
     Game* game1 = new Game(rng);
@@ -31,7 +37,8 @@ TEST(HelloTest, GameTests) {
 }
 
 TEST(HelloTest, CFRTests) {
-    uint64_t seed = 123456;
+    Utility::initLookup();
+    uint64_t seed = 1234;
     auto rng3 = std::mt19937(seed);
     Game* game3 = new Game(rng3);
     //game3->transition(Action::None);
@@ -39,12 +46,35 @@ TEST(HelloTest, CFRTests) {
     game3->transition(Action::None);
     game3->transition(Action::Raise);
     game3->transition(Action::Reraise);
-    std::cout << game3->getInfoSet(0) << "\n";
-    std::cout << game3->getInfoSet(1) << "\n";
 
     RegretMin minimizer(seed);
 
     double weiUtil = minimizer.ChanceCFR(*game3,0,1.0,1.0,1.0);
 
-    EXPECT_EQ(weiUtil,3.0);
+    game3->transition(Action::Call);
+
+    double out = game3->getUtility(0);
+
+    for (int i=0; i<CardNum;++i) {
+        std::cout << game3->mCards[i];
+    }
+    std::cout << "\n";
+    std::cout << game3->getInfoSet(0) << "\n";
+    std::cout << game3->getInfoSet(1) << "\n";
+    std::cout << game3->winner << "\n";
+
+
+    int cards10[] = { 1, 2, 3, 4, 5, 6, 7 };
+    Utility::EnumerateAll7CardHands();
+    EXPECT_EQ(Utility::LookupHand(cards10),10);
+
+    EXPECT_EQ(weiUtil,0.0);
+
+
+
+    std::filesystem::path cwd = std::filesystem::current_path() / "filename.txt";
+    std::ofstream file(cwd.string());
+    file.close();
+
+
 }

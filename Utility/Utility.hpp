@@ -20,11 +20,9 @@ public:
 
     static const int getWinner(int *p0Cards, int *p1Cards);
 
-
+    static void EnumerateAll7CardHands();
 
 private:
-
-
 
 
 };

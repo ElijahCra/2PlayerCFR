@@ -158,10 +158,12 @@ void Terminal::enter(Game *game, Action action) {
 
     //determine winner
 
-|    if (Action::Fold == action){
+    if (Action::Fold == action){
         game->winner = game->mCurrentPlayer;
         return;
     }
+
+    //std::copy(game->mCards.begin()+4,game->mCards.begin()+8,game->);
     std::array<int,7> p0cards{game->mCards[0],game->mCards[1]};
     std::array<int,7> p1cards{game->mCards[2],game->mCards[3]};
 
