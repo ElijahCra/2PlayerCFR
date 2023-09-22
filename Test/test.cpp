@@ -14,6 +14,7 @@
 TEST(GameTests, Game1) {
 
     Utility::initLookup();
+    Utility::EnumerateAll7CardHands();
 
     auto rng = std::mt19937(std::random_device()());
     Game *game1 = new Game(rng);
@@ -63,7 +64,7 @@ TEST(UtilityTests, WorkingTest) {
 
 TEST(RegretMinTests, Test1) {
     //Utility::initLookup();
-    uint64_t seed = 12345;
+    uint64_t seed = 120;
     auto rng3 = std::mt19937(seed);
     Game* game3 = new Game(rng3);
     //game3->transition(Action::None);
@@ -74,26 +75,33 @@ TEST(RegretMinTests, Test1) {
 
     RegretMin minimizer(seed);
 
-    double weiUtil = minimizer.ChanceCFR(*game3,0,1.0,1.0,1.0);
+    double weiUtil = minimizer.ChanceCFR(*game3,1,1.0,1.0,1.0);
 
     game3->transition(Action::Call);
-
-    double out = game3->getUtility(1);
-    std::cout << out << "\n";
-
-    for (int i=0; i<CardNum;++i) {
-        std::cout << game3->mCards[i];
-    }
-    std::cout << "\n";
-    std::cout << game3->getInfoSet(0) << "\n";
-    std::cout << game3->getInfoSet(1) << "\n";
     std::cout << game3->winner << "\n";
 
+    int polook[7] = {game3->mCards[0],game3->mCards[1],0,0,0,0,0};
+    int p1look[7] = {game3->mCards[2],game3->mCards[3],0,0,0,0,0};
+    for (int i=4; i<CardNum;++i) {
+        polook[i-2] = game3->mCards[i];
+        p1look[i-2] = game3->mCards[i];
+    }
+    for (int i=0; i<7;++i) {
+        std::cout << polook[i];
 
+    }
+    std::cout <<"\n";
+    for (int i=0; i<7;++i) {
+        std::cout << p1look[i];
 
+    }
+    std::cout <<"\n";
 
+    std::cout << std::to_string(Utility::LookupHand(polook))<<"\n";
+    std::cout << std::to_string(Utility::LookupHand(p1look))<<"\n";
+    std::cout << std::to_string(Utility::getWinner(polook,p1look))<<"\n";
 
-    EXPECT_EQ(weiUtil,-1.5);
+    EXPECT_EQ(weiUtil,1.5);
 
 
 }
