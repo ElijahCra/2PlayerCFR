@@ -11,7 +11,6 @@ int main() {
     uint64_t seed = 1234;
     auto rng3 = std::mt19937(seed);
     Game* game3 = new Game(rng3);
-    //game3->transition(Action::None);
 
     game3->transition(Action::None);
     game3->transition(Action::Raise);
