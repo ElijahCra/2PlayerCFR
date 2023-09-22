@@ -12,7 +12,9 @@ bool Utility::initialized = false;
 Utility::Utility() {
     initLookup();
 
-    assert(Utility::LookupSingleHands()==4145);
+    if (Utility::LookupSingleHands()!=4145){
+        throw(std::logic_error("hand ranks not loaded properly try changing path"));
+    };
 }
 
 int Utility::HR[32487834];
@@ -57,7 +59,7 @@ int Utility::LookupHand(int* pCards)
 }
 
 int Utility::LookupSingleHands() {
-    printf("Looking up individual hands...\n\n");
+    //printf("Looking up individual hands...\n\n");
 
     // Create a 7-card poker hand (each card gets a value between 1 and 52)
     int cards[] = { 2, 6, 12, 14, 23, 26, 29 };
@@ -137,8 +139,12 @@ void Utility::EnumerateAll7CardHands()
 }
 
 const int Utility::getWinner(int *p0Cards, int *p1Cards) {
+
     int hand0Val = Utility::LookupHand(p0Cards);
     int hand1Val = Utility::LookupHand(p1Cards);
+
+    //std::cout << hand0Val << "\n";
+    //std::cout << hand1Val << "\n";
 
     //return the winner or tie if they are same value
     if (hand0Val == hand1Val) {

@@ -14,7 +14,7 @@ Game::Game(std::mt19937 &engine) : mRNG(engine),
                                    mRaises(0),
                                    mUtilities(),
                                    mActions(),
-                                   mInfoSet({"0000","0000"}),
+                                   mInfoSet(),
                                    winner(-1),
                                    type("chance")
 {

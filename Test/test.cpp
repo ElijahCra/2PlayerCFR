@@ -10,21 +10,22 @@
 #include <iostream>
 #include <string>
 #include <fstream>
-/*
-TEST(GameTests, Test1) {
+
+TEST(GameTests, Game1) {
 
     Utility::initLookup();
 
     auto rng = std::mt19937(std::random_device()());
-    Game* game1 = new Game(rng);
+    Game *game1 = new Game(rng);
     // Expect equality.
     EXPECT_EQ(game1->getType(), "chance");
 
     game1->transition(Action::None);
     EXPECT_EQ(game1->getType(), "action");
     game1->transition(Action::Fold);
-    EXPECT_EQ(game1->getType(),"terminal");
-
+    EXPECT_EQ(game1->getType(), "terminal");
+}
+TEST(GameTests, Game2) {
     auto rng2 = std::mt19937(std::random_device()());
     Game* game2 = new Game(rng2);
 
@@ -33,11 +34,9 @@ TEST(GameTests, Test1) {
     game2->transition(Action::Check);
 
     EXPECT_EQ(game2->getType(), "terminal");
+}
 
-
-} */
-
-TEST(UtilityTests, Test1) {
+TEST(UtilityTests, WorkingTest) {
     Utility::initLookup();
     int cards10[] = { 1, 2, 3, 4, 5, 6, 7 };
     //Utility::EnumerateAll7CardHands();
@@ -49,10 +48,10 @@ TEST(UtilityTests, Test1) {
 }
 
 
-/*
+
 TEST(RegretMinTests, Test1) {
     //Utility::initLookup();
-    uint64_t seed = 1234;
+    uint64_t seed = 12345;
     auto rng3 = std::mt19937(seed);
     Game* game3 = new Game(rng3);
     //game3->transition(Action::None);
@@ -67,7 +66,8 @@ TEST(RegretMinTests, Test1) {
 
     game3->transition(Action::Call);
 
-    double out = game3->getUtility(0);
+    double out = game3->getUtility(1);
+    std::cout << out << "\n";
 
     for (int i=0; i<CardNum;++i) {
         std::cout << game3->mCards[i];
@@ -80,7 +80,8 @@ TEST(RegretMinTests, Test1) {
 
 
 
-    EXPECT_EQ(weiUtil,0.0);
+
+    EXPECT_EQ(weiUtil,-1.5);
 
 
-}*/
+}
