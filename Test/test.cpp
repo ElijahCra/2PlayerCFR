@@ -45,6 +45,18 @@ TEST(UtilityTests, WorkingTest) {
     int val2 = Utility::LookupHand(cards10);
     EXPECT_EQ(val2,32769);
 
+    int card3[7]= {1,2,3,4,5,6,7};
+    int val3 = Utility::LookupHand(card3);
+    int card4[7]= {8,9,3,4,5,6,7};
+    int val4 = Utility::LookupHand(card4);
+    EXPECT_GT(val4,val3);
+
+    int card5[7]= {1,2,3,4,5,6,7};
+    int val5 = Utility::LookupHand(card5);
+    int card6[7]= {1,2,3,4,5,8,9};
+    int val6 = Utility::LookupHand(card6);
+    EXPECT_GT(val5,val6);
+
 }
 
 
