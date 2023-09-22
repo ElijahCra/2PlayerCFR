@@ -25,10 +25,6 @@ bool Utility::initLookup() {
         return Utility::initialized;
     }
 
-
-    printf("Testing the Two Plus Two 7-Card Evaluator\n");
-    printf("-----------------------------------------\n\n");
-
     // Load the HandRanks.DAT file and map it into the HR array
     printf("Loading HandRanks.DAT file...\n");
     memset(HR, 0, sizeof(HR));
