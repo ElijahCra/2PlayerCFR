@@ -121,7 +121,7 @@ void Utility::EnumerateAll7CardHands()
     printf("Quads:            %d\n", handTypeSum[8]);
     printf("Straight Flush:   %d\n", handTypeSum[9]);
 
-    // Perform sanity checks.. make sure numbers are where they should be
+    // Perform sanity checks. make sure numbers are where they should be
     int testCount = 0;
     for (int index = 0; index < 10; index++)
         testCount += handTypeSum[index];

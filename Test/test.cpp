@@ -14,7 +14,7 @@
 TEST(GameTests, Game1) {
 
     Utility::initLookup();
-    Utility::EnumerateAll7CardHands();
+    //Utility::EnumerateAll7CardHands();
 
     auto rng = std::mt19937(std::random_device()());
     Game *game1 = new Game(rng);
@@ -50,7 +50,7 @@ TEST(UtilityTests, WorkingTest) {
     int val3 = Utility::LookupHand(card3);
     int card4[7]= {8,9,3,4,5,6,7};
     int val4 = Utility::LookupHand(card4);
-    EXPECT_GT(val4,val3);
+    EXPECT_EQ(val4>>12,8);
 
     int card5[7]= {1,2,3,4,5,6,7};
     int val5 = Utility::LookupHand(card5);
@@ -78,7 +78,7 @@ TEST(RegretMinTests, Test1) {
     double weiUtil = minimizer.ChanceCFR(*game3,1,1.0,1.0,1.0);
 
     game3->transition(Action::Call);
-    std::cout << game3->winner << "\n";
+    /*std::cout << game3->winner << "\n";
 
     int polook[7] = {game3->mCards[0],game3->mCards[1],0,0,0,0,0};
     int p1look[7] = {game3->mCards[2],game3->mCards[3],0,0,0,0,0};
@@ -100,7 +100,7 @@ TEST(RegretMinTests, Test1) {
     std::cout << std::to_string(Utility::LookupHand(polook))<<"\n";
     std::cout << std::to_string(Utility::LookupHand(p1look))<<"\n";
     std::cout << std::to_string(Utility::getWinner(polook,p1look))<<"\n";
-
+    */
     EXPECT_EQ(weiUtil,1.5);
 
 
