@@ -51,40 +51,38 @@ double RegretMinimizer::ChanceCFR(const Game& game, int updatePlayer, double pro
         return weightedUtil;
     }
     else if ("action" == game.getType()) { //Decision Node
-        double weightedUtil;
+        double weightedUtil = 0;
 
         Node *node = mNodeMap[game.getInfoSet(game.mCurrentPlayer)];
         if (node == nullptr) {
             node = new Node(static_cast<int>(actions.size()));
             mNodeMap[game.getInfoSet(game.mCurrentPlayer)] = node;
         }
-
+        double oneActionUtil[actions.size()];
         for (int i=0; const Action& action : actions) {
-            Game copiedGame(game);
-            copiedGame.transition(action);
+            Game gamePlusOneAction(game);
+            gamePlusOneAction.transition(action);
             if (0 == game.mCurrentPlayer) {
-                weightedUtil = node->getStrategy()[i] * ChanceCFR(copiedGame, updatePlayer, probP0*node->getStrategy()[i], probP1);
+                oneActionUtil[i] = ChanceCFR(gamePlusOneAction, updatePlayer, probP0 * node->getStrategy()[i], probP1);
             }else {
-                weightedUtil = node->getStrategy()[i] * ChanceCFR(copiedGame, updatePlayer, probP0, probP1*node->getStrategy()[i]);
+                oneActionUtil[i] = ChanceCFR(gamePlusOneAction, updatePlayer, probP0, probP1 * node->getStrategy()[i]);
             }
+             weightedUtil += node->getStrategy()[i] * oneActionUtil[i];
             ++i;
         }
 
         /// do regret calculation and matching based on the returned weightedUtil
 
         if (updatePlayer == game.mCurrentPlayer){
-            double regret[3]{0};
-            for (int i=0; auto action : actions) {
-                if (0 == updatePlayer) {
-                    regret[i] = probP1 * (weightedUtil / node->getStrategy()[i] - weightedUtil);
-                }
-                else {
-                    regret[i] = probP0 * (weightedUtil / node->getStrategy()[i] - weightedUtil);
-                }
+            for (int i=0; i<actions.size();++i) {
+                const double regret = oneActionUtil[i] - weightedUtil;
+                const double regretSum = node->regretSum(i) + probP0 * regret;
+                node->regretSum(i, regretSum);
                 ++i;
             }
+            // update average getStrategy across all training iterations
+            node->strategySum(node->getStrategy(), probP1);
         }
-
         return weightedUtil;
     }
 }

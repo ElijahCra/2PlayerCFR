@@ -21,7 +21,7 @@ public:
     void Train(int iterations);
 
     /// @brief recursively traverse game tree (depth-first) sampling only one chance outcome at each chance node and all actions
-    /// @param updatePlayer player whos strategy is updated and utilities are retrieved in terms of
+    /// @param updatePlayer player whos getStrategy is updated and utilities are retrieved in terms of
     /// @param probP0 probability of reaching current history given only P0 (bb) players contribution from all previous histories and chance ie. only the action nodes where p0 is acting
     /// @param probP1 probability of reaching current history given only P1 (sb) players contribution from all previous histories and chance
     /// @param probChance probability of reaching current history given only the chance contributions
