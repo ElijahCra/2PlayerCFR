@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "CFR/RegretMin.hpp"
+#include "CFR/RegretMinimizer.hpp"
 #include <iostream>
 #include <filesystem>
 #include "../Utility/Utility.hpp"
@@ -16,7 +16,7 @@ int main() {
     game3->transition(Action::Raise);
     game3->transition(Action::Reraise);
 
-    RegretMin minimizer(seed);
+    RegretMinimizer minimizer(seed);
 
 
     std::filesystem::path cwd = std::filesystem::current_path();

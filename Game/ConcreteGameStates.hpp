@@ -10,7 +10,7 @@
 
 
 
-class PreFlopChance : public GameState {
+class ChanceState : public GameState {
 public:
     void enter(Game* game, Action action) override;
     void transition(Game* game, Action action) override;
@@ -18,14 +18,14 @@ public:
     static GameState& getInstance();
 
 private:
-    PreFlopChance() = default;
-    PreFlopChance(const PreFlopChance& other);
-    PreFlopChance& operator=(const PreFlopChance& other);
+    ChanceState() = default;
+    ChanceState(const ChanceState& other);
+    ChanceState& operator=(const ChanceState& other);
 };
 
 
 
-class PreFlopActionNoBet : public GameState {
+class ActionStateNoBet : public GameState {
 public:
     void enter(Game* game, Action action) override;
     void transition(Game* game, Action action) override;
@@ -34,14 +34,14 @@ public:
     std::string type();
 
 private:
-    PreFlopActionNoBet() = default;
-    PreFlopActionNoBet(const PreFlopActionNoBet& other);
-    PreFlopActionNoBet& operator=(const PreFlopActionNoBet& other);
+    ActionStateNoBet() = default;
+    ActionStateNoBet(const ActionStateNoBet& other);
+    ActionStateNoBet& operator=(const ActionStateNoBet& other);
 };
 
 
 
-class PreFlopActionBet : public GameState {
+class ActionStateBet : public GameState {
 public:
     void enter(Game* game, Action action) override;
     void transition(Game* game, Action action) override;
@@ -50,9 +50,9 @@ public:
     std::string type();
 
 private:
-    PreFlopActionBet() = default;
-    PreFlopActionBet(const PreFlopActionBet& other);
-    PreFlopActionBet& operator=(const PreFlopActionBet& other);
+    ActionStateBet() = default;
+    ActionStateBet(const ActionStateBet& other);
+    ActionStateBet& operator=(const ActionStateBet& other);
 };
 
 
@@ -122,7 +122,7 @@ private:
     PostFlopActionP1NoBet& operator=(const PostFlopActionP1NoBet& other);
 };*/
 
-class Terminal : public GameState {
+class TerminalState : public GameState {
 public:
     void enter(Game* game, Action action) override;
     void transition(Game* game, Action action) override;
@@ -131,9 +131,9 @@ public:
     std::string type();
 
 private:
-    Terminal() = default;
-    Terminal(const Terminal& other);
-    Terminal& operator=(const Terminal& other);
+    TerminalState() = default;
+    TerminalState(const TerminalState& other);
+    TerminalState& operator=(const TerminalState& other);
 };
 
 

@@ -18,7 +18,7 @@ Game::Game(std::mt19937 &engine) : mRNG(engine),
                                    winner(-1),
                                    type("chance")
 {
-    mCurrentState = &PreFlopChance::getInstance();
+    mCurrentState = &ChanceState::getInstance();
     mCurrentState->enter(this,Action::None);
 }
 

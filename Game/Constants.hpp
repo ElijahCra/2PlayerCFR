@@ -26,7 +26,7 @@ enum class GameStates : int {
 
 static constexpr int PlayerNum = 2;
 
-static constexpr int CardNum = 9;
+static constexpr int DeckCardNum = 13;
 
 static constexpr int maxRaises = 2;
 
@@ -35,7 +35,7 @@ static constexpr int getRootChanceActionNum() {
 
     //(cardNum choose 2) * (cardNum-2 choose 2)
     int Actions = 1;
-    Actions *= CardNum * (CardNum - 1) * (CardNum - 2) * (CardNum-3) / 4;
+    Actions *= DeckCardNum * (DeckCardNum - 1) * (DeckCardNum - 2) * (DeckCardNum - 3) / 4;
 
     return Actions;
 }

@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 #include "../Game/Game.hpp"
-#include "../CFR/RegretMin.hpp"
+#include "../CFR/RegretMinimizer.hpp"
 
 #include <filesystem>
 #include <iostream>
@@ -46,17 +46,15 @@ TEST(UtilityTests, WorkingTest) {
     int val2 = Utility::LookupHand(cards10);
     EXPECT_EQ(val2,32769);
 
-    int card3[7]= {1,2,3,4,5,6,7};
-    int val3 = Utility::LookupHand(card3);
     int card4[7]= {8,9,3,4,5,6,7};
     int val4 = Utility::LookupHand(card4);
     EXPECT_EQ(val4>>12,8);
 
-    int card5[7]= {1,2,3,4,5,6,7};
+    int card5[7]= {1,5,9,13,17,21,25};
     int val5 = Utility::LookupHand(card5);
-    int card6[7]= {1,2,3,4,5,8,9};
+    int card6[7]= {9,13,17,21,25,29,33};
     int val6 = Utility::LookupHand(card6);
-    EXPECT_GT(val5,val6);
+    EXPECT_GT(val6,val5);
 
 }
 
@@ -73,35 +71,34 @@ TEST(RegretMinTests, Test1) {
     game3->transition(Action::Raise);
     game3->transition(Action::Reraise);
 
-    RegretMin minimizer(seed);
+    RegretMinimizer minimizer(seed);
 
-    double weiUtil = minimizer.ChanceCFR(*game3,1,1.0,1.0,1.0);
+    double weiUtil = minimizer.ChanceCFR(*game3,1,1.0,1.0);
 
     game3->transition(Action::Call);
-    /*std::cout << game3->winner << "\n";
+    std::cout << game3->winner << "\n";
 
     int polook[7] = {game3->mCards[0],game3->mCards[1],0,0,0,0,0};
     int p1look[7] = {game3->mCards[2],game3->mCards[3],0,0,0,0,0};
-    for (int i=4; i<CardNum;++i) {
+    for (int i=4; i < DeckCardNum; ++i) {
         polook[i-2] = game3->mCards[i];
         p1look[i-2] = game3->mCards[i];
     }
     for (int i=0; i<7;++i) {
-        std::cout << polook[i];
+        std::cout << polook[i] << " ";
 
     }
     std::cout <<"\n";
     for (int i=0; i<7;++i) {
-        std::cout << p1look[i];
+        std::cout << p1look[i] << " ";
 
     }
     std::cout <<"\n";
 
-    std::cout << std::to_string(Utility::LookupHand(polook))<<"\n";
-    std::cout << std::to_string(Utility::LookupHand(p1look))<<"\n";
+
     std::cout << std::to_string(Utility::getWinner(polook,p1look))<<"\n";
-    */
-    EXPECT_EQ(weiUtil,1.5);
+
+    EXPECT_EQ(weiUtil,-1.5);
 
 
 }

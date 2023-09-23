@@ -9,10 +9,17 @@
 
 
 
-void PreFlopChance::enter(Game *game, Action action) {
-    for (int i = 1; i <= CardNum; ++i) {
-        game->mCards[i-1] = i;
+void ChanceState::enter(Game *game, Action action) {
+    if (DeckCardNum == 13) {
+        for (int i = 0; i < DeckCardNum; ++i) {
+            game->mCards[i] = 1+i*4;
+        }
+    } else {
+        for (int i = 1; i <= DeckCardNum; ++i) {
+            game->mCards[i-1] = i;
+        }
     }
+
     // shuffle cards
     std::shuffle(game->mCards.begin(),game->mCards.end(), game->mRNG);
 
@@ -26,20 +33,20 @@ void PreFlopChance::enter(Game *game, Action action) {
     game->addMoney();
 }
 
-void PreFlopChance::transition(Game *game, Action action) {
+void ChanceState::transition(Game *game, Action action) {
     if (Action::None == action) {
-        game->setState(PreFlopActionNoBet::getInstance(), Action::None);
+        game->setState(ActionStateNoBet::getInstance(), Action::None);
     }
     else {throw std::logic_error("wrong action for preflopchance");}
     //std::cout << "transitioned from preflop chance \n";
 }
 
-GameState& PreFlopChance::getInstance() {
-    static PreFlopChance singleton;
+GameState& ChanceState::getInstance() {
+    static ChanceState singleton;
     return singleton;
 }
 
-void PreFlopChance::exit(Game *game, Action action) {
+void ChanceState::exit(Game *game, Action action) {
     game->setActions(std::vector<Action>{Action::None});
     game->updatePlayer();
 
@@ -48,7 +55,7 @@ void PreFlopChance::exit(Game *game, Action action) {
 
 
 
-void PreFlopActionNoBet::enter(Game *game, Action action) {
+void ActionStateNoBet::enter(Game *game, Action action) {
     if (Action::None == action) {
         std::vector<Action> availActions {Action::Fold,Action::Raise, Action::Call};
         game->setActions(availActions);
@@ -60,30 +67,30 @@ void PreFlopActionNoBet::enter(Game *game, Action action) {
     game->setType("action");
 }
 
-void PreFlopActionNoBet::transition(Game *game, Action action) {
+void ActionStateNoBet::transition(Game *game, Action action) {
     if (Action::Call == action) { //first action small-blind calls/limps
-        game->setState(PreFlopActionNoBet::getInstance(), action);
+        game->setState(ActionStateNoBet::getInstance(), action);
     }
     else if (Action::Fold == action or Action::Check == action) { //first action small-blind folds
-        game->setState(Terminal::getInstance(), action);          // or second action bb checks -> post flop chance node
+        game->setState(TerminalState::getInstance(), action);          // or second action bb checks -> post flop chance node
     }
     else if (Action::Raise == action) { //first action small blind raises
-        game->setState(PreFlopActionBet::getInstance(), action);
+        game->setState(ActionStateBet::getInstance(), action);
     }
     else {throw std::logic_error("wrong action for preflopnobet");}
     //std::cout << "transitioned from preflop no bet \n";
 }
 
-GameState& PreFlopActionNoBet::getInstance()
+GameState& ActionStateNoBet::getInstance()
 {
-    static PreFlopActionNoBet singleton;
+    static ActionStateNoBet singleton;
     return singleton;
 }
 
 
 
 
-void PreFlopActionNoBet::exit(Game *game, Action action) {
+void ActionStateNoBet::exit(Game *game, Action action) {
     if (Action::Call == action) {
         game->addMoney(0.5);
 
@@ -101,7 +108,7 @@ void PreFlopActionNoBet::exit(Game *game, Action action) {
 
 
 
-void PreFlopActionBet::enter(Game *game, Action action) {
+void ActionStateBet::enter(Game *game, Action action) {
     if (Action::Raise == action) {
         game->setActions(std::vector<Action> {Action::Fold, Action::Call, Action::Reraise});
     }
@@ -115,30 +122,30 @@ void PreFlopActionBet::enter(Game *game, Action action) {
     }
 }
 
-void PreFlopActionBet::transition(Game *game, Action action) {
+void ActionStateBet::transition(Game *game, Action action) {
     if (Action::Call == action or Action::Fold == action) { //previous player raises this player calls -> FC
-        game->setState(Terminal::getInstance(), action);    //or previous player raises this player folds -> FC
+        game->setState(TerminalState::getInstance(), action);    //or previous player raises this player folds -> FC
     }
     else if (Action::Reraise == action) { //previous player raises we reraise -> PFB player has to decide then -> FC
         if (maxRaises < game->mRaises){
             throw std::logic_error("reraised more than allowed in preflopactionbet");
         }
-        game->setState(PreFlopActionBet::getInstance(), action);
+        game->setState(ActionStateBet::getInstance(), action);
     }
     else {throw std::logic_error("wrong action for preflopbet");}
 
     //std::cout << "transitioned from preflop bet \n";
 }
 
-GameState& PreFlopActionBet::getInstance()
+GameState& ActionStateBet::getInstance()
 {
-    static PreFlopActionBet singleton;
+    static ActionStateBet singleton;
     return singleton;
 }
 
 
 
-void PreFlopActionBet::exit(Game *game, Action action) {
+void ActionStateBet::exit(Game *game, Action action) {
     if (Action::Call == action) {
         game->addMoney(1.0);
     }
@@ -152,7 +159,7 @@ void PreFlopActionBet::exit(Game *game, Action action) {
 }
 
 
-void Terminal::enter(Game *game, Action action) {
+void TerminalState::enter(Game *game, Action action) {
     game->setType("terminal");
     game->setActions(std::vector<Action>{Action::None});
 
@@ -173,18 +180,18 @@ void Terminal::enter(Game *game, Action action) {
     game->winner = Utility::getWinner(p0cards.begin(),p1cards.begin());
 }
 
-void Terminal::transition(Game *game, Action action) {
+void TerminalState::transition(Game *game, Action action) {
      throw std::logic_error("cant transition from terminal unless?(reset?)");
 }
 
-GameState& Terminal::getInstance()
+GameState& TerminalState::getInstance()
 {
-    static Terminal singleton;
+    static TerminalState singleton;
     return singleton;
 }
 
 
-void Terminal::exit(Game *game, Action action) {}
+void TerminalState::exit(Game *game, Action action) {}
 
 
 /*
@@ -192,7 +199,7 @@ void FlopChance::enter(Game *game, Action action) {}
 
 void FlopChance::transition(Game *game, Action action) {
 
-    game->setState(Terminal::getInstance(), Action::None);
+    game->setState(TerminalState::getInstance(), Action::None);
 }
 
 GameState& FlopChance::getInstance()

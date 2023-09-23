@@ -29,7 +29,7 @@ public:
      void setActions(std::vector<Action> actionVec);
 
     ///@brief deck of cards
-    std::array<int, CardNum> mCards;
+    std::array<int, DeckCardNum> mCards;
 
     /// @brief acting player
     int mCurrentPlayer;
