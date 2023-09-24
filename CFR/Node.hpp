@@ -1,9 +1,7 @@
-//
-// Copyright (c) 2020 Kenshi Abe
-//
 
-#ifndef REGRETMINIMIZATION_NODE_HPP
-#define REGRETMINIMIZATION_NODE_HPP
+
+#ifndef INC_2PLAYERCFR_NODE_HPP
+#define INC_2PLAYERCFR_NODE_HPP
 
 #include <vector>
 
@@ -50,31 +48,10 @@ public:
     uint8_t actionNum() const;
 
 private:
-    friend class boost::serialization::access;
+
 
     /// @brief Calculate the average getStrategy across all training iterations
     void calcAverageStrategy();
-
-    template<class Archive>
-    void save(Archive &ar, const unsigned int version) const {
-        std::vector<double> vec(mAverageStrategy, mAverageStrategy + mActionNum);
-        ar & vec;
-    }
-
-    template<class Archive>
-    void load(Archive &ar, const unsigned int version) {
-        std::vector<double> vec;
-        ar & vec;
-        mActionNum = vec.size();
-        delete[] mAverageStrategy;
-        mAverageStrategy = new double[vec.size()];
-        for (int i = 0; i < vec.size(); ++i) {
-            mAverageStrategy[i] = vec[i];
-        }
-        mAlreadyCalculated = true;
-        mNeedToUpdateStrategy = false;
-    }
-
 
 
     uint8_t mActionNum;
@@ -86,4 +63,4 @@ private:
     bool mNeedToUpdateStrategy;
 };
 
-#endif //REGRETMINIMIZATION_NODE_HPP
+#endif //INC_2PLAYERCFR_NODE_HPP

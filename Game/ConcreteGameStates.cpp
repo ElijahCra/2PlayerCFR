@@ -19,6 +19,7 @@ void ChanceState::enter(Game *game, Action action) {
             game->mCards[i-1] = i;
         }
     }
+    game->mRNG();
 
     // shuffle cards
     std::shuffle(game->mCards.begin(),game->mCards.end(), game->mRNG);

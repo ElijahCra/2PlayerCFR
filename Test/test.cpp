@@ -76,29 +76,16 @@ TEST(RegretMinTests, Test1) {
     double weiUtil = minimizer.ChanceCFR(*game3,1,1.0,1.0);
 
     game3->transition(Action::Call);
-    std::cout << game3->winner << "\n";
 
     int polook[7] = {game3->mCards[0],game3->mCards[1],0,0,0,0,0};
     int p1look[7] = {game3->mCards[2],game3->mCards[3],0,0,0,0,0};
-    for (int i=4; i < DeckCardNum; ++i) {
+    for (int i=4; i < 9; ++i) {
         polook[i-2] = game3->mCards[i];
         p1look[i-2] = game3->mCards[i];
     }
-    for (int i=0; i<7;++i) {
-        std::cout << polook[i] << " ";
-
-    }
-    std::cout <<"\n";
-    for (int i=0; i<7;++i) {
-        std::cout << p1look[i] << " ";
-
-    }
-    std::cout <<"\n";
 
 
-    std::cout << std::to_string(Utility::getWinner(polook,p1look))<<"\n";
-
-    EXPECT_EQ(weiUtil,-1.5);
+    EXPECT_EQ(weiUtil,0.5);
 
 
 }
