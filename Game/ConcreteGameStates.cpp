@@ -10,6 +10,7 @@
 
 
 void ChanceState::enter(Game *game, Action action) {
+    //deal cards
     if (DeckCardNum == 13) {
         for (int i = 0; i < DeckCardNum; ++i) {
             game->mCards[i] = 1+i*4;
@@ -19,18 +20,29 @@ void ChanceState::enter(Game *game, Action action) {
             game->mCards[i-1] = i;
         }
     }
-    game->mRNG();
 
     // shuffle cards
     std::shuffle(game->mCards.begin(),game->mCards.end(), game->mRNG);
 
     //deal player cards
     for (int player = 0; player < PlayerNum; ++player) {
-        for (int index=0; index <2; ++index) {
-            game->updateInfoSet(player,game->mCards[index+2*player],index);
-        }
+            int card1 = game->mCards[2*player];
+            int card2 = game->mCards[1+2*player];
+            if (card1>card2){
+                game->updateInfoSet(player,card1);
+                game->updateInfoSet(player,card2);
+            }
+            else {
+                game->updateInfoSet(player,card2);
+                game->updateInfoSet(player,card1);
+            }
+
     }
-    //ante up
+
+    //set allowable actions to transfer from this node
+    game->setActions({Action::None});
+
+    //put money into the pot for small and big blind
     game->addMoney();
 }
 

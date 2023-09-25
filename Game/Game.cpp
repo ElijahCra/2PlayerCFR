@@ -74,8 +74,8 @@ void Game::updateInfoSet(Action action) {
 
 }
 
-void Game::updateInfoSet(int player, int card, int cardIndex) {
-    mInfoSet[player].replace(cardIndex*2,0, cardIntToStr(card));
+void Game::updateInfoSet(int player, int card) {
+    mInfoSet[player].append(cardIntToStr(card));
 }
 
 std::string Game::getInfoSet(int player) const{
@@ -121,4 +121,18 @@ void Game::setType(std::string type1) {
 
 std::string Game::getType() const{
     return type;
+}
+
+void Game::reInitialize() {
+    mRNG();
+    mCurrentPlayer = 0;
+    mRaises = 0;
+    for (int i=0; i<PlayerNum; ++i) {
+        mInfoSet[i] = "";
+        mUtilities[i] = 0;
+    }
+    winner = -1;
+    type = "chance";
+    mCurrentState = &ChanceState::getInstance();
+    mCurrentState->enter(this,Action::None);
 }

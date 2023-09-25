@@ -28,6 +28,8 @@ public:
 
      void setActions(std::vector<Action> actionVec);
 
+     void reInitialize();
+
     ///@brief deck of cards
     std::array<int, DeckCardNum> mCards;
 
@@ -42,7 +44,7 @@ public:
 
     double getUtility(int payoffPlayer) const;
 
-    void updateInfoSet(int player, int card, int cardIndex);
+    void updateInfoSet(int player, int card);
 
     void updateInfoSet(Action action);
 

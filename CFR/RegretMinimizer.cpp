@@ -9,8 +9,8 @@
 
 RegretMinimizer::RegretMinimizer(const uint32_t seed) : mRNG(seed),
                                                         mNodeCount(0),
-                                                        util(){
-    mRNG();
+                                                        util()
+{
     mGame = new Game(mRNG);
 }
 
@@ -23,12 +23,22 @@ RegretMinimizer::~RegretMinimizer() {
 
 void RegretMinimizer::Train(int iterations) {
     double utilities[PlayerNum];
-
+    int rootAN =getRootChanceActionNum();
     for (int i = 0; i < iterations; ++i) {
         for (int p = 0; p < PlayerNum; ++p) {
-            utilities[p] = ChanceCFR(*mGame, p, 1.0*1.0/getRootChanceActionNum(), 1.0*1.0/getRootChanceActionNum());
-            std::cout << utilities[p] << " " << p <<"\n";
+            utilities[p] = ChanceCFR(*mGame, p, (1.0/rootAN), (1.0/rootAN));
+
         }
+        for (auto & itr : mNodeMap) {
+            itr.second->updateStrategy();
+        }
+        if (i%100 == 0 and i !=0) {
+            //std::cout << utilities[0] << "\n";
+
+            printf("fold: %f, raise: %f, call: %f \n",mNodeMap["4945"]->getStrategy()[0],mNodeMap["4945"]->getStrategy()[1],mNodeMap["4945"]->getStrategy()[2]);
+        }
+        mGame->reInitialize();
+
     }
 }
 
@@ -36,7 +46,9 @@ void RegretMinimizer::Train(int iterations) {
 double RegretMinimizer::ChanceCFR(const Game& game, int updatePlayer, double probP0, double probP1) {
     ++mNodeCount;
 
-    if ("terminal" == game.getType()){
+    std::string type = game.getType();
+
+    if ("terminal" == type){
         return game.getUtility(updatePlayer);
     }
 
@@ -44,7 +56,7 @@ double RegretMinimizer::ChanceCFR(const Game& game, int updatePlayer, double pro
 
     //int const actionNum = static_cast<int>(actions.size());
 
-    if ("chance" == game.getType()) {
+    if ("chance" == type) {
         double weightedUtil;
         //sample one chance outcomes
         Game copiedGame(game);
@@ -53,7 +65,9 @@ double RegretMinimizer::ChanceCFR(const Game& game, int updatePlayer, double pro
 
         return weightedUtil;
     }
-    else if ("action" == game.getType()) { //Decision Node
+    else if ("action" == type) { //Decision Node
+
+
         double weightedUtil = 0;
 
         Node *node = mNodeMap[game.getInfoSet(game.mCurrentPlayer)];
@@ -87,5 +101,6 @@ double RegretMinimizer::ChanceCFR(const Game& game, int updatePlayer, double pro
         }
         return weightedUtil;
     }
+    else {throw std::logic_error("not terminal action or chance type");}
 }
 
