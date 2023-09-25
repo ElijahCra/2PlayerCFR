@@ -22,10 +22,10 @@ public:
 
     /// @brief recursively traverse game tree (depth-first) sampling only one chance outcome at each chance node and all actions
     /// @param updatePlayer player whos getStrategy is updated and utilities are retrieved in terms of
-    /// @param probP0 probability of reaching current history given only P0 (bb) players contribution from all previous histories and chance ie. only the action nodes where p0 is acting
-    /// @param probP1 probability of reaching current history given only P1 (sb) players contribution from all previous histories and chance
+    /// @param probCounterFactual reach contribution of all players and chance except for active player (who is the update player for this implementation)
+    /// @param probUpdatePlayer reach contribution of only the active player (update player)
     /// @param probChance probability of reaching current history given only the chance contributions
-    double ChanceCFR(const Game& game, int updatePlayer, double probP0, double probP1);
+    double ChanceCFR(const Game& game, int updatePlayer, double probCounterFactual, double probUpdatePlayer);
 
 private:
     Utility util;
