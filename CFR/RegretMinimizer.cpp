@@ -75,24 +75,31 @@ double RegretMinimizer::ChanceCFR(const Game& game, int updatePlayer, double pro
             node = new Node(static_cast<int>(actions.size()));
             mNodeMap[game.getInfoSet(game.mCurrentPlayer)] = node;
         }
-        double oneActionUtil[actions.size()];
+
+        const double *currentStrategy = node->getStrategy();
+
+        double oneActionWeightedUtil[actions.size()];
         for (int i=0; i<actions.size();++i) {
             Game gamePlusOneAction(game);
             gamePlusOneAction.transition(actions[i]);
             if (0 == game.mCurrentPlayer) {
-                oneActionUtil[i] = ChanceCFR(gamePlusOneAction, updatePlayer, probP0 * node->getStrategy()[i], probP1);
+                oneActionWeightedUtil[i] = ChanceCFR(gamePlusOneAction, updatePlayer, probP0 * currentStrategy[i], probP1);
             }else {
-                oneActionUtil[i] = ChanceCFR(gamePlusOneAction, updatePlayer, probP0, probP1 * node->getStrategy()[i]);
+                oneActionWeightedUtil[i] = ChanceCFR(gamePlusOneAction, updatePlayer, probP0, probP1 * currentStrategy[i]);
             }
-             weightedUtil += node->getStrategy()[i] * oneActionUtil[i];
-
+             weightedUtil += currentStrategy[i] * oneActionWeightedUtil[i];
         }
 
         /// do regret calculation and matching based on the returned weightedUtil
 
         if (updatePlayer == game.mCurrentPlayer){
+            if (updatePlayer == 0){
+                double counterfacProb = probP1;
+            } else {
+                double counterfacProb = probP0;
+            }
             for (int i=0; i<actions.size();++i) {
-                const double regret = oneActionUtil[i] - weightedUtil;
+                const double regret = oneActionWeightedUtil[i] - weightedUtil;
                 const double regretSum = node->regretSum(i) + probP0 * regret;
                 node->regretSum(i, regretSum);
             }
