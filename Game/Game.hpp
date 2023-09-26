@@ -60,7 +60,9 @@ public:
     void setType(std::string type);
     std::string getType() const;
 
+    double averageUtility;
 
+    double averageUtilitySum;
 
 private:
     std::string type;
@@ -75,6 +77,8 @@ private:
 
     ///@brief actions available at this point in the game
     std::vector<Action> mActions;
+
+
 };
 
 

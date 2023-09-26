@@ -4,8 +4,7 @@
 #define INC_2PLAYERCFR_NODE_HPP
 
 #include <vector>
-
-
+#include <cstdint>
 
 /// @class Node
 /// @brief Information set node class definition

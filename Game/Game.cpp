@@ -16,7 +16,9 @@ Game::Game(std::mt19937 &engine) : mRNG(engine),
                                    mActions(),
                                    mInfoSet(),
                                    winner(-1),
-                                   type("chance")
+                                   type("chance"),
+                                   averageUtility(0),
+                                   averageUtilitySum(0)
 {
     mCurrentState = &ChanceState::getInstance();
     mCurrentState->enter(this,Action::None);

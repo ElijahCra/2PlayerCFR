@@ -28,13 +28,17 @@ void RegretMinimizer::Train(int iterations) {
         for (int p = 0; p < PlayerNum; ++p) {
             utilities[p] = ChanceCFR(*mGame, p, 1.0,1.0);
 
+
         }
+        mGame->averageUtilitySum += utilities[1];
+        mGame->averageUtility = mGame->averageUtilitySum/(double(i));
+
         for (auto & itr : mNodeMap) {
             itr.second->updateStrategy();
         }
-        if (i%100 == 0 and i !=0) {
+        if (i%1000 == 0 and i !=0) {
             //std::cout << utilities[0] << "\n";
-
+            std::cout << mGame->averageUtility << "\n";
             printf("fold: %f, raise: %f, call: %f \n",mNodeMap["2117"]->getStrategy()[0],mNodeMap["2117"]->getStrategy()[1],mNodeMap["2117"]->getStrategy()[2]);
         }
         mGame->reInitialize();
@@ -66,7 +70,6 @@ double RegretMinimizer::ChanceCFR(const Game& game, int updatePlayer, double pro
         return weightedUtil;
     }
     else if ("action" == type) { //Decision Node
-
 
         double weightedUtil = 0;
 
