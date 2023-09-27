@@ -3,7 +3,7 @@
 //
 
 #include <gtest/gtest.h>
-#include "Texas/Game.hpp"
+#include "../Game/Texas/Game.hpp"
 #include "../CFR/RegretMinimizer.hpp"
 
 #include <filesystem>

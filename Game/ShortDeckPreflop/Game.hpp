@@ -9,77 +9,80 @@
 #include <random>
 #include <array>
 
+namespace Preflop {
+    class Game {
+    public:
 
-class Game {
-public:
+        explicit Game(std::mt19937 &engine);
 
-    explicit Game(std::mt19937 &engine);
+        inline GameState *getCurrentState() const { return currentState; }
 
-    inline GameState *getCurrentState() const { return currentState; }
+        void transition(Action action);
 
-    void transition(Action action);
+        void setState(GameState &newState, Action action);
 
-    void setState(GameState &newState, Action action);
+        void addMoney();
 
-    void addMoney();
-    void addMoney(double amount);
+        void addMoney(double amount);
 
-    std::vector<Action> getActions() const;
+        std::vector<Action> getActions() const;
 
-     void setActions(std::vector<Action> actionVec);
+        void setActions(std::vector<Action> actionVec);
 
-     void reInitialize();
+        void reInitialize();
 
-    ///@brief deck of cards
-    std::array<int, DeckCardNum> deckCards;
+        ///@brief deck of cards
+        std::array<int, DeckCardNum> deckCards;
 
-    /// @brief acting player
-    int currentPlayer;
+        /// @brief acting player
+        int currentPlayer;
 
-    /// @brief number of raises + reraises played this round
-    uint8_t raiseNum;
+        /// @brief number of raises + reraises played this round
+        uint8_t raiseNum;
 
-    ///@brief rng engine, mersienne twister
-    std::mt19937& RNG;
+        ///@brief rng engine, mersienne twister
+        std::mt19937 &RNG;
 
-    double getUtility(int payoffPlayer) const;
+        double getUtility(int payoffPlayer) const;
 
-    void updateInfoSet(int player, int card);
+        void updateInfoSet(int player, int card);
 
-    void updateInfoSet(Action action);
+        void updateInfoSet(Action action);
 
-    void updatePlayer();
+        void updatePlayer();
 
-    std::string getInfoSet(int player) const;
+        std::string getInfoSet(int player) const;
 
-    static std::string cardIntToStr(int card);
-    static std::string actionToStr(Action action);
+        static std::string cardIntToStr(int card);
 
-    int winner;
+        static std::string actionToStr(Action action);
 
-    void setType(std::string type);
-    std::string getType() const;
+        int winner;
 
-    double averageUtility;
+        void setType(std::string type);
 
-    double averageUtilitySum;
+        std::string getType() const;
 
-private:
-    std::string type;
-    /// @brief the players private info set, contains their cards public cards and all actions played
-    std::array<std::string, PlayerNum> infoSet{};
+        double averageUtility;
 
-    /// @brief array of payoff, 1 per player final is the pot
-    std::array<double, PlayerNum + 1> utilities{};
+        double averageUtilitySum;
 
-    ///@brief current gamestate i.e. preflop chance or preflopnobet
-    GameState* currentState;
+    private:
+        std::string type;
+        /// @brief the players private info set, contains their cards public cards and all actions played
+        std::array<std::string, PlayerNum> infoSet{};
 
-    ///@brief actions available at this point in the game
-    std::vector<Action> availActions;
+        /// @brief array of payoff, 1 per player final is the pot
+        std::array<double, PlayerNum + 1> utilities{};
+
+        ///@brief current gamestate i.e. preflop chance or preflopnobet
+        GameState *currentState;
+
+        ///@brief actions available at this point in the game
+        std::vector<Action> availActions;
 
 
-};
-
+    };
+}
 
 #endif //INC_2PLAYERCFR_GAME_HPP
