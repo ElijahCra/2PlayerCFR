@@ -6,6 +6,7 @@
 #define INC_2PLAYERCFR_CONSTANTS_HPP
 
 namespace Preflop {
+
     class Game;
 
     enum class Action : int {

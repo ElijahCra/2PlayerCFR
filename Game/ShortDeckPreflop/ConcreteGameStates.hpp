@@ -8,56 +8,91 @@
 #include "GameState.hpp"
 #include "Game.hpp"
 
+namespace Preflop {
+
+    class ChanceState : public GameState {
+    public:
+        void enter(Game *game, Action action) override;
+
+        void transition(Game *game, Action action) override;
+
+        void exit(Game *game, Action action) override;
+
+        static GameState &getInstance();
+
+    private:
+        ChanceState() = default;
+
+        ChanceState(const ChanceState &other);
+
+        ChanceState &operator=(const ChanceState &other);
+    };
 
 
-class ChanceState : public GameState {
-public:
-    void enter(Game* game, Action action) override;
-    void transition(Game* game, Action action) override;
-    void exit(Game* game, Action action) override;
-    static GameState& getInstance();
+    class ActionStateNoBet : public GameState {
+    public:
+        void enter(Game *game, Action action) override;
 
-private:
-    ChanceState() = default;
-    ChanceState(const ChanceState& other);
-    ChanceState& operator=(const ChanceState& other);
-};
+        void transition(Game *game, Action action) override;
 
+        void exit(Game *game, Action action) override;
 
+        static GameState &getInstance();
 
-class ActionStateNoBet : public GameState {
-public:
-    void enter(Game* game, Action action) override;
-    void transition(Game* game, Action action) override;
-    void exit(Game* game, Action action) override;
-    static GameState& getInstance();
-    std::string type();
+        std::string type();
 
-private:
-    ActionStateNoBet() = default;
-    ActionStateNoBet(const ActionStateNoBet& other);
-    ActionStateNoBet& operator=(const ActionStateNoBet& other);
-};
+    private:
+        ActionStateNoBet() = default;
+
+        ActionStateNoBet(const ActionStateNoBet &other);
+
+        ActionStateNoBet &operator=(const ActionStateNoBet &other);
+    };
 
 
+    class ActionStateBet : public GameState {
+    public:
+        void enter(Game *game, Action action) override;
 
-class ActionStateBet : public GameState {
-public:
-    void enter(Game* game, Action action) override;
-    void transition(Game* game, Action action) override;
-    void exit(Game* game, Action action) override;
-    static GameState& getInstance();
-    std::string type();
+        void transition(Game *game, Action action) override;
 
-private:
-    ActionStateBet() = default;
-    ActionStateBet(const ActionStateBet& other);
-    ActionStateBet& operator=(const ActionStateBet& other);
-};
+        void exit(Game *game, Action action) override;
+
+        static GameState &getInstance();
+
+        std::string type();
+
+    private:
+        ActionStateBet() = default;
+
+        ActionStateBet(const ActionStateBet &other);
+
+        ActionStateBet &operator=(const ActionStateBet &other);
+    };
 
 
+    class TerminalState : public GameState {
+    public:
+        void enter(Game *game, Action action) override;
 
-/*
+        void transition(Game *game, Action action) override;
+
+        void exit(Game *game, Action action) override;
+
+        static GameState &getInstance();
+
+        std::string type();
+
+    private:
+        TerminalState() = default;
+
+        TerminalState(const TerminalState &other);
+
+        TerminalState &operator=(const TerminalState &other);
+    };
+
+
+    /*
 class FlopChance : public GameState {
 public:
     void enter(Game* game, Action action);
@@ -121,20 +156,5 @@ private:
     PostFlopActionP1NoBet(const PostFlopActionP1NoBet& other);
     PostFlopActionP1NoBet& operator=(const PostFlopActionP1NoBet& other);
 };*/
-
-class TerminalState : public GameState {
-public:
-    void enter(Game* game, Action action) override;
-    void transition(Game* game, Action action) override;
-    void exit(Game* game, Action action) override;
-    static GameState& getInstance();
-    std::string type();
-
-private:
-    TerminalState() = default;
-    TerminalState(const TerminalState& other);
-    TerminalState& operator=(const TerminalState& other);
-};
-
-
+}
 #endif //INC_2PLAYERCFR_CONCRETEGAMESTATES_HPP

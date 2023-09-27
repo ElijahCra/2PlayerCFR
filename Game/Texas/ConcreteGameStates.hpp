@@ -9,64 +9,82 @@
 #include "Game.hpp"
 
 
+namespace Texas {
 
-class ChanceState : public GameState {
-public:
-    void enter(Game* game, Action action) override;
-    void transition(Game* game, Action action) override;
-    void exit(Game* game, Action action) override;
-    static GameState& getInstance();
+    class ChanceState : public GameState {
+    public:
+        void enter(Game *game, Action action) override;
 
-private:
-    ChanceState() = default;
-    ChanceState(const ChanceState& other);
-    ChanceState& operator=(const ChanceState& other);
-};
+        void transition(Game *game, Action action) override;
 
+        void exit(Game *game, Action action) override;
 
+        static GameState &getInstance();
 
-class ActionStateNoBet : public GameState {
-public:
-    void enter(Game* game, Action action) override;
-    void transition(Game* game, Action action) override;
-    void exit(Game* game, Action action) override;
-    static GameState& getInstance();
+    private:
+        ChanceState() = default;
 
-private:
-    ActionStateNoBet() = default;
-    ActionStateNoBet(const ActionStateNoBet& other);
-    ActionStateNoBet& operator=(const ActionStateNoBet& other);
-};
+        ChanceState(const ChanceState &other);
+
+        ChanceState &operator=(const ChanceState &other);
+    };
 
 
+    class ActionStateNoBet : public GameState {
+    public:
+        void enter(Game *game, Action action) override;
 
-class ActionStateBet : public GameState {
-public:
-    void enter(Game* game, Action action) override;
-    void transition(Game* game, Action action) override;
-    void exit(Game* game, Action action) override;
-    static GameState& getInstance();
+        void transition(Game *game, Action action) override;
 
-private:
-    ActionStateBet() = default;
-    ActionStateBet(const ActionStateBet& other);
-    ActionStateBet& operator=(const ActionStateBet& other);
-};
+        void exit(Game *game, Action action) override;
+
+        static GameState &getInstance();
+
+    private:
+        ActionStateNoBet() = default;
+
+        ActionStateNoBet(const ActionStateNoBet &other);
+
+        ActionStateNoBet &operator=(const ActionStateNoBet &other);
+    };
 
 
+    class ActionStateBet : public GameState {
+    public:
+        void enter(Game *game, Action action) override;
 
-class TerminalState : public GameState {
-public:
-    void enter(Game* game, Action action) override;
-    void transition(Game* game, Action action) override;
-    void exit(Game* game, Action action) override;
-    static GameState& getInstance();
+        void transition(Game *game, Action action) override;
 
-private:
-    TerminalState() = default;
-    TerminalState(const TerminalState& other);
-    TerminalState& operator=(const TerminalState& other);
-};
+        void exit(Game *game, Action action) override;
+
+        static GameState &getInstance();
+
+    private:
+        ActionStateBet() = default;
+
+        ActionStateBet(const ActionStateBet &other);
+
+        ActionStateBet &operator=(const ActionStateBet &other);
+    };
+
+
+    class TerminalState : public GameState {
+    public:
+        void enter(Game *game, Action action) override;
+
+        void transition(Game *game, Action action) override;
+
+        void exit(Game *game, Action action) override;
+
+        static GameState &getInstance();
+
+    private:
+        TerminalState() = default;
+
+        TerminalState(const TerminalState &other);
+
+        TerminalState &operator=(const TerminalState &other);
+    };
 
 /*
 class FlopChance : public GameState {
@@ -132,5 +150,5 @@ private:
     PostFlopActionP1NoBet(const PostFlopActionP1NoBet& other);
     PostFlopActionP1NoBet& operator=(const PostFlopActionP1NoBet& other);
 };*/
-
+}
 #endif //INC_TEXAS_CONCRETEGAMESTATES_HPP

@@ -6,26 +6,28 @@
 #include <iostream>
 
 
-
-RegretMinimizer::RegretMinimizer(const uint32_t seed) : mRNG(seed),
+template <typename Game>
+RegretMinimizer<Game>::RegretMinimizer(const uint32_t seed) : mRNG(seed),
                                                         mNodeCount(0),
                                                         util()
 {
     mGame = new Game(mRNG);
 }
 
-RegretMinimizer::~RegretMinimizer() {
+template <typename Game>
+RegretMinimizer<Game>::~RegretMinimizer() {
     for (auto &itr : mNodeMap) {
         delete itr.second;
     }
     delete mGame;
 }
 
-void RegretMinimizer::Train(int iterations) {
-    double utilities[PlayerNum];
-    int rootAN =getRootChanceActionNum();
+template <typename Game>
+void RegretMinimizer<Game>::Train(int iterations) {
+    double utilities[Game::PlayerNum];
+    int rootAN =Game::getRootChanceActionNum();
     for (int i = 0; i < iterations; ++i) {
-        for (int p = 0; p < PlayerNum; ++p) {
+        for (int p = 0; p < Game::PlayerNum; ++p) {
             utilities[p] = ChanceCFR(*mGame, p, 1.0,1.0);
 
 
@@ -46,8 +48,8 @@ void RegretMinimizer::Train(int iterations) {
     }
 }
 
-
-double RegretMinimizer::ChanceCFR(const Game& game, int updatePlayer, double probCounterFactual, double probUpdatePlayer) {
+template <typename Game>
+double RegretMinimizer<Game>::ChanceCFR(const Game& game, int updatePlayer, double probCounterFactual, double probUpdatePlayer) {
     ++mNodeCount;
 
     std::string type = game.getType();
@@ -56,7 +58,7 @@ double RegretMinimizer::ChanceCFR(const Game& game, int updatePlayer, double pro
         return game.getUtility(updatePlayer);
     }
 
-     std::vector<Action> const actions  = game.getActions();
+    auto const actions  = game.getActions();
 
     int const actionNum = static_cast<int>(actions.size());
 
@@ -64,8 +66,8 @@ double RegretMinimizer::ChanceCFR(const Game& game, int updatePlayer, double pro
         double weightedUtil;
         //sample one chance outcomes
         Game copiedGame(game);
-        copiedGame.transition(Action::None);
-        weightedUtil = ChanceCFR(copiedGame, updatePlayer, probCounterFactual*getRootChanceActionNum(), probUpdatePlayer);
+        copiedGame.transition(Game::Action::None);
+        weightedUtil = ChanceCFR(copiedGame, updatePlayer, probCounterFactual*Game::getRootChanceActionNum(), probUpdatePlayer);
 
         return weightedUtil;
     }

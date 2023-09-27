@@ -7,11 +7,12 @@
 
 #include <random>
 #include "../Game/ShortDeckPreflop/Game.hpp"
+#include "../Game/Texas/Game.hpp"
 #include <unordered_map>
 #include "Node.hpp"
 #include "../Utility/Utility.hpp"
 
-
+template <typename Game>
 class RegretMinimizer {
 public:
     explicit RegretMinimizer(uint32_t seed = std::random_device()());

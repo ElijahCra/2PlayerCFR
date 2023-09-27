@@ -80,8 +80,6 @@ namespace Preflop {
 
         ///@brief actions available at this point in the game
         std::vector<Action> availActions;
-
-
     };
 }
 

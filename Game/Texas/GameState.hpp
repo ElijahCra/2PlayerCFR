@@ -9,15 +9,20 @@
 #include <vector>
 #include <string>
 
-class GameState{
-public:
-    virtual void enter(Game* game, Action action) = 0;
-    virtual void transition(Game* game, Action action) = 0;
-    virtual void exit(Game* game, Action action) = 0;
-    virtual ~GameState() = default;
+namespace Texas {
 
-private:
+    class GameState {
+    public:
+        virtual void enter(Game *game, Action action) = 0;
 
-};
+        virtual void transition(Game *game, Action action) = 0;
 
+        virtual void exit(Game *game, Action action) = 0;
+
+        virtual ~GameState() = default;
+
+    private:
+
+    };
+}
 #endif //INC_TEXAS_GAMESTATE_HPP

@@ -8,6 +8,7 @@
 #include "Constants.hpp"
 #include <vector>
 #include <string>
+
 namespace Preflop {
     class GameState {
     public:
@@ -18,7 +19,6 @@ namespace Preflop {
         virtual void exit(Game *game, Action action) = 0;
 
         virtual ~GameState() = default;
-
 
     private:
 
