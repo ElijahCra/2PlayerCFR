@@ -5,7 +5,7 @@
 #include "ConcreteGameStates.hpp"
 #include <iostream>
 #include <algorithm>
-#include "../Utility/Utility.hpp"
+#include "../../Utility/Utility.hpp"
 
 
 
@@ -13,21 +13,21 @@ void ChanceState::enter(Game *game, Action action) {
     //deal cards
     if (DeckCardNum == 13) {
         for (int i = 0; i < DeckCardNum; ++i) {
-            game->mCards[i] = 1+i*4;
+            game->deckCards[i] = 1 + i * 4;
         }
     } else {
         for (int i = 1; i <= DeckCardNum; ++i) {
-            game->mCards[i-1] = i;
+            game->deckCards[i - 1] = i;
         }
     }
 
     // shuffle cards
-    std::shuffle(game->mCards.begin(),game->mCards.end(), game->mRNG);
+    std::shuffle(game->deckCards.begin(), game->deckCards.end(), game->RNG);
 
     //deal player cards
     for (int player = 0; player < PlayerNum; ++player) {
-            int card1 = game->mCards[2*player];
-            int card2 = game->mCards[1+2*player];
+            int card1 = game->deckCards[2 * player];
+            int card2 = game->deckCards[1 + 2 * player];
             if (card1>card2){
                 game->updateInfoSet(player,card1);
                 game->updateInfoSet(player,card2);
@@ -110,7 +110,7 @@ void ActionStateNoBet::exit(Game *game, Action action) {
     }
     else if (Action::Raise == action) {
         game->addMoney(1.5);
-        ++game->mRaises;
+        ++game->raiseNum;
     }
     else if (Action::Check == action){}
 
@@ -126,7 +126,7 @@ void ActionStateBet::enter(Game *game, Action action) {
         game->setActions(std::vector<Action> {Action::Fold, Action::Call, Action::Reraise});
     }
     else if (Action::Reraise == action){
-        if (game->mRaises >= maxRaises) {
+        if (game->raiseNum >= maxRaises) {
             game->setActions(std::vector<Action>{Action::Fold, Action::Call});
         }
         else{
@@ -140,7 +140,7 @@ void ActionStateBet::transition(Game *game, Action action) {
         game->setState(TerminalState::getInstance(), action);    //or previous player raises this player folds -> FC
     }
     else if (Action::Reraise == action) { //previous player raises we reraise -> PFB player has to decide then -> FC
-        if (maxRaises < game->mRaises){
+        if (maxRaises < game->raiseNum){
             throw std::logic_error("reraised more than allowed in preflopactionbet");
         }
         game->setState(ActionStateBet::getInstance(), action);
@@ -164,7 +164,7 @@ void ActionStateBet::exit(Game *game, Action action) {
     }
     else if (Action::Reraise == action){
         game->addMoney(2.0);
-        ++game->mRaises;
+        ++game->raiseNum;
     }
     else if (Action::Fold == action){}
     game->updateInfoSet(action);
@@ -179,16 +179,16 @@ void TerminalState::enter(Game *game, Action action) {
     //determine winner
 
     if (Action::Fold == action){
-        game->winner = game->mCurrentPlayer;
+        game->winner = game->currentPlayer;
         return;
     }
 
-    //std::copy(game->mCards.begin()+4,game->mCards.begin()+8,game->);
-    std::array<int,7> p0cards{game->mCards[0],game->mCards[1]};
-    std::array<int,7> p1cards{game->mCards[2],game->mCards[3]};
+    //std::copy(game->deckCards.begin()+4,game->deckCards.begin()+8,game->);
+    std::array<int,7> p0cards{game->deckCards[0], game->deckCards[1]};
+    std::array<int,7> p1cards{game->deckCards[2], game->deckCards[3]};
 
-    std::copy(game->mCards.begin()+4,game->mCards.begin()+9,p0cards.begin()+2);
-    std::copy(game->mCards.begin()+4,game->mCards.begin()+9,p1cards.begin()+2);
+    std::copy(game->deckCards.begin() + 4, game->deckCards.begin() + 9, p0cards.begin() + 2);
+    std::copy(game->deckCards.begin() + 4, game->deckCards.begin() + 9, p1cards.begin() + 2);
 
     game->winner = Utility::getWinner(p0cards.begin(),p1cards.begin());
 }

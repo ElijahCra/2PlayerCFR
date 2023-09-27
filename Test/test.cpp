@@ -3,7 +3,7 @@
 //
 
 #include <gtest/gtest.h>
-#include "../Game/Game.hpp"
+#include "Texas/Game.hpp"
 #include "../CFR/RegretMinimizer.hpp"
 
 #include <filesystem>
@@ -77,11 +77,11 @@ TEST(RegretMinTests, Test1) {
 
     game3->transition(Action::Call);
 
-    int polook[7] = {game3->mCards[0],game3->mCards[1],0,0,0,0,0};
-    int p1look[7] = {game3->mCards[2],game3->mCards[3],0,0,0,0,0};
+    int polook[7] = {game3->deckCards[0], game3->deckCards[1], 0, 0, 0, 0, 0};
+    int p1look[7] = {game3->deckCards[2], game3->deckCards[3], 0, 0, 0, 0, 0};
     for (int i=4; i < 9; ++i) {
-        polook[i-2] = game3->mCards[i];
-        p1look[i-2] = game3->mCards[i];
+        polook[i-2] = game3->deckCards[i];
+        p1look[i-2] = game3->deckCards[i];
     }
 
 

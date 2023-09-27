@@ -2,8 +2,8 @@
 // Created by Elijah Crain on 8/27/23.
 //
 
-#ifndef INC_2PLAYERCFR_GAME_HPP
-#define INC_2PLAYERCFR_GAME_HPP
+#ifndef INC_TEXAS_GAME_HPP
+#define INC_TEXAS_GAME_HPP
 
 #include "GameState.hpp"
 #include <random>
@@ -15,7 +15,7 @@ public:
 
     explicit Game(std::mt19937 &engine);
 
-    inline GameState *getCurrentState() const { return mCurrentState; }
+    inline GameState *getCurrentState() const { return currentState; }
 
     void transition(Action action);
 
@@ -31,16 +31,16 @@ public:
      void reInitialize();
 
     ///@brief deck of cards
-    std::array<int, DeckCardNum> mCards;
+    std::array<int, DeckCardNum> deckCards;
 
     /// @brief acting player
-    int mCurrentPlayer;
+    int currentPlayer;
 
     /// @brief number of raises + reraises played this round
-    uint8_t mRaises;
+    uint8_t raiseNum;
 
     ///@brief rng engine, mersienne twister
-    std::mt19937& mRNG;
+    std::mt19937& RNG;
 
     double getUtility(int payoffPlayer) const;
 
@@ -64,22 +64,24 @@ public:
 
     double averageUtilitySum;
 
+    Round currentRound;
+
 private:
     std::string type;
     /// @brief the players private info set, contains their cards public cards and all actions played
-    std::array<std::string, PlayerNum> mInfoSet{};
+    std::array<std::string, PlayerNum> infoSet{};
 
     /// @brief array of payoff, 1 per player final is the pot
-    std::array<double, PlayerNum + 1> mUtilities{};
+    std::array<double, PlayerNum + 1> utilities{};
 
     ///@brief current gamestate i.e. preflop chance or preflopnobet
-    GameState* mCurrentState;
+    GameState* currentState;
 
     ///@brief actions available at this point in the game
-    std::vector<Action> mActions;
+    std::vector<Action> availActions;
 
 
 };
 
 
-#endif //INC_2PLAYERCFR_GAME_HPP
+#endif //INC_TEXAS_GAME_HPP

@@ -6,7 +6,7 @@
 #define INC_2PLAYERCFR_REGRETMINIMIZER_HPP
 
 #include <random>
-#include "../Game/Game.hpp"
+#include "../Game/ShortDeckPreflop/Game.hpp"
 #include <unordered_map>
 #include "Node.hpp"
 #include "../Utility/Utility.hpp"

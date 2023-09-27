@@ -8,80 +8,80 @@
 #include <stdexcept>
 #include "ConcreteGameStates.hpp"
 
-Game::Game(std::mt19937 &engine) : mRNG(engine),
-                                   mCurrentPlayer(0),
-                                   mCards(),
-                                   mRaises(0),
-                                   mUtilities(),
-                                   mActions(),
-                                   mInfoSet(),
+Game::Game(std::mt19937 &engine) : RNG(engine),
+                                   currentPlayer(0),
+                                   deckCards(),
+                                   raiseNum(0),
+                                   utilities(),
+                                   availActions(),
+                                   infoSet(),
                                    winner(-1),
                                    type("chance"),
                                    averageUtility(0),
                                    averageUtilitySum(0)
 {
-    mCurrentState = &ChanceState::getInstance();
-    mCurrentState->enter(this,Action::None);
+    currentState = &ChanceState::getInstance();
+    currentState->enter(this, Action::None);
 }
 
 void Game::setState(GameState &newState, Action action) {
-    mCurrentState->exit(this, action); //
-    mCurrentState = &newState;
-    mCurrentState->enter(this, action);
+    currentState->exit(this, action); //
+    currentState = &newState;
+    currentState->enter(this, action);
 }
 
 void Game::transition(Action action) {
-    mCurrentState->transition(this, action);
+    currentState->transition(this, action);
 }
 
 void Game::addMoney() { //preflop ante's
-    mUtilities[0] = -1;
-    mUtilities[1] = -0.5;
-    mUtilities[2] = 1.5;
+    utilities[0] = -1;
+    utilities[1] = -0.5;
+    utilities[2] = 1.5;
 }
 
 void Game::addMoney(double amount) {
-    mUtilities[mCurrentPlayer] -= amount;
-    mUtilities[2] += amount;
+    utilities[currentPlayer] -= amount;
+    utilities[2] += amount;
 }
 
 std::vector<Action> Game::getActions() const {
-    return mActions;
+    return availActions;
 }
 
 void Game::setActions(std::vector<Action> actionVec) {
-    mActions = std::move(actionVec);
+    availActions = std::move(actionVec);
 }
 
 double Game::getUtility(int payoffPlayer) const{
 
     if (3 == winner) {
-        return mUtilities[2]/2.0 + mUtilities[payoffPlayer];
+        return utilities[2] / 2.0 + utilities[payoffPlayer];
     }
     else if(payoffPlayer == winner) {
-        return mUtilities[2] + mUtilities[payoffPlayer];
+        return utilities[2] + utilities[payoffPlayer];
     }
     else if(-1 == winner) {
         throw std::logic_error("game winner not updated from initialization");
     }
     else {
-        return mUtilities[payoffPlayer];
+        return utilities[payoffPlayer];
     }
 }
 
 void Game::updateInfoSet(Action action) {
     for (int i = 0; i < PlayerNum; ++i) {
-        mInfoSet[i].append(actionToStr(action));
+        infoSet[i].append(actionToStr(action));
     }
 
 }
 
 void Game::updateInfoSet(int player, int card) {
-    mInfoSet[player].append(cardIntToStr(card));
+    infoSet[player].append(cardIntToStr(card));
 }
 
 std::string Game::getInfoSet(int player) const{
-    return mInfoSet[player];
+    return infoSet[player];
 }
 
 std::string Game::cardIntToStr(int card) {
@@ -114,7 +114,7 @@ std::string Game::actionToStr(Action action) {
 }
 
 void Game::updatePlayer(){
-    mCurrentPlayer = 1 - mCurrentPlayer;
+    currentPlayer = 1 - currentPlayer;
 }
 
 void Game::setType(std::string type1) {
@@ -126,15 +126,15 @@ std::string Game::getType() const{
 }
 
 void Game::reInitialize() {
-    mRNG();
-    mCurrentPlayer = 0;
-    mRaises = 0;
+    RNG();
+    currentPlayer = 0;
+    raiseNum = 0;
     for (int i=0; i<PlayerNum; ++i) {
-        mInfoSet[i] = "";
-        mUtilities[i] = 0;
+        infoSet[i] = "";
+        utilities[i] = 0;
     }
     winner = -1;
     type = "chance";
-    mCurrentState = &ChanceState::getInstance();
-    mCurrentState->enter(this,Action::None);
+    currentState = &ChanceState::getInstance();
+    currentState->enter(this, Action::None);
 }
