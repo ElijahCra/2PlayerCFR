@@ -5,7 +5,6 @@
 #ifndef INC_TEXAS_CONCRETEGAMESTATES_HPP
 #define INC_TEXAS_CONCRETEGAMESTATES_HPP
 
-#include "GameState.hpp"
 #include "Game.hpp"
 
 
@@ -13,11 +12,11 @@ namespace Texas {
 
     class ChanceState : public GameState {
     public:
-        void enter(Game *game, Action action) override;
+        void enter(Game *game, GameBase::Action action) override;
 
-        void transition(Game *game, Action action) override;
+        void transition(Game *game, GameBase::Action action) override;
 
-        void exit(Game *game, Action action) override;
+        void exit(Game *game, GameBase::Action action) override;
 
         static GameState &getInstance();
 
@@ -32,11 +31,11 @@ namespace Texas {
 
     class ActionStateNoBet : public GameState {
     public:
-        void enter(Game *game, Action action) override;
+        void enter(Game *game, GameBase::Action action) override;
 
-        void transition(Game *game, Action action) override;
+        void transition(Game *game, GameBase::Action action) override;
 
-        void exit(Game *game, Action action) override;
+        void exit(Game *game, GameBase::Action action) override;
 
         static GameState &getInstance();
 
@@ -51,11 +50,11 @@ namespace Texas {
 
     class ActionStateBet : public GameState {
     public:
-        void enter(Game *game, Action action) override;
+        void enter(Game *game, GameBase::Action action) override;
 
-        void transition(Game *game, Action action) override;
+        void transition(Game *game, GameBase::Action action) override;
 
-        void exit(Game *game, Action action) override;
+        void exit(Game *game, GameBase::Action action) override;
 
         static GameState &getInstance();
 
@@ -70,11 +69,11 @@ namespace Texas {
 
     class TerminalState : public GameState {
     public:
-        void enter(Game *game, Action action) override;
+        void enter(Game *game, GameBase::Action action) override;
 
-        void transition(Game *game, Action action) override;
+        void transition(Game *game, GameBase::Action action) override;
 
-        void exit(Game *game, Action action) override;
+        void exit(Game *game, GameBase::Action action) override;
 
         static GameState &getInstance();
 

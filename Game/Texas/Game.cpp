@@ -3,9 +3,9 @@
 //
 
 #include "Game.hpp"
-
 #include <utility>
 #include <stdexcept>
+#include <cassert>
 #include "ConcreteGameStates.hpp"
 
 namespace Texas {
@@ -21,7 +21,7 @@ namespace Texas {
                                        type("chance"),
                                        averageUtility(0),
                                        averageUtilitySum(0),
-                                       currentRound(Round::Preflop) {
+                                       currentRound(0) {
         currentState = &ChanceState::getInstance();
         currentState->enter(this, Action::None);
     }
@@ -33,8 +33,8 @@ namespace Texas {
     }
 
     void Game::transition(Action action) {
-        auto availActions = getActions();
-        assert(std::find(availActions.begin(), availActions.end(), action) != availActions.end());
+        auto Actions = getActions();
+        assert(std::find(Actions.begin(), Actions.end(), action) != Actions.end());
         currentState->transition(this, action);
     }
 
@@ -49,11 +49,11 @@ namespace Texas {
         utilities[2] += amount;
     }
 
-    std::vector<Action> Game::getActions() const {
+    std::vector<GameBase::Action> Game::getActions() const {
         return availActions;
     }
 
-    void Game::setActions(std::vector<Action> actionVec) {
+    void Game::setActions(std::vector<GameBase::Action> actionVec) {
         availActions = std::move(actionVec);
     }
 
@@ -130,7 +130,7 @@ namespace Texas {
         }
         winner = -1;
         type = "chance";
-        currentRound = Round::Preflop;
+        currentRound = 0;
         currentState = &ChanceState::getInstance();
         currentState->enter(this, Action::None);
 

@@ -36,11 +36,11 @@ namespace CFR {
             for (auto &itr: mNodeMap) {
                 itr.second->updateStrategy();
             }
-            if (i % 1000 == 0 and i != 0) {
+            if (i % 100 == 0 and i != 0) {
                 //std::cout << utilities[0] << "\n";
                 std::cout << mGame->averageUtility << "\n";
-                printf("fold: %f, raise: %f, call: %f \n", mNodeMap["2117"]->getStrategy()[0],
-                       mNodeMap["2117"]->getStrategy()[1], mNodeMap["2117"]->getStrategy()[2]);
+                printf("fold: %f, raise: %f, call: %f \n", mNodeMap["4541"]->getStrategy()[0],
+                       mNodeMap["4541"]->getStrategy()[1], mNodeMap["4541"]->getStrategy()[2]);
             }
             mGame->reInitialize();
         }
@@ -56,6 +56,8 @@ namespace CFR {
         if ("terminal" == type) {
             return game.getUtility(updatePlayer);
         }
+
+        typename GameType::Action Actions;
 
         auto const actions = game.getActions();
 

@@ -1,9 +1,8 @@
 //
 // Created by Elijah Crain on 8/27/23.
 //
-#include "Constants.hpp"
-#include "Game.hpp"
 
+#include "Game.hpp"
 #include <utility>
 #include <stdexcept>
 #include "ConcreteGameStates.hpp"

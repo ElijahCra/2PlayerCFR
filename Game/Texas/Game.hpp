@@ -7,47 +7,15 @@
 
 #include <random>
 #include <array>
+#include "GameBase.h"
 #include "GameState.hpp"
 
 namespace Texas {
 
-
-
-    class Game {
+    class Game : public GameBase {
     public:
 
-        /// constants
-        static constexpr int PlayerNum = 2;
-
-        static constexpr int DeckCardNum = 13;
-
-        static constexpr int maxRaises = 2;
-
-        static enum class Action : int {
-            None = -1,
-            Check = 0,
-            Fold = 1,
-            Raise = 2,
-            Call = 3,
-            Reraise = 4
-        };
-
-        static enum class Round : int {
-            Preflop = 0,
-            Flop,
-            Turn,
-            River
-        };
-
-        Round& operator++(Round& obj){
-            obj = static_cast<Round> (static_cast<int> (obj) +1);
-            return obj;
-        }
-
-        /// constructors
         explicit Game(std::mt19937 &engine);
-
-
 
         GameState *getCurrentState() const { return currentState; }
 
@@ -101,7 +69,7 @@ namespace Texas {
 
         double averageUtilitySum;
 
-        Round currentRound;
+        int currentRound;
 
 
 

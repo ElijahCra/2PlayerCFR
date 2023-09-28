@@ -8,18 +8,19 @@
 
 #include <vector>
 #include <string>
-#include "Game.hpp"
+#include "GameBase.h"
 
 namespace Texas {
 
+    class Game;
 
     class GameState {
     public:
-        virtual void enter(Game *game, Texas::Action action) = 0;
+        virtual void enter(Game *game, GameBase::Action action) = 0;
 
-        virtual void transition(Game *game, Action action) = 0;
+        virtual void transition(Game *game, GameBase::Action action) = 0;
 
-        virtual void exit(Game *game, Action action) = 0;
+        virtual void exit(Game *game, GameBase::Action action) = 0;
 
         virtual ~GameState() = default;
 
