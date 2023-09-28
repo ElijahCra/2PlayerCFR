@@ -13,6 +13,4 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 
 add_executable(2PlayerCFR main.cpp)
 
-target_include_directories(2PlayerCFR PUBLIC Utility ShortDeckPreflop CFR)
-target_link_libraries(CFR PUBLIC Utility ShortDeckPreflop)
 target_link_libraries(2PlayerCFR PUBLIC CFR)

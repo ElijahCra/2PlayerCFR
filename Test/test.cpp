@@ -4,6 +4,7 @@
 
 #include <gtest/gtest.h>
 #include "../Game/Texas/Game.hpp"
+#include "../Game/ShortDeckPreflop//Game.hpp"
 #include "../CFR/RegretMinimizer.hpp"
 
 #include <filesystem>
@@ -11,32 +12,36 @@
 #include <string>
 #include <fstream>
 
-TEST(GameTests, Game1) {
+namespace Preflop {
+    TEST(GameTests, Game1) {
 
-    Utility::initLookup();
-    //Utility::EnumerateAll7CardHands();
 
-    auto rng = std::mt19937(std::random_device()());
-    Game *game1 = new Game(rng);
-    // Expect equality.
-    EXPECT_EQ(game1->getType(), "chance");
+        Utility::initLookup();
+        //Utility::EnumerateAll7CardHands();
 
-    game1->transition(Action::None);
-    EXPECT_EQ(game1->getType(), "action");
-    game1->transition(Action::Fold);
-    EXPECT_EQ(game1->getType(), "terminal");
+        auto rng = std::mt19937(std::random_device()());
+        Game *game1 = new Game(rng);
+        // Expect equality.
+        EXPECT_EQ(game1->getType(), "chance");
+
+        game1->transition(Action::None);
+        EXPECT_EQ(game1->getType(), "action");
+        game1->transition(Action::Fold);
+        EXPECT_EQ(game1->getType(), "terminal");
+
+    }
+
+    TEST(GameTests, Game2) {
+        auto rng2 = std::mt19937(std::random_device()());
+        Game *game2 = new Game(rng2);
+
+        game2->transition(Action::None);
+        game2->transition(Action::Call);
+        game2->transition(Action::Check);
+
+        EXPECT_EQ(game2->getType(), "terminal");
+    }
 }
-TEST(GameTests, Game2) {
-    auto rng2 = std::mt19937(std::random_device()());
-    Game* game2 = new Game(rng2);
-
-    game2->transition(Action::None);
-    game2->transition(Action::Call);
-    game2->transition(Action::Check);
-
-    EXPECT_EQ(game2->getType(), "terminal");
-}
-
 TEST(UtilityTests, WorkingTest) {
     Utility::initLookup();
     int cards10[] = { 1, 2, 3, 4, 5, 6, 7 };

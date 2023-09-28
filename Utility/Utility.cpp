@@ -140,20 +140,16 @@ void Utility::EnumerateAll7CardHands()
     printf("\nEnumerated %d hands.\n", count);
 }
 
-const int Utility::getWinner(int *p0Cards, int *p1Cards) {
-
+int Utility::getWinner(int *p0Cards, int *p1Cards) {
     int hand0Val = Utility::LookupHand(p0Cards);
     int hand1Val = Utility::LookupHand(p1Cards);
-
-    //std::cout << hand0Val << "\n";
-    //std::cout << hand1Val << "\n";
 
     //return the winner or tie if they are same value
     if (hand0Val == hand1Val) {
         return 3;
-    }
-    else if(hand0Val > hand1Val) {
+    } else if(hand0Val > hand1Val) {
         return 0;
+    } else {
+        return 1;
     }
-    else {return 1;}
 }

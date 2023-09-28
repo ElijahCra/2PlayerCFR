@@ -1,3 +1,3 @@
-add_subdirectory(ShortDeckPreflop)
+add_subdirectory(Preflop)
 add_subdirectory(Texas)
 

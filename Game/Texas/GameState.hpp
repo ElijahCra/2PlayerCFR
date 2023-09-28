@@ -5,15 +5,17 @@
 #ifndef INC_TEXAS_GAMESTATE_HPP
 #define INC_TEXAS_GAMESTATE_HPP
 
-#include "Constants.hpp"
+
 #include <vector>
 #include <string>
+#include "Game.hpp"
 
 namespace Texas {
 
+
     class GameState {
     public:
-        virtual void enter(Game *game, Action action) = 0;
+        virtual void enter(Game *game, Texas::Action action) = 0;
 
         virtual void transition(Game *game, Action action) = 0;
 
