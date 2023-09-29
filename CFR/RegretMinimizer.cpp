@@ -39,6 +39,10 @@ namespace CFR {
             if (i % 100 == 0 and i != 0) {
                 //std::cout << utilities[0] << "\n";
                 std::cout << mGame->averageUtility << "\n";
+
+                printf("fold: %f, raise: %f, call: %f \n", mNodeMap["4945"]->regretSum(0),
+                       mNodeMap["4945"]->regretSum(1), mNodeMap["4945"]->regretSum(2));
+
                 printf("fold: %f, raise: %f, call: %f \n", mNodeMap["4945"]->averageStrategy()[0],
                        mNodeMap["4945"]->averageStrategy()[1], mNodeMap["4945"]->averageStrategy()[2]);
             }
