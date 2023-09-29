@@ -9,8 +9,9 @@ namespace CFR {
 
     template<typename GameType>
     RegretMinimizer<GameType>::RegretMinimizer(const uint32_t seed) : mRNG(seed),
-                                                                      mNodeCount(0),
-                                                                      util() {
+                                                                      util(),
+                                                                      mNodeCount(0)
+                                                                      {
         mGame = new GameType(mRNG);
     }
 
@@ -25,7 +26,6 @@ namespace CFR {
     template<typename GameType>
     void RegretMinimizer<GameType>::Train(int iterations) {
         double utilities[GameType::PlayerNum];
-        int rootAN = GameType::getRootChanceActionNum();
         for (int i = 0; i < iterations; ++i) {
             for (int p = 0; p < GameType::PlayerNum; ++p) {
                 utilities[p] = ChanceCFR(*mGame, p, 1.0, 1.0);
@@ -39,8 +39,8 @@ namespace CFR {
             if (i % 100 == 0 and i != 0) {
                 //std::cout << utilities[0] << "\n";
                 std::cout << mGame->averageUtility << "\n";
-                printf("fold: %f, raise: %f, call: %f \n", mNodeMap["4541"]->getStrategy()[0],
-                       mNodeMap["4541"]->getStrategy()[1], mNodeMap["4541"]->getStrategy()[2]);
+                printf("fold: %f, raise: %f, call: %f \n", mNodeMap["4945"]->averageStrategy()[0],
+                       mNodeMap["4945"]->averageStrategy()[1], mNodeMap["4945"]->averageStrategy()[2]);
             }
             mGame->reInitialize();
         }
@@ -57,24 +57,25 @@ namespace CFR {
             return game.getUtility(updatePlayer);
         }
 
-        typename GameType::Action Actions;
-
         auto const actions = game.getActions();
 
         int const actionNum = static_cast<int>(actions.size());
 
         if ("chance" == type) {
-            double weightedUtil;
-            //sample one chance outcomes
+            //sample one chance outcome at each chance node
             GameType copiedGame(game);
             copiedGame.transition(GameType::Action::None);
-            weightedUtil = ChanceCFR(copiedGame, updatePlayer, probCounterFactual * GameType::getRootChanceActionNum(),
-                                     probUpdatePlayer);
+            double weightedUtil;
+            weightedUtil = ChanceCFR(copiedGame, updatePlayer, probCounterFactual * (1.0/game.getChanceActionNum()), probUpdatePlayer);
+
+
+
+
 
             return weightedUtil;
         } else if ("action" == type) { //Decision Node
 
-            double weightedUtil = 0;
+            double weightedUtil = 0.0;
 
             Node *node = mNodeMap[game.getInfoSet(game.currentPlayer)];
             if (node == nullptr) {

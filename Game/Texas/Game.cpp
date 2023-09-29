@@ -34,7 +34,6 @@ namespace Texas {
 
     void Game::transition(Action action) {
         auto Actions = getActions();
-        assert(std::find(Actions.begin(), Actions.end(), action) != Actions.end());
         currentState->transition(this, action);
     }
 

@@ -17,7 +17,7 @@ namespace Texas {
 
         explicit Game(std::mt19937 &engine);
 
-        GameState *getCurrentState() const { return currentState; }
+        inline GameState *getCurrentState() const { return currentState; }
 
         void transition(Action action);
 
@@ -27,7 +27,7 @@ namespace Texas {
 
         void addMoney(double amount);
 
-        std::vector <Action> getActions() const;
+        std::vector<Action> getActions() const;
 
         void setActions(std::vector <Action> actionVec);
 
@@ -65,22 +65,24 @@ namespace Texas {
 
         std::string getType() const;
 
-        double averageUtility;
+        long double averageUtility;
 
-        double averageUtilitySum;
+        long double averageUtilitySum;
 
         int currentRound;
 
 
 
         ///@brief how many unique deals are possible
-        static constexpr int getRootChanceActionNum() {
-
-            //(cardNum choose 2) * (cardNum-2 choose 2)
-            int Actions = 1;
-            Actions *= DeckCardNum * (DeckCardNum - 1) * (DeckCardNum - 2) * (DeckCardNum - 3) / 4;
-
-            return Actions;
+        constexpr int getChanceActionNum() const{
+            if (0 == currentRound) {
+                //(cardNum choose 2) * (cardNum-2 choose 2)
+                return DeckCardNum * (DeckCardNum - 1) * (DeckCardNum - 2) * (DeckCardNum - 3);
+            } else if (1 == currentRound) {
+                return (DeckCardNum - 4) * (DeckCardNum - 5) * (DeckCardNum - 6);
+            } else {
+                return DeckCardNum - (currentRound + 5);
+            }
         }
 
     private:
@@ -89,7 +91,7 @@ namespace Texas {
         std::array <std::string, PlayerNum> infoSet{};
 
         /// @brief array of payoff, 1 per player final is the pot
-        std::array<double, PlayerNum + 1> utilities{};
+        std::array<long double, PlayerNum + 1> utilities{};
 
         ///@brief current gamestate i.e. preflop chance or preflopnobet
         GameState *currentState;

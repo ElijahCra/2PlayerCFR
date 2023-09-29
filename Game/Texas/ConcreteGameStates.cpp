@@ -95,9 +95,13 @@ namespace Texas {
     }
 
     void ActionStateNoBet::enter(Game *game, Game::Action action) {
-        if (Game::Action::None == action) {
-            game->setActions({Game::Action::Fold, Game::Action::Raise, Game::Action::Call});
-        } else if (Game::Action::Call == action) {
+        if (0 == game->currentRound) {
+            if (Game::Action::None == action) {
+                game->setActions({Game::Action::Fold, Game::Action::Raise, Game::Action::Call});
+            } else if (Game::Action::Call == action) {
+                game->setActions({Game::Action::Check, Game::Action::Raise});
+            }
+        } else {
             game->setActions({Game::Action::Check, Game::Action::Raise});
         }
         game->setType("action");
@@ -109,8 +113,10 @@ namespace Texas {
         } else if (Game::Action::Check == action) {
             if (3 == game->currentRound) {
                 game->setState(TerminalState::getInstance(), action);
-            } else {
+            } else if (0 == game->currentRound){
                 game->setState(ChanceState::getInstance(), action);
+            } else {
+                game->setState(ActionStateNoBet::getInstance(), action);
             }
         } else if (Game::Action::Fold == action) { //first action small-blind folds
             game->setState(TerminalState::getInstance(),
