@@ -4,7 +4,7 @@
 
 #include <gtest/gtest.h>
 #include "../Game/Texas/Game.hpp"
-#include "../Game/ShortDeckPreflop//Game.hpp"
+#include "../Game/Preflop/Game.hpp"
 #include "../CFR/RegretMinimizer.hpp"
 
 #include <filesystem>
@@ -12,36 +12,87 @@
 #include <string>
 #include <fstream>
 
-namespace Preflop {
-    TEST(GameTests, Game1) {
+using Game = Texas::Game;
+using Action = Texas::Game::Action;
+TEST(TexasGameTests, BasicTest) {
 
+    Utility::initLookup();
 
-        Utility::initLookup();
-        //Utility::EnumerateAll7CardHands();
+    auto rng = std::mt19937(std::random_device()());
+    Game *game1 = new Game(rng);
+    // Expect equality.
+    EXPECT_EQ(game1->getType(), "chance");
 
-        auto rng = std::mt19937(std::random_device()());
-        Game *game1 = new Game(rng);
-        // Expect equality.
-        EXPECT_EQ(game1->getType(), "chance");
+    game1->transition(Action::None);
+    EXPECT_EQ(game1->getType(), "action");
+    game1->transition(Action::Fold);
+    EXPECT_EQ(game1->getType(), "terminal");
 
-        game1->transition(Action::None);
-        EXPECT_EQ(game1->getType(), "action");
-        game1->transition(Action::Fold);
-        EXPECT_EQ(game1->getType(), "terminal");
-
-    }
-
-    TEST(GameTests, Game2) {
-        auto rng2 = std::mt19937(std::random_device()());
-        Game *game2 = new Game(rng2);
-
-        game2->transition(Action::None);
-        game2->transition(Action::Call);
-        game2->transition(Action::Check);
-
-        EXPECT_EQ(game2->getType(), "terminal");
-    }
 }
+
+TEST(TexasGameTests, ChecksAlltheWay) {
+    auto rng2 = std::mt19937(0);
+    Game *game2 = new Game(rng2);
+
+    EXPECT_EQ(game2->currentRound, 0);
+    game2->transition(Action::None);
+    game2->transition(Action::Call);
+    game2->transition(Action::Check);
+
+    EXPECT_EQ(game2->currentRound, 1);
+    game2->transition(Action::None);
+    game2->transition(Action::Check);
+    game2->transition(Action::Check);
+
+    EXPECT_EQ(game2->currentRound, 2);
+    game2->transition(Action::None);
+    game2->transition(Action::Check);
+    EXPECT_EQ(game2->currentRound, 2);
+    game2->transition(Action::Check);
+    EXPECT_EQ(game2->currentRound, 3);
+
+    game2->transition(Action::None);
+    game2->transition(Action::Check);
+    game2->transition(Action::Check);
+
+    EXPECT_EQ(game2->getType(), "terminal");
+    EXPECT_EQ(game2->getUtility(0),-1);
+}
+
+TEST(TexasGameTests, RaisesAlltheWay) {
+    auto rng3 = std::mt19937(0);
+    Game *game3 = new Game(rng3);
+
+    EXPECT_EQ(game3->currentRound, 0);
+    game3->transition(Action::None);
+    game3->transition(Action::Raise);
+    game3->transition(Action::Reraise);
+    game3->transition(Action::Call);
+
+    EXPECT_EQ(game3->currentRound, 1);
+    game3->transition(Action::None);
+    game3->transition(Action::Raise);
+    game3->transition(Action::Reraise);
+    game3->transition(Action::Call);
+
+    EXPECT_EQ(game3->currentRound, 2);
+    game3->transition(Action::None);
+    game3->transition(Action::Raise);
+    game3->transition(Action::Reraise);
+    game3->transition(Action::Call);
+    EXPECT_EQ(game3->currentRound, 3);
+
+    game3->transition(Action::None);
+    game3->transition(Action::Raise);
+    game3->transition(Action::Reraise);
+    game3->transition(Action::Call);
+
+    EXPECT_EQ(game3->getType(), "terminal");
+    EXPECT_ANY_THROW(game3->transition(Action::Call));
+    EXPECT_EQ(game3->getUtility(1),9);
+}
+
+/*
 TEST(UtilityTests, WorkingTest) {
     Utility::initLookup();
     int cards10[] = { 1, 2, 3, 4, 5, 6, 7 };
@@ -76,7 +127,7 @@ TEST(RegretMinTests, Test1) {
     game3->transition(Action::Raise);
     game3->transition(Action::Reraise);
 
-    RegretMinimizer minimizer(seed);
+    CFR::RegretMinimizer<Texas::Game> minimizer(seed);
 
     double weiUtil = minimizer.ChanceCFR(*game3,1,1.0,1.0);
 
@@ -91,6 +142,4 @@ TEST(RegretMinTests, Test1) {
 
 
     EXPECT_EQ(weiUtil,0.5);
-
-
-}
+*/

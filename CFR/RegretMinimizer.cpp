@@ -94,8 +94,7 @@ namespace CFR {
                 GameType gamePlusOneAction(game);
                 gamePlusOneAction.transition(actions[i]);
                 if (updatePlayer == game.currentPlayer) {
-                    oneActionWeightedUtil[i] = ChanceCFR(gamePlusOneAction, updatePlayer, probCounterFactual,
-                                                         probUpdatePlayer * currentStrategy[i]);
+                    oneActionWeightedUtil[i] = ChanceCFR(gamePlusOneAction, updatePlayer, probCounterFactual, probUpdatePlayer * currentStrategy[i]);
                 } else {
                     oneActionWeightedUtil[i] = ChanceCFR(gamePlusOneAction, updatePlayer,
                                                          probCounterFactual * currentStrategy[i], probUpdatePlayer);

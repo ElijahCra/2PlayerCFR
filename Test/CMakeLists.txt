@@ -24,7 +24,8 @@ add_executable(
 target_link_libraries(
         hello_test
         GTest::gtest_main
-        Game
+        Texas
+        Preflop
         CFR
         Utility
 )

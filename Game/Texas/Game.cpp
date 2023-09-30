@@ -18,10 +18,11 @@ namespace Texas {
                                        availActions(),
                                        infoSet(),
                                        winner(-1),
-                                       type("chance"),
+                                       type(),
                                        averageUtility(0),
                                        averageUtilitySum(0),
                                        currentRound(0) {
+        playerMoney.fill(100.0);
         currentState = &ChanceState::getInstance();
         currentState->enter(this, Action::None);
     }
@@ -34,12 +35,13 @@ namespace Texas {
 
     void Game::transition(Action action) {
         auto Actions = getActions();
+        assert(std::find(Actions.begin(),Actions.end(),action) != Actions.end());
         currentState->transition(this, action);
     }
 
     void Game::addMoney() { //preflop ante's
-        utilities[0] = -0.5;
-        utilities[1] = -1;
+        utilities[0] = -0.5; //dealer posts sb
+        utilities[1] = -1; // +1 posts bb
         utilities[2] = 1.5;
     }
 
@@ -57,7 +59,6 @@ namespace Texas {
     }
 
     double Game::getUtility(int payoffPlayer) const {
-
         if (3 == winner) {
             return utilities[2] / 2.0 + utilities[payoffPlayer];
         } else if (payoffPlayer == winner) {

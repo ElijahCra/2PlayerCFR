@@ -25,6 +25,10 @@ namespace Texas {
             Reraise = 4
         };
 
+        std::array<double,PlayerNum> playerMoney;
+    private:
+
+
     };
 
 
