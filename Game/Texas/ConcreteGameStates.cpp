@@ -16,10 +16,8 @@ void ChanceState::enter(Game *game, Game::Action action) {
         case 0: {//preflop chance state
 
             //initialize deck cards
-            if (Game::DeckCardNum == 13) {
-                for (int i = 0; i < Game::DeckCardNum; ++i) {
-                    game->deckCards[i] = 1 + i * 4;
-                }
+            for (int i = 0; i < Game::DeckCardNum; ++i) {
+                game->deckCards[i] = i + 1;
             }
 
             // shuffle cards

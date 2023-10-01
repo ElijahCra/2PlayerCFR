@@ -11,7 +11,7 @@ namespace Texas {
         /// constants
         static constexpr int PlayerNum = 2;
 
-        static constexpr int DeckCardNum = 13;
+        static constexpr int DeckCardNum = 52;
 
         static constexpr int maxRaises = 2;
         /// constructors
@@ -20,12 +20,14 @@ namespace Texas {
             None = -1,
             Check = 0,
             Fold = 1,
-            Raise = 2,
             Call = 3,
+            Raise = 2,
             Reraise = 4
         };
 
         std::array<double,PlayerNum> playerMoney;
+
+
     private:
 
 
