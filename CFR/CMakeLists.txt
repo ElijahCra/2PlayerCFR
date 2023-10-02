@@ -1,4 +1,4 @@
-add_library(CFR STATIC Node.cpp RegretMinimizer.cpp)
+add_library(CFR STATIC Node.cpp RegretMinimizer.hpp)
 
 target_link_libraries(CFR PUBLIC Utility Preflop Texas)
 

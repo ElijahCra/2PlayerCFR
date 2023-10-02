@@ -85,6 +85,7 @@ namespace Texas {
             }
         }
 
+        Action prevAction;
     private:
         std::string type;
         /// @brief the players private info set, contains their cards public cards and all actions played

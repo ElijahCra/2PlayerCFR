@@ -19,9 +19,10 @@ namespace Texas {
                                        infoSet(),
                                        winner(-1),
                                        type("chance"),
-                                       averageUtility(0),
-                                       averageUtilitySum(0),
-                                       currentRound(0) {
+                                       averageUtility(0.f),
+                                       averageUtilitySum(0.f),
+                                       currentRound(0),
+                                       prevAction(Action::None) {
         currentState = &ChanceState::getInstance();
         currentState->enter(this, Action::None);
     }

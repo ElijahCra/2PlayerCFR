@@ -3,115 +3,102 @@
 #include "Node.hpp"
 
 namespace CFR {
-/// @param actionNum Number of available actions in this node
-    Node::Node(const int actionNum) : mActionNum(actionNum), mAlreadyCalculated(false), mNeedToUpdateStrategy(false) {
-        mRegretSum = new float[actionNum] {0.f};
-        mStrategy = new float[actionNum] {0.f};
-        mStrategySum = new float[actionNum] {0.f};
-        mAverageStrategy = new float[actionNum] {0.f};
+
+    Node::Node(const int actionNum) : actionNum(actionNum), alreadyCalculated(false), needToUpdateStrategy(false) {
+        regretSum = new float[actionNum] {0.f};
+        strategy = new float[actionNum] {0.f};
+        strategySum = new float[actionNum] {0.f};
+        averageStrategy = new float[actionNum] {0.f};
         for (int a = 0; a < actionNum; ++a) {
-            mRegretSum[a] = 0.f;
-            mStrategy[a] = 1.f / (float) actionNum;
-            mStrategySum[a] = 0.f;
-            mAverageStrategy[a] = 0.f;
+            regretSum[a] = 0.f;
+            strategy[a] = 1.f / (float) actionNum;
+            strategySum[a] = 0.f;
+            averageStrategy[a] = 0.f;
         }
     }
 
     Node::~Node() {
-        delete[] mRegretSum;
-        delete[] mStrategy;
-        delete[] mStrategySum;
-        delete[] mAverageStrategy;
+        delete[] regretSum;
+        delete[] strategy;
+        delete[] strategySum;
+        delete[] averageStrategy;
     }
 
-/// @brief Get the current getStrategy at this node through Regret-Matching
-/// @return mixed getStrategy
     const float *Node::getStrategy() {
-        return mStrategy;
+        return strategy;
     }
 
-/// @brief Get the average getStrategy across all training iterations
-/// @return average mixed getStrategy
-    const float *Node::averageStrategy() {
-        if (!mAlreadyCalculated) {
+    const float *Node::getAverageStrategy() {
+        if (!alreadyCalculated) {
             calcAverageStrategy();
         }
-        return mAverageStrategy;
+        return averageStrategy;
     }
 
-/// @brief Update the average strategy by doing addition the current getStrategy weighted by the contribution of the acting player at the this node.
-///        The contribution is the probability of reaching this node if all players other than the acting player always choose actions leading to this node.
-/// @param strategy current getStrategy
-/// @param realizationWeight contribution of the acting player at this node
-    void Node::strategySum(const float *strategy, const float realizationWeight) {
-        for (int a = 0; a < mActionNum; ++a) {
-            mStrategySum[a] += realizationWeight * strategy[a];
+
+    void Node::updateStrategySum(const float *strategy, const float realizationWeight) {
+        for (int a = 0; a < actionNum; ++a) {
+            strategySum[a] += realizationWeight * strategy[a];
         }
-        mAlreadyCalculated = false;
+        alreadyCalculated = false;
     }
 
-/// @brief Update current getStrategy
+
     void Node::updateStrategy() {
-        if (!mNeedToUpdateStrategy) {
+        if (!needToUpdateStrategy) {
             return;
         }
         float normalizingSum = 0.0;
-        for (int a = 0; a < mActionNum; ++a) {
-            mStrategy[a] = mRegretSum[a] > 0 ? mRegretSum[a] : 0;
-            normalizingSum += mStrategy[a];
+        for (int a = 0; a < actionNum; ++a) {
+            strategy[a] = regretSum[a] > 0 ? regretSum[a] : 0;
+            normalizingSum += strategy[a];
         }
-        for (int a = 0; a < mActionNum; ++a) {
+        for (int a = 0; a < actionNum; ++a) {
             if (normalizingSum > 0) {
-                mStrategy[a] /= normalizingSum;
+                strategy[a] /= normalizingSum;
             } else {
-                mStrategy[a] = 1.f / (float) mActionNum;
+                strategy[a] = 1.f / (float) actionNum;
             }
         }
     }
 
-/// @brief Get the cumulative counterfactual regret of the specified action
-/// @param action action
-/// @return cumulative counterfactual regret
-    float Node::regretSum(const int action) const {
-        return mRegretSum[action];
+
+    float Node::getRegretSum(const int action) const {
+        return regretSum[action];
     }
 
-/// @brief Update the cumulative counterfactual regret by doing addition the counterfactual regret weighted by the contribution of the all players other than the acting player at this node.
-/// @param action action
-/// @param value counterfactual regret
-    void Node::regretSum(const int action, const float value) {
-        mRegretSum[action] = value;
-        mNeedToUpdateStrategy = true;
+
+    void Node::updateRegretSum(const int action, const float value) {
+        regretSum[action] = value;
+        needToUpdateStrategy = true;
     }
 
-/// @brief Get the number of available actions at this node.
-/// @return number of available actions
-    uint8_t Node::actionNum() const {
-        return mActionNum;
+    uint8_t Node::getActionNum() const {
+        return actionNum;
     }
 
-/// @brief Calculate the average getStrategy across all training iterations
+
     void Node::calcAverageStrategy() {
         // if average getStrategy has already been calculated, do nothing to reduce the calculation time
-        if (mAlreadyCalculated) {
+        if (alreadyCalculated) {
             return;
         }
 
         // calculate average getStrategy
-        for (int a = 0; a < mActionNum; ++a) {
-            mAverageStrategy[a] = 0.0;
+        for (int a = 0; a < actionNum; ++a) {
+            averageStrategy[a] = 0.0;
         }
         float normalizingSum = 0.0;
-        for (int a = 0; a < mActionNum; ++a) {
-            normalizingSum += mStrategySum[a];
+        for (int a = 0; a < actionNum; ++a) {
+            normalizingSum += strategySum[a];
         }
-        for (int a = 0; a < mActionNum; ++a) {
+        for (int a = 0; a < actionNum; ++a) {
             if (normalizingSum > 0) {
-                mAverageStrategy[a] = mStrategySum[a] / normalizingSum;
+                averageStrategy[a] = strategySum[a] / normalizingSum;
             } else {
-                mAverageStrategy[a] = 1.0 / (float) mActionNum;
+                averageStrategy[a] = 1.0 / (float) actionNum;
             }
         }
-        mAlreadyCalculated = true;
+        alreadyCalculated = true;
     }
 }

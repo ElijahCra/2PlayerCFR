@@ -31,3 +31,7 @@
 *.exe
 *.out
 *.app
+
+
+*.xml
+WSL*/

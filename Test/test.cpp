@@ -3,11 +3,10 @@
 //
 
 #include <gtest/gtest.h>
-//#include <benchmark/benchmark.h>
+#include <benchmark/benchmark.h>
 #include "../Game/Texas/Game.hpp"
 #include "../Game/Texas/Game.cpp"
 
-#include "../Game/Preflop/Game.hpp"
 #include "../CFR/RegretMinimizer.hpp"
 
 
@@ -19,14 +18,10 @@
 namespace Texas {
     TEST(GameTests, Game1) {
 
-        Utility::initLookup();
-        //Utility::EnumerateAll7CardHands();
-
         auto rng = std::mt19937(std::random_device()());
         Game *game1 = new Game(rng);
         // Expect equality.
         EXPECT_EQ(game1->getType(), "chance");
-
         game1->transition(Game::Action::None);
         EXPECT_EQ(game1->getType(), "action");
         game1->transition(Game::Action::Fold);
@@ -40,6 +35,18 @@ namespace Texas {
 
         game2->transition(Game::Action::None);
         game2->transition(Game::Action::Call);
+        game2->transition(Game::Action::Check);
+
+        game2->transition(Game::Action::None);
+        game2->transition(Game::Action::Check);
+        game2->transition(Game::Action::Check);
+
+        game2->transition(Game::Action::None);
+        game2->transition(Game::Action::Check);
+        game2->transition(Game::Action::Check);
+
+        game2->transition(Game::Action::None);
+        game2->transition(Game::Action::Check);
         game2->transition(Game::Action::Check);
 
         EXPECT_EQ(game2->getType(), "terminal");
