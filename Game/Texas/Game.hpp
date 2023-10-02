@@ -15,7 +15,7 @@ namespace Texas {
     class Game : public GameBase {
     public:
 
-        explicit Game(std::mt19937 &engine);
+        explicit Game(std::mt19937 &engine); //boost rng
 
         inline GameState *getCurrentState() const { return currentState; }
 
@@ -25,7 +25,7 @@ namespace Texas {
 
         void addMoney();
 
-        void addMoney(double amount);
+        void addMoney(float amount);
 
         std::vector<Action> getActions() const;
 
@@ -45,7 +45,7 @@ namespace Texas {
         ///@brief rng engine, mersienne twister
         std::mt19937 &RNG;
 
-        double getUtility(int payoffPlayer) const;
+        float getUtility(int payoffPlayer) const;
 
         void updateInfoSet(int player, int card);
 
@@ -65,9 +65,9 @@ namespace Texas {
 
         std::string getType() const;
 
-        long double averageUtility;
+        float averageUtility;
 
-        long double averageUtilitySum;
+        float averageUtilitySum;
 
         int currentRound;
 
@@ -91,7 +91,7 @@ namespace Texas {
         std::array <std::string, PlayerNum> infoSet{};
 
         /// @brief array of payoff, 1 per player final is the pot
-        std::array<long double, PlayerNum + 1> utilities{};
+        std::array<float, PlayerNum + 1> utilities{};
 
         ///@brief current gamestate i.e. preflop chance or preflopnobet
         GameState *currentState;

@@ -16,7 +16,8 @@ FetchContent_MakeAvailable(googletest)
 
 
 enable_testing()
-
+set (benchmark_DIR  ../benchmark/build/)
+find_package(benchmark REQUIRED)
 add_executable(
         hello_test
         test.cpp
@@ -24,10 +25,16 @@ add_executable(
 target_link_libraries(
         hello_test
         GTest::gtest_main
-        Game
+        Texas
+        #Preflop
         CFR
         Utility
+        benchmark::benchmark
+        benchmark::benchmark_main
 )
 
 include(GoogleTest)
 gtest_discover_tests(hello_test)
+
+
+

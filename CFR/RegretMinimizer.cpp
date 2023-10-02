@@ -25,34 +25,34 @@ namespace CFR {
 
     template<typename GameType>
     void RegretMinimizer<GameType>::Train(int iterations) {
-        double utilities[GameType::PlayerNum];
+        float utilities[GameType::PlayerNum];
         for (int i = 0; i < iterations; ++i) {
             for (int p = 0; p < GameType::PlayerNum; ++p) {
                 utilities[p] = ChanceCFR(*mGame, p, 1.0, 1.0);
             }
             mGame->averageUtilitySum += utilities[1];
-            mGame->averageUtility = mGame->averageUtilitySum / (double(i));
+            mGame->averageUtility = mGame->averageUtilitySum / ((float)i);
 
             for (auto &itr: mNodeMap) {
                 itr.second->updateStrategy();
             }
-            if (i % 100 == 0 and i != 0) {
+            if (i % 100 == 0 and i > 1000) {
                 //std::cout << utilities[0] << "\n";
                 std::cout << mGame->averageUtility << "\n";
 
-                printf("fold: %f, raise: %f, call: %f \n", mNodeMap["4945"]->regretSum(0),
-                       mNodeMap["4945"]->regretSum(1), mNodeMap["4945"]->regretSum(2));
+                printf("raise: %f, call: %f, fold: %f, iteration: %d \n", mNodeMap["5251"]->regretSum(0),
+                       mNodeMap["5251"]->regretSum(1), mNodeMap["5251"]->regretSum(2), i);
 
-                printf("fold: %f, raise: %f, call: %f \n", mNodeMap["4945"]->averageStrategy()[0],
-                       mNodeMap["4945"]->averageStrategy()[1], mNodeMap["4945"]->averageStrategy()[2]);
+                printf("raise: %f, call: %f, fold: %f, iteration: %d \n", mNodeMap["5251"]->averageStrategy()[0],
+                       mNodeMap["5251"]->averageStrategy()[1], mNodeMap["5251"]->averageStrategy()[2], i);
             }
             mGame->reInitialize();
         }
     }
 
     template<typename GameType>
-    double RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlayer, double probCounterFactual,
-                                                double probUpdatePlayer) {
+    float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual,
+                                                float probUpdatePlayer) {
         ++mNodeCount;
 
         std::string type = game.getType();
@@ -69,17 +69,14 @@ namespace CFR {
             //sample one chance outcome at each chance node
             GameType copiedGame(game);
             copiedGame.transition(GameType::Action::None);
-            double weightedUtil;
+            float weightedUtil;
             weightedUtil = ChanceCFR(copiedGame, updatePlayer, probCounterFactual * (1.0/game.getChanceActionNum()), probUpdatePlayer);
-
-
-
-
-
             return weightedUtil;
-        } else if ("action" == type) { //Decision Node
+        }
 
-            double weightedUtil = 0.0;
+        else if ("action" == type) { //Decision Node
+
+            float weightedUtil = 0.0;
 
             Node *node = mNodeMap[game.getInfoSet(game.currentPlayer)];
             if (node == nullptr) {
@@ -87,9 +84,9 @@ namespace CFR {
                 mNodeMap[game.getInfoSet(game.currentPlayer)] = node;
             }
 
-            const double *currentStrategy = node->getStrategy();
+            const float *currentStrategy = node->getStrategy();
 
-            double oneActionWeightedUtil[actionNum];
+            float oneActionWeightedUtil[actionNum];
             for (int i = 0; i < actionNum; ++i) {
                 GameType gamePlusOneAction(game);
                 gamePlusOneAction.transition(actions[i]);
@@ -107,8 +104,8 @@ namespace CFR {
 
             if (updatePlayer == game.currentPlayer) {
                 for (int i = 0; i < actions.size(); ++i) {
-                    const double regret = oneActionWeightedUtil[i] - weightedUtil;
-                    const double regretSum = node->regretSum(i) + probCounterFactual * regret;
+                    const float regret = oneActionWeightedUtil[i] - weightedUtil;
+                    const float regretSum = node->regretSum(i) + probCounterFactual * regret;
                     node->regretSum(i, regretSum);
                 }
                 // update average getStrategy across all training iterations
@@ -116,5 +113,13 @@ namespace CFR {
             }
             return weightedUtil;
         } else { throw std::logic_error("not terminal action or chance type"); }
+    }
+    template<typename GameType>
+    void RegretMinimizer<GameType>::preGenTree() {
+        //todo
+    }
+    template<typename GameType>
+    void RegretMinimizer<GameType>::preGenTreeMultiThreaded() {
+        //todo
     }
 }

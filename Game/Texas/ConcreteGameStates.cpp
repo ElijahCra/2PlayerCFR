@@ -13,14 +13,8 @@ namespace Texas {
         switch (game->currentRound) {
             case 0: {
                 //deal cards
-                if (Game::DeckCardNum == 13) {
-                    for (int i = 0; i < Game::DeckCardNum; ++i) {
-                        game->deckCards[i] = 1 + i * 4;
-                    }
-                } else {
-                    for (int i = 1; i <= Game::DeckCardNum; ++i) {
-                        game->deckCards[i - 1] = i;
-                    }
+                for (int i = 0; i < Game::DeckCardNum; ++i) {
+                    game->deckCards[i] = i + 1;
                 }
                 // shuffle cards
                 std::shuffle(game->deckCards.begin(), game->deckCards.end(), game->RNG);
@@ -97,12 +91,12 @@ namespace Texas {
     void ActionStateNoBet::enter(Game *game, Game::Action action) {
         if (0 == game->currentRound) {
             if (Game::Action::None == action) {
-                game->setActions({Game::Action::Fold, Game::Action::Raise, Game::Action::Call});
+                game->setActions({Game::Action::Raise, Game::Action::Call, Game::Action::Fold});
             } else if (Game::Action::Call == action) {
-                game->setActions({Game::Action::Check, Game::Action::Raise});
+                game->setActions({Game::Action::Raise, Game::Action::Check});
             }
         } else {
-            game->setActions({Game::Action::Check, Game::Action::Raise});
+            game->setActions({Game::Action::Raise, Game::Action::Check});
         }
         game->setType("action");
     }

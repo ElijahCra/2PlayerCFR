@@ -34,6 +34,7 @@ namespace Texas {
 
     void Game::transition(Action action) {
         auto Actions = getActions();
+        assert(std::find(Actions.begin(),Actions.end(),action)!=Actions.end());
         currentState->transition(this, action);
     }
 
@@ -43,7 +44,7 @@ namespace Texas {
         utilities[2] = 1.5;
     }
 
-    void Game::addMoney(double amount) {
+    void Game::addMoney(float amount) {
         utilities[currentPlayer] -= amount;
         utilities[2] += amount;
     }
@@ -56,7 +57,7 @@ namespace Texas {
         availActions = std::move(actionVec);
     }
 
-    double Game::getUtility(int payoffPlayer) const {
+    float Game::getUtility(int payoffPlayer) const {
 
         if (3 == winner) {
             return utilities[2] / 2.0 + utilities[payoffPlayer];

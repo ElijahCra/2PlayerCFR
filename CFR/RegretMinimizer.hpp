@@ -29,9 +29,12 @@ namespace CFR {
         /// @param probCounterFactual reach contribution of all players and chance except for active player (who is the update player for this implementation)
         /// @param probUpdatePlayer reach contribution of only the active player (update player)
         /// @param probChance probability of reaching current history given only the chance contributions
-        double ChanceCFR(const GameType &game, int updatePlayer, double probCounterFactual, double probUpdatePlayer);
+        float ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer);
 
     private:
+        void preGenTree();
+        void preGenTreeMultiThreaded();
+
         Utility util;
 
         std::mt19937 mRNG;
