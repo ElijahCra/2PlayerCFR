@@ -1,3 +1,3 @@
-add_library(Game STATIC Game.cpp ConcreteGameStates.cpp)
+add_subdirectory(Preflop)
+add_subdirectory(Texas)
 
-target_include_directories(Game PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
