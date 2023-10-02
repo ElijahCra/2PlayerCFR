@@ -16,7 +16,7 @@ FetchContent_MakeAvailable(googletest)
 
 
 enable_testing()
-set (benchmark_DIR  ../benchmark/build/)
+set (benchmark_DIR  ./benchmark/build/)
 find_package(benchmark REQUIRED)
 add_executable(
         hello_test

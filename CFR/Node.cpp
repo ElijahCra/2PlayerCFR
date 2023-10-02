@@ -5,15 +5,15 @@
 namespace CFR {
 /// @param actionNum Number of available actions in this node
     Node::Node(const int actionNum) : mActionNum(actionNum), mAlreadyCalculated(false), mNeedToUpdateStrategy(false) {
-        mRegretSum = new float[actionNum];
-        mStrategy = new float[actionNum];
-        mStrategySum = new float[actionNum];
-        mAverageStrategy = new float[actionNum];
+        mRegretSum = new float[actionNum] {0.f};
+        mStrategy = new float[actionNum] {0.f};
+        mStrategySum = new float[actionNum] {0.f};
+        mAverageStrategy = new float[actionNum] {0.f};
         for (int a = 0; a < actionNum; ++a) {
-            mRegretSum[a] = 0.0;
-            mStrategy[a] = 1.0 / (float) actionNum;
-            mStrategySum[a] = 0.0;
-            mAverageStrategy[a] = 0.0;
+            mRegretSum[a] = 0.f;
+            mStrategy[a] = 1.f / (float) actionNum;
+            mStrategySum[a] = 0.f;
+            mAverageStrategy[a] = 0.f;
         }
     }
 
@@ -64,7 +64,7 @@ namespace CFR {
             if (normalizingSum > 0) {
                 mStrategy[a] /= normalizingSum;
             } else {
-                mStrategy[a] = 1.0 / (float) mActionNum;
+                mStrategy[a] = 1.f / (float) mActionNum;
             }
         }
     }

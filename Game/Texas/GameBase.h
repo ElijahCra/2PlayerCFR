@@ -11,7 +11,7 @@ namespace Texas {
         /// constants
         static constexpr int PlayerNum = 2;
 
-        static constexpr int DeckCardNum = 52;
+        static constexpr int DeckCardNum = 26;
 
         static constexpr int maxRaises = 2;
         /// constructors

@@ -3,8 +3,10 @@
 //
 
 #include <gtest/gtest.h>
-#include <benchmark/benchmark.h>
+//#include <benchmark/benchmark.h>
 #include "../Game/Texas/Game.hpp"
+#include "../Game/Texas/Game.cpp"
+
 #include "../Game/Preflop/Game.hpp"
 #include "../CFR/RegretMinimizer.hpp"
 
@@ -76,7 +78,7 @@ namespace Texas {
         game3->transition(Game::Action::Raise);
         game3->transition(Game::Action::Reraise);
 
-        CFR::RegretMinimizer<Texas::Game> minimizer(seed);
+        CFR::RegretMinimizer<Game> minimizer(seed);
 
         float weiUtil = minimizer.ChanceCFR(*game3, 1, 1.0, 1.0);
 

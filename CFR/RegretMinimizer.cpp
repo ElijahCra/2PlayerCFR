@@ -40,11 +40,11 @@ namespace CFR {
                 //std::cout << utilities[0] << "\n";
                 std::cout << mGame->averageUtility << "\n";
 
-                printf("raise: %f, call: %f, fold: %f, iteration: %d \n", mNodeMap["5251"]->regretSum(0),
-                       mNodeMap["5251"]->regretSum(1), mNodeMap["5251"]->regretSum(2), i);
+                printf("raise: %.9g, call: %.9g, fold: %.9g, iteration: %d \n", mNodeMap["2625"]->regretSum(0),
+                       mNodeMap["2625"]->regretSum(1), mNodeMap["2625"]->regretSum(2), i);
 
-                printf("raise: %f, call: %f, fold: %f, iteration: %d \n", mNodeMap["5251"]->averageStrategy()[0],
-                       mNodeMap["5251"]->averageStrategy()[1], mNodeMap["5251"]->averageStrategy()[2], i);
+                printf("raise: %f, call: %f, fold: %f \n", mNodeMap["2625"]->averageStrategy()[0],
+                       mNodeMap["2625"]->averageStrategy()[1], mNodeMap["2625"]->averageStrategy()[2]);
             }
             mGame->reInitialize();
         }
@@ -76,7 +76,7 @@ namespace CFR {
 
         else if ("action" == type) { //Decision Node
 
-            float weightedUtil = 0.0;
+            float weightedUtil = 0.f;
 
             Node *node = mNodeMap[game.getInfoSet(game.currentPlayer)];
             if (node == nullptr) {
@@ -91,11 +91,9 @@ namespace CFR {
                 GameType gamePlusOneAction(game);
                 gamePlusOneAction.transition(actions[i]);
                 if (updatePlayer == game.currentPlayer) {
-                    oneActionWeightedUtil[i] = ChanceCFR(gamePlusOneAction, updatePlayer, probCounterFactual,
-                                                         probUpdatePlayer * currentStrategy[i]);
+                    oneActionWeightedUtil[i] = ChanceCFR(gamePlusOneAction, updatePlayer, probCounterFactual, probUpdatePlayer * currentStrategy[i]);
                 } else {
-                    oneActionWeightedUtil[i] = ChanceCFR(gamePlusOneAction, updatePlayer,
-                                                         probCounterFactual * currentStrategy[i], probUpdatePlayer);
+                    oneActionWeightedUtil[i] = ChanceCFR(gamePlusOneAction, updatePlayer, probCounterFactual * currentStrategy[i], probUpdatePlayer);
                 }
                 weightedUtil += currentStrategy[i] * oneActionWeightedUtil[i];
             }
