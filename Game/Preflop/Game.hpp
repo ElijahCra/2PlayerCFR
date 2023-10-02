@@ -8,10 +8,11 @@
 #include "GameState.hpp"
 #include <random>
 #include <array>
+#include "GameBase.h"
 
 namespace Preflop {
 
-    class Game {
+    class Game : public GameBase {
     public:
 
 
@@ -19,7 +20,7 @@ namespace Preflop {
 
         inline Preflop::GameState *getCurrentState() const { return currentState; }
 
-        void transition(Preflop::Action action);
+        void transition(Action action);
 
         void setState(GameState &newState, Action action);
 
