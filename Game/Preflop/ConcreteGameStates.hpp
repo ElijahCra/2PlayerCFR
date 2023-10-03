@@ -12,11 +12,11 @@ namespace Preflop {
 
     class ChanceState : public GameState {
     public:
-        void enter(Game *game, Action action) override;
+        void enter(Game *game, GameBase::Action action) override;
 
-        void transition(Game *game, Action action) override;
+        void transition(Game *game, GameBase::Action action) override;
 
-        void exit(Game *game, Action action) override;
+        void exit(Game *game, GameBase::Action action) override;
 
         static GameState &getInstance();
 
@@ -31,15 +31,13 @@ namespace Preflop {
 
     class ActionStateNoBet : public GameState {
     public:
-        void enter(Game *game, Action action) override;
+        void enter(Game *game, GameBase::Action action) override;
 
-        void transition(Game *game, Action action) override;
+        void transition(Game *game, GameBase::Action action) override;
 
-        void exit(Game *game, Action action) override;
+        void exit(Game *game, GameBase::Action action) override;
 
         static GameState &getInstance();
-
-        std::string type();
 
     private:
         ActionStateNoBet() = default;
@@ -52,15 +50,13 @@ namespace Preflop {
 
     class ActionStateBet : public GameState {
     public:
-        void enter(Game *game, Action action) override;
+        void enter(Game *game, GameBase::Action action) override;
 
-        void transition(Game *game, Action action) override;
+        void transition(Game *game, GameBase::Action action) override;
 
-        void exit(Game *game, Action action) override;
+        void exit(Game *game, GameBase::Action action) override;
 
         static GameState &getInstance();
-
-        std::string type();
 
     private:
         ActionStateBet() = default;
@@ -73,15 +69,13 @@ namespace Preflop {
 
     class TerminalState : public GameState {
     public:
-        void enter(Game *game, Action action) override;
+        void enter(Game *game, GameBase::Action action) override;
 
-        void transition(Game *game, Action action) override;
+        void transition(Game *game, GameBase::Action action) override;
 
-        void exit(Game *game, Action action) override;
+        void exit(Game *game, GameBase::Action action) override;
 
         static GameState &getInstance();
-
-        std::string type();
 
     private:
         TerminalState() = default;

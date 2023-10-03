@@ -45,7 +45,7 @@ namespace Preflop {
         utilities[2] += amount;
     }
 
-    std::vector<Action> Game::getActions() const {
+    std::vector<GameBase::Action> Game::getActions() const {
         return availActions;
     }
 

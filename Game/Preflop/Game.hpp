@@ -5,16 +5,15 @@
 #ifndef INC_2PLAYERCFR_GAME_HPP
 #define INC_2PLAYERCFR_GAME_HPP
 
-#include "GameState.hpp"
 #include <random>
 #include <array>
 #include "GameBase.h"
+#include "GameState.hpp"
 
 namespace Preflop {
 
     class Game : public GameBase {
     public:
-
 
         explicit Game(std::mt19937 &engine);
 
@@ -70,7 +69,12 @@ namespace Preflop {
 
         double averageUtilitySum;
 
-    private:
+        constexpr int getChanceActionNum() const {
+            return DeckCardNum * (DeckCardNum - 1) * (DeckCardNum - 2) * (DeckCardNum - 3);
+        }
+
+
+            private:
         std::string type;
         /// @brief the players private info set, contains their cards public cards and all actions played
         std::array<std::string, PlayerNum> infoSet{};

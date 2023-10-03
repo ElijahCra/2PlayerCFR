@@ -82,11 +82,11 @@ namespace CFR {
                 //std::cout << utilities[0] << "\n";
                 std::cout << mGame->averageUtility << "\n";
 
-                printf("raise: %.9g, call: %.9g, fold: %.9g, iteration: %d \n", mNodeMap["0502"]->getRegretSum(0),
-                       mNodeMap["0502"]->getRegretSum(1), mNodeMap["0502"]->getRegretSum(2), i);
+                printf("raise: %.6g, call: %.6g, fold: %.6g, iteration: %d \n", mNodeMap["1211"]->getRegretSum(0),
+                       mNodeMap["1211"]->getRegretSum(1), mNodeMap["1211"]->getRegretSum(2), i);
 
-                printf("raise: %f, call: %f, fold: %f \n", mNodeMap["0502"]->getAverageStrategy()[0],
-                       mNodeMap["0502"]->getAverageStrategy()[1], mNodeMap["0502"]->getAverageStrategy()[2]);
+                printf("raise: %.6g, call: %.6g, fold: %.6g \n", mNodeMap["1211"]->getAverageStrategy()[0],
+                       mNodeMap["1211"]->getAverageStrategy()[1], mNodeMap["1211"]->getAverageStrategy()[2]);
             }
             mGame->reInitialize();
         }

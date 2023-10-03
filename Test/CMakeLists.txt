@@ -16,8 +16,14 @@ FetchContent_MakeAvailable(googletest)
 
 
 enable_testing()
-set (benchmark_DIR  ../benchmark/build/)
-find_package(benchmark REQUIRED)
+set (benchmark_DIR  ./benchmark/build/)
+find_package(benchmark)
+IF(${benchmark_FOUND})
+
+ELSE(${benchmark_FOUND})
+    set (benchmark_DIR  ../benchmark/build/)
+    find_package(benchmark REQUIRED)
+ENDIF(${benchmark_FOUND})
 add_executable(
         hello_test
         test.cpp

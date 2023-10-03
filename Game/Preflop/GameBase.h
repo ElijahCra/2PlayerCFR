@@ -27,8 +27,6 @@ namespace Preflop {
 
     };
 
-
-
 } // Preflop
 
 #endif //INC_2PLAYERCFR_PREFLOP_H

@@ -27,8 +27,6 @@ namespace Texas {
 
     };
 
-
-
 } // Texas
 
 #endif //INC_2PLAYERCFR_G_H
