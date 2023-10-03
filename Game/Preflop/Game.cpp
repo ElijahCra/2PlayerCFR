@@ -35,14 +35,14 @@ namespace Preflop {
     }
 
     void Game::addMoney() { //preflop ante's
-        utilities[0] = -1;
-        utilities[1] = -0.5;
+        utilities[0] = -0.5;
+        utilities[1] = -1;
         utilities[2] = 1.5;
     }
 
     void Game::addMoney(double amount) {
         utilities[currentPlayer] -= amount;
-        utilities[2] += amount;
+        utilities[PlayerNum] += amount;
     }
 
     std::vector<GameBase::Action> Game::getActions() const {

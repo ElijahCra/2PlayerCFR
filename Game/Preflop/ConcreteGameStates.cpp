@@ -11,14 +11,8 @@ namespace Preflop {
 
     void ChanceState::enter(Game *game, Game::Action action) {
         //deal cards
-        if (Game::DeckCardNum == 13) {
-            for (int i = 0; i < Game::DeckCardNum; ++i) {
-                game->deckCards[i] = 1 + i * 4;
-            }
-        } else {
-            for (int i = 1; i <= Game::DeckCardNum; ++i) {
-                game->deckCards[i - 1] = i;
-            }
+        for (int i = 0; i < Game::DeckCardNum; ++i) {
+            game->deckCards[i = i + 1;
         }
 
         // shuffle cards
@@ -59,7 +53,7 @@ namespace Preflop {
 
     void ChanceState::exit(Game *game, Game::Action action) {
         game->setActions(std::vector<Game::Action>{Game::Action::None});
-        game->updatePlayer();
+        game->currentPlayer = 0; //dealer (p0) posts sb and plays first preflop
 
     }
 
