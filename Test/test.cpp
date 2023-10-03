@@ -99,7 +99,7 @@ namespace Texas {
         }
 
 
-        EXPECT_EQ(weiUtil, 0.5);
+        EXPECT_EQ(weiUtil, 0.651330948f);
 
 
     }

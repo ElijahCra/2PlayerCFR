@@ -77,6 +77,7 @@ namespace Texas {
         } else {
             game->currentPlayer = 1;
         }
+        game->prevAction = Game::Action::None;
     }
 
     void ChanceState::transition(Game *game, Game::Action action) {
@@ -106,11 +107,21 @@ namespace Texas {
             game->setState(ActionStateNoBet::getInstance(), action);
         } else if (Game::Action::Check == action) {
             if (3 == game->currentRound) {
-                game->setState(TerminalState::getInstance(), action);
+                if (Game::Action::Check == game->prevAction) {
+                    game->setState(TerminalState::getInstance(), action);
+                } else {
+                    game->setState(ActionStateNoBet::getInstance(), action);
+                    game->prevAction = Game::Action::Check;
+                }
             } else if (0 == game->currentRound){
                 game->setState(ChanceState::getInstance(), action);
             } else {
-                game->setState(ActionStateNoBet::getInstance(), action);
+                if (Game::Action::Check == game->prevAction) {
+                    game->setState(ChanceState::getInstance(), action);
+                } else {
+                    game->setState(ActionStateNoBet::getInstance(), action);
+                    game->prevAction = Game::Action::Check;
+                }
             }
         } else if (Game::Action::Fold == action) { //first action small-blind folds
             game->setState(TerminalState::getInstance(),
@@ -132,7 +143,11 @@ namespace Texas {
             game->addMoney(1.5);
             ++game->raiseNum;
         } else if (Game::Action::Check == action) {
-            ++game->currentRound;
+            if (game->currentRound == 0) {
+                ++game->currentRound;
+            } else if (Game::Action::Check == game->prevAction) {
+                ++game->currentRound;
+            }
         } else if (Game::Action::Fold == action) {}
         game->updatePlayer();
         game->updateInfoSet(action);
