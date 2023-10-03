@@ -12,7 +12,7 @@ namespace Preflop {
     void ChanceState::enter(Game *game, Game::Action action) {
         //deal cards
         for (int i = 0; i < Game::DeckCardNum; ++i) {
-            game->deckCards[i = i + 1;
+            game->deckCards[i] = i + 1;
         }
 
         // shuffle cards
