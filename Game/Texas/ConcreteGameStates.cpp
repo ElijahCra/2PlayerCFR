@@ -10,6 +10,7 @@
 namespace Texas {
 
     void ChanceState::enter(Game *game, Game::Action action) {
+        game->setType("chance");
         switch (game->currentRound) {
             case 0: {
                 //deal cards
