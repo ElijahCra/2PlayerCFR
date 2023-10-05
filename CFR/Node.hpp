@@ -11,8 +11,15 @@ namespace CFR {
 /// @brief Information set node class definition
     class Node {
     public:
-        /// @param actionNum Number of available actions in this node
-        explicit Node(int actionNum = 0);
+        /// @param actionNum allowable actions at this node
+        explicit Node(int actionNum);
+
+        float* calcStrategy(float realizationWeight);
+
+        float *calcAverageStrategy();
+
+
+        /*
 
         ~Node();
 
@@ -36,12 +43,21 @@ namespace CFR {
 
         uint8_t getActionNum() const;
 
+        */
+
 
 
     private:
+
+        float *regretSum;
+        float *strategy;
+        float *strategySum;
+        float * averageStrategy;
+
+        uint8_t actionNum;
+
+        /*
         void calcAverageStrategy();
-
-
         uint8_t actionNum;
         float *regretSum;
         float *strategy;
@@ -49,6 +65,7 @@ namespace CFR {
         float *averageStrategy;
         bool alreadyCalculated;
         bool needToUpdateStrategy;
+         */
     };
 }
 #endif //INC_2PLAYERCFR_NODE_HPP

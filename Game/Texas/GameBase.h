@@ -18,11 +18,21 @@ namespace Texas {
 
         enum class Action : int {
             None = -1,
-            Check = 0,
-            Fold = 1,
+            Fold = 0,
+            Check = 1,
             Call = 2,
             Raise = 3,
-            Reraise = 4
+            Raise1 = 4,
+            Raise2 = 5,
+            Raise3 = 6,
+            Raise5 = 7,
+            Raise10 = 8,
+            Reraise2 = 9,
+            Reraise4 = 10,
+            Reraise6 = 11,
+            Reraise10 = 12,
+            Reraise20 = 13,
+            AllIn = 13,
         };
 
     };

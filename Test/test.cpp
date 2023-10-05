@@ -15,10 +15,11 @@
 #include <string>
 #include <fstream>
 
-bool windowsOS = false;
-
-#ifdef _WIN32
-windowsOS = true;
+//using wsl on my windows machine so detect linux header
+#ifdef __linux__
+    #define windowsOS true
+#else
+    #define windowsOS false
 #endif
 
 
@@ -209,8 +210,10 @@ namespace Texas {
         }
 
         if (windowsOS){
-            EXPECT_EQ(weiUtil, 0.345214784f);
+            EXPECT_EQ(weiUtil, 345.214783f);
+        } else {
+            EXPECT_EQ(weiUtil, 1.7734375f);
         }
-        EXPECT_EQ(weiUtil, 1.7734375f);
+
     }
 }

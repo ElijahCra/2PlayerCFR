@@ -18,7 +18,7 @@ namespace Texas {
                     game->deckCards[i] = i + 1;
                 }
                 // shuffle cards
-                std::shuffle(game->deckCards.begin(), game->deckCards.end(), game->RNG);
+                std::shuffle(game->deckCards.begin(), game->deckCards.end(), game->RNG); // todo compare this to fisher-yates shuffle speed
 
                 //deal player cards
                 for (int player = 0; player < Game::PlayerNum; ++player) {

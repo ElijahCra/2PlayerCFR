@@ -4,6 +4,44 @@
 
 namespace CFR {
 
+    Node::Node(int actionNum) : actionNum(actionNum) {
+
+        regretSum = new float[actionNum];
+        strategy = new float[actionNum];
+        strategySum = new float[actionNum];
+        averageStrategy= new float[actionNum];
+
+    }
+
+    float *Node::calcStrategy(float realizationWeight) {
+        float normalizingSum = 0;
+        for (int a = 0; a < actionNum; a++) {
+            strategy[a] = regretSum[a] > 0 ? regretSum[a] : 0;
+            normalizingSum += strategy[a];
+        }
+        for (int a = 0; a < actionNum; a++) {
+            if (normalizingSum > 0)
+                strategy[a] /= normalizingSum;
+            else
+                strategy[a] = 1.f / (float)actionNum;
+            strategySum[a] += realizationWeight * strategy[a];
+        }
+        return strategy;
+    }
+
+    float *Node::calcAverageStrategy() {
+        float normalizingSum = 0;
+        for (int a = 0; a < actionNum; a++)
+            normalizingSum += strategySum[a];
+        for (int a = 0; a < actionNum; a++)
+            if (normalizingSum > 0)
+                averageStrategy[a] = strategySum[a] / normalizingSum;
+            else
+                averageStrategy[a] = 1.f / (float)actionNum;
+        return averageStrategy;
+    }
+    /*
+
     Node::Node(const int actionNum) : actionNum(actionNum), alreadyCalculated(false), needToUpdateStrategy(false) {
         regretSum = new float[actionNum] {0.f};
         strategy = new float[actionNum] {0.f};
@@ -101,4 +139,5 @@ namespace CFR {
         }
         alreadyCalculated = true;
     }
+     */
 }
