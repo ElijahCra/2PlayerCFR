@@ -36,6 +36,8 @@ namespace CFR {
 
         uint8_t getActionNum() const;
 
+
+
     private:
         void calcAverageStrategy();
 

@@ -111,6 +111,50 @@ namespace Texas {
         EXPECT_EQ(game2->getType(), "terminal");
     }
 
+    TEST(GameTests, Game4) {
+        auto rng2 = std::mt19937(std::random_device()());
+        Game *game2 = new Game(rng2);
+
+        EXPECT_EQ(game2->currentRound, 0);
+        EXPECT_EQ(game2->getType(), "chance");
+        game2->transition(Game::Action::None);
+        EXPECT_EQ(game2->getType(), "action");
+        game2->transition(Game::Action::Call);
+        EXPECT_EQ(game2->getType(), "action");
+        game2->transition(Game::Action::Check);
+        EXPECT_EQ(game2->getType(), "chance");
+
+        EXPECT_EQ(game2->currentRound, 1);
+        game2->transition(Game::Action::None);
+        EXPECT_EQ(game2->getType(), "action");
+        game2->transition(Game::Action::Check);
+        EXPECT_EQ(game2->getType(), "action");
+        game2->transition(Game::Action::Raise);
+        EXPECT_EQ(game2->getType(), "action");
+        game2->transition(Game::Action::Reraise);
+        EXPECT_EQ(game2->getType(), "action");
+        game2->transition(Game::Action::Call);
+        EXPECT_EQ(game2->getType(), "chance");
+
+        EXPECT_EQ(game2->currentRound, 2);
+        game2->transition(Game::Action::None);
+        EXPECT_EQ(game2->getType(), "action");
+        game2->transition(Game::Action::Check);
+        EXPECT_EQ(game2->getType(), "action");
+        game2->transition(Game::Action::Check);
+        EXPECT_EQ(game2->getType(), "chance");
+
+        EXPECT_EQ(game2->currentRound, 3);
+        game2->transition(Game::Action::None);
+        EXPECT_EQ(game2->getType(), "action");
+        game2->transition(Game::Action::Check);
+        EXPECT_EQ(game2->getType(), "action");
+        game2->transition(Game::Action::Raise);
+        EXPECT_EQ(game2->getType(), "action");
+        game2->transition(Game::Action::Fold);
+        EXPECT_EQ(game2->getType(), "terminal");
+    }
+
     TEST(UtilityTests, WorkingTest) {
         Utility::initLookup();
         int cards10[] = {1, 2, 3, 4, 5, 6, 7};

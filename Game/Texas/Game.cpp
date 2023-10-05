@@ -61,7 +61,7 @@ namespace Texas {
     float Game::getUtility(int payoffPlayer) const {
 
         if (3 == winner) {
-            return utilities[2] / 2.0 + utilities[payoffPlayer];
+            return utilities[2] / 2.f + utilities[payoffPlayer];
         } else if (payoffPlayer == winner) {
             return utilities[2] + utilities[payoffPlayer];
         } else if (-1 == winner) {

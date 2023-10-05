@@ -31,6 +31,9 @@ namespace CFR {
         /// @param probChance probability of reaching current history given only the chance contributions
         float ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer);
 
+        /// @brief same as ChanceCFR except at each action node sample one action for non update player, sample all actions for update player
+        float ActionChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer);
+
     private:
         void preGenTree();
         void preGenTreeMultiThreaded();
@@ -70,7 +73,7 @@ namespace CFR {
         float utilities[GameType::PlayerNum];
         for (int i = 0; i < iterations; ++i) {
             for (int p = 0; p < GameType::PlayerNum; ++p) {
-                utilities[p] = ChanceCFR(*mGame, p, 1.0, 1.0);
+                utilities[p] = ActionChanceCFR(*mGame, p, 1.0, 1.0);
             }
             mGame->averageUtilitySum += utilities[1];
             mGame->averageUtility = mGame->averageUtilitySum / ((float)i);
@@ -122,7 +125,7 @@ namespace CFR {
 
             Node *node = mNodeMap[game.getInfoSet(game.currentPlayer)];
             if (node == nullptr) {
-                node = new Node(static_cast<int>(actionNum));
+                node = new Node(actionNum);
                 mNodeMap[game.getInfoSet(game.currentPlayer)] = node;
             }
 
@@ -154,6 +157,77 @@ namespace CFR {
             return weightedUtil;
         } else { throw std::logic_error("not terminal action or chance type"); }
     }
+
+    template<typename GameType>
+    float RegretMinimizer<GameType>::ActionChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) {
+        ++mNodeCount;
+
+        std::string type = game.getType();
+
+        if ("terminal" == type) {
+            return game.getUtility(updatePlayer);
+        }
+
+
+        //actions available at this game state / node
+        auto const actions = game.getActions();
+        int const actionNum = static_cast<int>(actions.size());
+
+        if ("chance" == type) {
+            //sample one chance outcome at each chance node
+            GameType copiedGame(game);
+            copiedGame.transition(GameType::Action::None);
+            float weightedUtil;
+            weightedUtil = ActionChanceCFR(copiedGame, updatePlayer, probCounterFactual * (1.0/game.getChanceActionNum()), probUpdatePlayer);
+            return weightedUtil;
+        }
+
+        else if ("action" == type) { //Decision Node
+        float weightedUtil = 0.f;
+
+        Node *node = mNodeMap[game.getInfoSet(game.currentPlayer)];
+        if (node == nullptr) {
+            node = new Node(actionNum);
+            mNodeMap[game.getInfoSet(game.currentPlayer)] = node;
+        }
+
+        const float *currentStrategy = node->getStrategy();
+        float oneActionWeightedUtil[actionNum];
+        if (updatePlayer == game.currentPlayer) {
+            for (int i = 0; i < actionNum; ++i) {
+                GameType gamePlusOneAction(game);
+                gamePlusOneAction.transition(actions[i]);
+                if (updatePlayer == game.currentPlayer) {
+                    oneActionWeightedUtil[i] = ActionChanceCFR(gamePlusOneAction, updatePlayer, probCounterFactual, probUpdatePlayer * currentStrategy[i]);
+                } else {
+                    oneActionWeightedUtil[i] = ActionChanceCFR(gamePlusOneAction, updatePlayer, probCounterFactual * currentStrategy[i], probUpdatePlayer);
+                }
+                weightedUtil += currentStrategy[i] * oneActionWeightedUtil[i];
+            }
+        } else { //sample single player action for non update player
+            GameType gamePlusOneAction(game);
+            std::discrete_distribution<int> actionSpread(currentStrategy,currentStrategy+actionNum);
+            auto sampledAction = actionSpread(mRNG);
+            gamePlusOneAction.transition(actions[sampledAction]);
+            weightedUtil = ActionChanceCFR(gamePlusOneAction,updatePlayer, probCounterFactual*currentStrategy[sampledAction], probUpdatePlayer);
+        }
+
+
+        /// do regret calculation and matching based on the returned weightedUtil
+
+        if (updatePlayer == game.currentPlayer) {
+            for (int i = 0; i < actions.size(); ++i) {
+                const float regret = oneActionWeightedUtil[i] - weightedUtil;
+                const float regretSum = node->getRegretSum(i) + probCounterFactual * regret;
+                node->updateRegretSum(i, regretSum);
+            }
+            // update average getStrategy across all training iterations
+            node->updateStrategySum(currentStrategy, probUpdatePlayer);
+        }
+        return weightedUtil;
+        } else { throw std::logic_error("not terminal action or chance type"); }
+    }
+
     template<typename GameType>
     void RegretMinimizer<GameType>::preGenTree() {
         //todo
