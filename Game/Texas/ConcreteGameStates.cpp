@@ -139,9 +139,9 @@ namespace Texas {
 
     void ActionStateNoBet::exit(Game *game, Game::Action action) {
         if (Game::Action::Call == action) {
-            game->addMoney(0.5);
+            game->addMoney(500);
         } else if (Game::Action::Raise == action) {
-            game->addMoney(1.5);
+            game->addMoney(1500);
             ++game->raiseNum;
         } else if (Game::Action::Check == action) {
             if (game->currentRound == 0) {
@@ -192,10 +192,10 @@ namespace Texas {
 
     void ActionStateBet::exit(Game *game, Game::Action action) {
         if (Game::Action::Call == action) {
-            game->addMoney(1.0);
+            game->addMoney(1000);
             ++game->currentRound;
         } else if (Game::Action::Reraise == action) {
-            game->addMoney(2.0);
+            game->addMoney(2000);
             ++game->raiseNum;
         } else if (Game::Action::Fold == action) {}
         game->updateInfoSet(action);

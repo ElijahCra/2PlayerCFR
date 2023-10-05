@@ -39,10 +39,10 @@ namespace Texas {
         currentState->transition(this, action);
     }
 
-    void Game::addMoney() { //preflop ante's
-        utilities[0] = -0.5;
-        utilities[1] = -1;
-        utilities[2] = 1.5;
+    void Game::addMoney() { //preflop ante's in milliBigBlinds
+        utilities[0] = -500;
+        utilities[1] = -1000;
+        utilities[2] = 1500;
     }
 
     void Game::addMoney(float amount) {
