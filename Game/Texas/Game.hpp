@@ -12,9 +12,9 @@
 
 namespace Texas {
 
+
     class Game : public GameBase {
     public:
-
         explicit Game(std::mt19937 &engine); //boost rng
 
         inline GameState *getCurrentState() const { return currentState; }
@@ -71,8 +71,6 @@ namespace Texas {
 
         int currentRound;
 
-
-
         ///@brief how many unique deals are possible
         constexpr int getChanceActionNum() const{
             if (0 == currentRound) {
@@ -84,8 +82,9 @@ namespace Texas {
                 return DeckCardNum - (currentRound + 5);
             }
         }
-
         Action prevAction;
+
+        std::array<float,PlayerNum> playerStacks;
         
     private:
         std::string type;
@@ -100,9 +99,7 @@ namespace Texas {
 
         ///@brief actions available at this point in the game
         std::vector <Action> availActions;
-
-
     };
-
 }
+
 #endif //INC_TEXAS_GAME_HPP

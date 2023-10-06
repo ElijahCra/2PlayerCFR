@@ -29,10 +29,10 @@ public:
     /// @param probCounterFactual reach contribution of all players and chance except for active player (who is the update player for this implementation)
     /// @param probUpdatePlayer reach contribution of only the active player (update player)
     /// @param probChance probability of reaching current history given only the chance contributions
-    float ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer);
+    float ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer, float probChance);
 
     /// @brief same as ChanceCFR except at each action node sample one action for non update player, sample all actions for update player
-    float ActionChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer);
+    float ActionChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer, float probChance);
 
 private:
     void preGenTree();
@@ -96,8 +96,7 @@ void RegretMinimizer<GameType>::Train(int iterations) {
 }
 
 template<typename GameType>
-float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual,
-                                           float probUpdatePlayer) {
+float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer, float probChance) {
     ++mNodeCount;
 
     std::string type = game.getType();
@@ -144,14 +143,14 @@ float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlaye
         }
 
         /// do regret calculation and matching based on the returned weightedUtil
-
         if (updatePlayer == game.currentPlayer) {
             for (int i = 0; i < actions.size(); ++i) {
                 const float regret = oneActionWeightedUtil[i] - weightedUtil;
-                const float regretSum = node->getRegretSum(i) + probCounterFactual * regret;
-                node->updateRegretSum(i, regretSum);
+                const float localRegretSum = node->getRegretSum()[i] + probCounterFactual * regret;
+                node->updateRegretSum(i, localRegretSum);
             }
-            // update average getStrategy across all training iterations
+
+            /// update average getStrategy across all training iterations
             node->updateStrategySum(currentStrategy, probUpdatePlayer);
         }
         return weightedUtil;
@@ -159,7 +158,7 @@ float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlaye
 }
 
 template<typename GameType>
-float RegretMinimizer<GameType>::ActionChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) {
+float RegretMinimizer<GameType>::ActionChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer, float probChance) {
     ++mNodeCount;
 
     std::string type = game.getType();
@@ -203,7 +202,7 @@ float RegretMinimizer<GameType>::ActionChanceCFR(const GameType &game, int updat
 
             for (int i = 0; i < actions.size(); ++i) {
                 const float regret = oneActionWeightedUtil[i] - weightedUtil;
-                const float regretSum = node->getRegretSum(i) + probCounterFactual * regret;
+                const float regretSum = node->getRegretSum()[i] + probCounterFactual * regret;
                 node->updateRegretSum(i, regretSum);
             }
             // update average getStrategy across all training iterations

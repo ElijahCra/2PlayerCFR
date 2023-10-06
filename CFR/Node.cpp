@@ -40,6 +40,18 @@ namespace CFR {
                 averageStrategy[a] = 1.f / (float)actionNum;
         return averageStrategy;
     }
+
+    const float *Node::getStrategy() {
+        return strategy;
+    }
+
+    const float *Node::getRegretSum() {
+        return regretSum;
+    }
+
+    void Node::updateRegretSum(int i, const float regret) {
+        regretSum[i] = regret;
+    }
     /*
 
     Node::Node(const int actionNum) : actionNum(actionNum), alreadyCalculated(false), needToUpdateStrategy(false) {

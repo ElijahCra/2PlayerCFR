@@ -47,6 +47,12 @@ namespace CFR {
 
 
 
+        const float *getStrategy();
+
+        const float *getRegretSum();
+
+        void updateRegretSum(int i, const float regret);
+
     private:
 
         float *regretSum;

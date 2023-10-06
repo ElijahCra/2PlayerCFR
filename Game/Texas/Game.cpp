@@ -4,6 +4,7 @@
 
 #include "Game.hpp"
 #include <utility>
+#include <unordered_map>
 #include <stdexcept>
 #include <cassert>
 #include "ConcreteGameStates.hpp"
@@ -14,15 +15,16 @@ namespace Texas {
                                        currentPlayer(0),
                                        deckCards(),
                                        raiseNum(0),
-                                       utilities(),
+                                       utilities({0.f}),
                                        availActions(),
-                                       infoSet(),
+                                       infoSet({""}),
                                        winner(-1),
                                        type("chance"),
                                        averageUtility(0.f),
                                        averageUtilitySum(0.f),
                                        currentRound(0),
-                                       prevAction(Action::None) {
+                                       prevAction(Action::None),
+                                       playerStacks({100.f}){
         currentState = &ChanceState::getInstance();
         currentState->enter(this, Action::None);
     }
@@ -94,19 +96,23 @@ namespace Texas {
         }
     }
 
-    std::string Game::actionToStr(Action action) {
-        if (Action::Check == action) {
-            return {"Ch"};
-        } else if (Action::Fold == action) {
-            return {"Fo"};
-        } else if (Action::Raise == action) {
-            return {"Ra"};
-        } else if (Action::Call == action) {
-            return {"Ca"};
-        } else if (Action::Reraise == action) {
-            return {"Re"};
-        } else { throw std::logic_error("cannot convert that action to str"); }
-
+     std::string Game::actionToStr(Action action) {
+        static std::unordered_map<Action, std::string> converter = {
+                {Action::Check, "Ch"},
+                {Action::Fold, "Fo"},
+                {Action::Call, "Ca"},
+                {Action::Raise1, "Ra1"},
+                {Action::Raise2, "Ra2"},
+                {Action::Raise3, "Ra3"},
+                {Action::Raise5, "Ra5"},
+                {Action::Raise10, "Ra10"},
+                {Action::Reraise2, "Re2"},
+                {Action::Reraise4, "Re4"},
+                {Action::Reraise6, "Re6"},
+                {Action::Reraise10, "Re10"},
+                {Action::Reraise20, "Re20"},
+                {Action::AllIn, "AI"}
+        };
     }
 
     void Game::updatePlayer() {
