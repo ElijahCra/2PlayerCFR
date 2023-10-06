@@ -14,44 +14,19 @@ namespace CFR {
         /// @param actionNum allowable actions at this node
         explicit Node(int actionNum);
 
-        float* calcStrategy(float realizationWeight);
+        float* calcUpdatedStrategy(float realizationWeight);
 
         float *calcAverageStrategy();
 
+        const float *getAverageStrategy() const;
 
-        /*
+        const float *getStrategy() const;
 
-        ~Node();
+        const float *getRegretSum() const;
 
+        void updateRegretSum(int i, float regret, float probCounterFactual);
 
-        const float *getStrategy();
-
-
-        const float *getAverageStrategy();
-
-
-        void updateStrategySum(const float *strategy, float realizationWeight);
-
-
-        void updateStrategy();
-
-
-        float getRegretSum(int action) const;
-
-
-        void updateRegretSum(int action, float value);
-
-        uint8_t getActionNum() const;
-
-        */
-
-
-
-        const float *getStrategy();
-
-        const float *getRegretSum();
-
-        void updateRegretSum(int i, const float regret);
+        void updateStrategySum(const float *currentStrategy, float probUpdatePlayer);
 
     private:
 
@@ -60,6 +35,7 @@ namespace CFR {
         float *strategySum;
         float * averageStrategy;
 
+        bool updateThisStrategy;
         uint8_t actionNum;
 
         /*

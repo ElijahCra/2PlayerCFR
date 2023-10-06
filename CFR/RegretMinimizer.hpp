@@ -78,18 +78,20 @@ void RegretMinimizer<GameType>::Train(int iterations) {
         mGame->averageUtilitySum += utilities[1];
         mGame->averageUtility = mGame->averageUtilitySum / ((float)i);
 
-        for (auto &itr: mNodeMap) {
-            itr.second->updateStrategy();
-        }
+        /*for (auto &itr: mNodeMap) {
+            itr.second->calcUpdatedStrategy();
+        }*/
         if (i % 100 == 0 and i > 1000) {
             //std::cout << utilities[0] << "\n";
             std::cout << mGame->averageUtility << "\n";
 
-            printf("raise: %.6g, call: %.6g, fold: %.6g, iteration: %d \n", mNodeMap["1211"]->getRegretSum(0),
-                   mNodeMap["1211"]->getRegretSum(1), mNodeMap["1211"]->getRegretSum(2), i);
+            auto regretSum = mNodeMap["1211"]->getRegretSum();
+            printf("raise: %.6g, call: %.6g, fold: %.6g, iteration: %d \n", regretSum[0],
+                   regretSum[1], regretSum[2], i);
 
-            printf("raise: %.6g, call: %.6g, fold: %.6g \n", mNodeMap["1211"]->getAverageStrategy()[0],
-                   mNodeMap["1211"]->getAverageStrategy()[1], mNodeMap["1211"]->getAverageStrategy()[2]);
+            auto averageStrat = mNodeMap["1211"]->getAverageStrategy();
+            printf("raise: %.6g, call: %.6g, fold: %.6g \n", averageStrat[0],
+                   averageStrat[1], averageStrat[2]);
         }
         mGame->reInitialize();
     }
@@ -152,7 +154,10 @@ float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlaye
 
             /// update average getStrategy across all training iterations
             node->updateStrategySum(currentStrategy, probUpdatePlayer);
+
+            node->calcUpdatedStrategy(probUpdatePlayer);
         }
+
         return weightedUtil;
     } else { throw std::logic_error("not terminal action or chance type"); }
 }
@@ -202,10 +207,9 @@ float RegretMinimizer<GameType>::ActionChanceCFR(const GameType &game, int updat
 
             for (int i = 0; i < actions.size(); ++i) {
                 const float regret = oneActionWeightedUtil[i] - weightedUtil;
-                const float regretSum = node->getRegretSum()[i] + probCounterFactual * regret;
-                node->updateRegretSum(i, regretSum);
+                node->updateRegretSum(i, regret, probCounterFactual);
             }
-            // update average getStrategy across all training iterations
+
             node->updateStrategySum(currentStrategy, probUpdatePlayer);
 
 

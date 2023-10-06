@@ -14,7 +14,6 @@ namespace Texas {
         static constexpr int DeckCardNum = 12;
 
         static constexpr int maxRaises = 2;
-        /// constructors
 
         enum class Action : int {
             None = -1,
@@ -33,9 +32,7 @@ namespace Texas {
             Reraise20,
             AllIn
         };
-
     };
-
 } // Texas
 
 #endif //INC_2PLAYERCFR_G_H
