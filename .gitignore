@@ -37,4 +37,5 @@
 WSL*/
 .idea/
 cmake-build*/
-Test/benchmark/
+
+/Test/benchmark/
