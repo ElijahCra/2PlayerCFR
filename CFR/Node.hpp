@@ -14,9 +14,9 @@ namespace CFR {
         /// @param actionNum allowable actions at this node
         explicit Node(int actionNum);
 
-        float* calcUpdatedStrategy(float realizationWeight);
+        void calcUpdatedStrategy();
 
-        float *calcAverageStrategy();
+        void calcAverageStrategy();
 
         const float *getAverageStrategy() const;
 
@@ -24,7 +24,7 @@ namespace CFR {
 
         const float *getRegretSum() const;
 
-        void updateRegretSum(int i, float regret, float probCounterFactual);
+        void updateRegretSum(int i, float actionRegret, float probCounterFactual);
 
         void updateStrategySum(const float *currentStrategy, float probUpdatePlayer);
 
@@ -35,7 +35,7 @@ namespace CFR {
         float *strategySum;
         float * averageStrategy;
 
-        bool updateThisStrategy;
+        //bool updateThisStrategy;
         uint8_t actionNum;
 
         /*

@@ -13,10 +13,10 @@ namespace CFR {
 
     }
 
-    float *Node::calcUpdatedStrategy(float realizationWeight) {
-        if (!updateThisStrategy) {
+    void Node::calcUpdatedStrategy() {
+        /*if (!updateThisStrategy) {
             return;
-        }
+        }*/
         float normalizingSum = 0;
         for (int a = 0; a < actionNum; a++) {
             strategy[a] = regretSum[a] > 0 ? regretSum[a] : 0;
@@ -27,12 +27,10 @@ namespace CFR {
                 strategy[a] /= normalizingSum;
             else
                 strategy[a] = 1.f / (float)actionNum;
-            strategySum[a] += realizationWeight * strategy[a];
         }
-        return strategy;
     }
 
-    float *Node::calcAverageStrategy() {
+    void Node::calcAverageStrategy() {
         float normalizingSum = 0;
         for (int a = 0; a < actionNum; a++)
             normalizingSum += strategySum[a];
@@ -41,7 +39,6 @@ namespace CFR {
                 averageStrategy[a] = strategySum[a] / normalizingSum;
             else
                 averageStrategy[a] = 1.f / (float)actionNum;
-        return averageStrategy;
     }
 
     const float *Node::getStrategy() const {
@@ -58,8 +55,8 @@ namespace CFR {
 
 
 
-    void Node::updateRegretSum(int i, float regret, float probCounterFactual) {
-        regretSum[i] += probCounterFactual * regret;
+    void Node::updateRegretSum(int i, float actionRegret, float probCounterFactual) {
+        regretSum[i] += probCounterFactual * actionRegret;
     }
 
     void Node::updateStrategySum(const float *currentStrategy, float probUpdatePlayer) {
