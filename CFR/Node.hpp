@@ -14,6 +14,8 @@ namespace CFR {
         /// @param actionNum allowable actions at this node
         explicit Node(int actionNum);
 
+        ~Node();
+
         void calcUpdatedStrategy();
 
         void calcAverageStrategy();
@@ -38,16 +40,6 @@ namespace CFR {
         //bool updateThisStrategy;
         uint8_t actionNum;
 
-        /*
-        void calcAverageStrategy();
-        uint8_t actionNum;
-        float *regretSum;
-        float *strategy;
-        float *strategySum;
-        float *averageStrategy;
-        bool alreadyCalculated;
-        bool needToUpdateStrategy;
-         */
     };
 }
 #endif //INC_2PLAYERCFR_NODE_HPP
