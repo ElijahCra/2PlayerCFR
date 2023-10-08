@@ -17,11 +17,12 @@ namespace CFR {
 template<typename GameType>
 class RegretMinimizer {
 public:
+    /// @brief constructor always initializes rng engine for game
     explicit RegretMinimizer(uint32_t seed = std::random_device()());
 
     ~RegretMinimizer();
 
-
+    ///@ brief calls cfr algorithm
     void Train(int iterations);
 
     /// @brief recursively traverse game tree (depth-first) sampling only one chance outcome at each chance node and all actions
@@ -172,7 +173,6 @@ float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int u
     if ("terminal" == type) {
         return game.getUtility(updatePlayer);
     }
-
 
     //actions available at this game state / node
     auto const actions = game.getActions();

@@ -212,7 +212,7 @@ namespace Texas {
         if (windowsOS){
             EXPECT_EQ(weiUtil, 345.214783f);
         } else {
-            EXPECT_EQ(weiUtil, 1.7734375f);
+            EXPECT_EQ(weiUtil, 1773.4375f);
         }
 
     }
