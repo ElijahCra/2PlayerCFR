@@ -16,14 +16,14 @@ FetchContent_MakeAvailable(googletest)
 
 
 enable_testing()
-set (benchmark_DIR  ./benchmark/build/)
-find_package(benchmark)
-IF(${benchmark_FOUND})
+#set (benchmark_DIR  ./benchmark/build/)
+#find_package(benchmark)
+#IF(${benchmark_FOUND})
 
-ELSE(${benchmark_FOUND})
-    set (benchmark_DIR  ../benchmark/build/)
-    find_package(benchmark REQUIRED)
-ENDIF(${benchmark_FOUND})
+#ELSE(${benchmark_FOUND})
+#    set (benchmark_DIR  ../benchmark/build/)
+#    find_package(benchmark REQUIRED)
+#ENDIF(${benchmark_FOUND})
 add_executable(
         hello_test
         test.cpp
@@ -35,8 +35,8 @@ target_link_libraries(
         #Preflop
         CFR
         Utility
-        benchmark::benchmark
-        benchmark::benchmark_main
+        #benchmark::benchmark
+        #benchmark::benchmark_main
 )
 
 include(GoogleTest)

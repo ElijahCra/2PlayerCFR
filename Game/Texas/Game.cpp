@@ -113,6 +113,7 @@ namespace Texas {
                 {Action::Reraise20, "Re20"},
                 {Action::AllIn, "AI"}
         };
+        return converter[action];
     }
 
     void Game::updatePlayer() {

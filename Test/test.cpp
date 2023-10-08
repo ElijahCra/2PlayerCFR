@@ -3,7 +3,7 @@
 //
 
 #include <gtest/gtest.h>
-#include <benchmark/benchmark.h>
+//#include <benchmark/benchmark.h>
 #include "../Game/Texas/Game.hpp"
 #include "../Game/Texas/Game.cpp"
 
@@ -83,7 +83,7 @@ namespace Texas {
         EXPECT_EQ(game2->getType(), "chance");
         game2->transition(Game::Action::None);
         EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Raise);
+        game2->transition(Game::Action::Raise1);
         EXPECT_EQ(game2->getType(), "action");
         game2->transition(Game::Action::Call);
         EXPECT_EQ(game2->getType(), "chance");
@@ -93,9 +93,9 @@ namespace Texas {
         EXPECT_EQ(game2->getType(), "action");
         game2->transition(Game::Action::Check);
         EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Raise);
+        game2->transition(Game::Action::Raise1);
         EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Reraise);
+        game2->transition(Game::Action::Reraise2);
         EXPECT_EQ(game2->getType(), "action");
         game2->transition(Game::Action::Call);
         EXPECT_EQ(game2->getType(), "chance");
@@ -103,9 +103,9 @@ namespace Texas {
         EXPECT_EQ(game2->currentRound, 2);
         game2->transition(Game::Action::None);
         EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Raise);
+        game2->transition(Game::Action::Raise1);
         EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Reraise);
+        game2->transition(Game::Action::Reraise2);
         EXPECT_EQ(game2->getType(), "action");
         game2->transition(Game::Action::Call);
         EXPECT_EQ(game2->getType(), "chance");
@@ -113,7 +113,7 @@ namespace Texas {
         EXPECT_EQ(game2->currentRound, 3);
         game2->transition(Game::Action::None);
         EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Raise);
+        game2->transition(Game::Action::Raise1);
         EXPECT_EQ(game2->getType(), "action");
         game2->transition(Game::Action::Fold);
         EXPECT_EQ(game2->getType(), "terminal");
@@ -137,9 +137,9 @@ namespace Texas {
         EXPECT_EQ(game2->getType(), "action");
         game2->transition(Game::Action::Check);
         EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Raise);
+        game2->transition(Game::Action::Raise1);
         EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Reraise);
+        game2->transition(Game::Action::Reraise2);
         EXPECT_EQ(game2->getType(), "action");
         game2->transition(Game::Action::Call);
         EXPECT_EQ(game2->getType(), "chance");
@@ -157,7 +157,7 @@ namespace Texas {
         EXPECT_EQ(game2->getType(), "action");
         game2->transition(Game::Action::Check);
         EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Raise);
+        game2->transition(Game::Action::Raise1);
         EXPECT_EQ(game2->getType(), "action");
         game2->transition(Game::Action::Fold);
         EXPECT_EQ(game2->getType(), "terminal");
@@ -193,8 +193,8 @@ namespace Texas {
         //game3->transition(Action::None);
 
         game3->transition(Game::Action::None);
-        game3->transition(Game::Action::Raise);
-        game3->transition(Game::Action::Reraise);
+        game3->transition(Game::Action::Raise1);
+        game3->transition(Game::Action::Reraise2);
 
         CFR::RegretMinimizer<Game> minimizer(seed);
 
