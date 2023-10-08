@@ -93,12 +93,12 @@ namespace Texas {
     void ActionStateNoBet::enter(Game *game, Game::Action action) {
         if (0 == game->currentRound) {
             if (Game::Action::None == action) {
-                game->setActions({Game::Action::Raise, Game::Action::Call, Game::Action::Fold});
+                game->setActions({Game::Action::Raise1, Game::Action::Call, Game::Action::Fold});
             } else if (Game::Action::Call == action) {
-                game->setActions({Game::Action::Raise, Game::Action::Check});
+                game->setActions({Game::Action::Raise1, Game::Action::Check});
             }
         } else {
-            game->setActions({Game::Action::Raise, Game::Action::Check});
+            game->setActions({Game::Action::Raise1, Game::Action::Check});
         }
         game->setType("action");
     }
@@ -127,7 +127,7 @@ namespace Texas {
         } else if (Game::Action::Fold == action) { //first action small-blind folds
             game->setState(TerminalState::getInstance(),
                            action);          // or second action bb checks -> post flop chance node
-        } else if (Game::Action::Raise == action) { //first action small blind raises
+        } else if (Game::Action::Raise1 == action) { //first action small blind raises
             game->setState(ActionStateBet::getInstance(), action);
         }
     }
@@ -140,7 +140,7 @@ namespace Texas {
     void ActionStateNoBet::exit(Game *game, Game::Action action) {
         if (Game::Action::Call == action) {
             game->addMoney(500);
-        } else if (Game::Action::Raise == action) {
+        } else if (Game::Action::Raise1 == action) {
             game->addMoney(1500);
             ++game->raiseNum;
         } else if (Game::Action::Check == action) {
@@ -156,13 +156,13 @@ namespace Texas {
 
 
     void ActionStateBet::enter(Game *game, Game::Action action) {
-        if (Game::Action::Raise == action) {
-            game->setActions(std::vector<Game::Action>{Game::Action::Fold, Game::Action::Call, Game::Action::Reraise});
-        } else if (Game::Action::Reraise == action) {
+        if (Game::Action::Raise1 == action) {
+            game->setActions(std::vector<Game::Action>{Game::Action::Fold, Game::Action::Call, Game::Action::Reraise2});
+        } else if (Game::Action::Reraise2 == action) {
             if (game->raiseNum >= Game::maxRaises) {
                 game->setActions(std::vector<Game::Action>{Game::Action::Fold, Game::Action::Call});
             } else {
-                game->setActions(std::vector<Game::Action>{Game::Action::Fold, Game::Action::Call, Game::Action::Reraise});
+                game->setActions(std::vector<Game::Action>{Game::Action::Fold, Game::Action::Call, Game::Action::Reraise2});
             }
         }
     }
@@ -176,7 +176,7 @@ namespace Texas {
             }
         } else if (Game::Action::Fold == action) {
             game->setState(TerminalState::getInstance(), action);
-        } else if (Game::Action::Reraise == action) {
+        } else if (Game::Action::Reraise2 == action) {
             if (Game::maxRaises < game->raiseNum) {
                 throw std::logic_error("reraised more than allowed in actionbet");
             }
@@ -194,7 +194,7 @@ namespace Texas {
         if (Game::Action::Call == action) {
             game->addMoney(1000);
             ++game->currentRound;
-        } else if (Game::Action::Reraise == action) {
+        } else if (Game::Action::Reraise2 == action) {
             game->addMoney(2000);
             ++game->raiseNum;
         } else if (Game::Action::Fold == action) {}

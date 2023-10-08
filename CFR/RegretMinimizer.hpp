@@ -28,10 +28,11 @@ public:
     /// @param updatePlayer player whose getStrategy is updated and utilities are retrieved in terms of
     /// @param probCounterFactual reach contribution of all players and chance except for active player (who is the update player for this implementation)
     /// @param probUpdatePlayer reach contribution of only the active player (update player)
-    float ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer, float probChance);
+    /// probCounterfactual does not include chance probabilities bc we divivide by the probability the chance outcomes were sampled making them 1 for the calculation
+    float ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer);
 
     /// @brief same as ChanceCFR except at each action node sample one action for non update player, but still sample all actions for update player
-    float ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer, float probChance);
+    float ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer);
 
 private:
     void preGenTree();
@@ -72,7 +73,7 @@ void RegretMinimizer<GameType>::Train(int iterations) {
     float utilities[GameType::PlayerNum];
     for (int i = 0; i < iterations; ++i) {
         for (int p = 0; p < GameType::PlayerNum; ++p) {
-            utilities[p] = ChanceCFR(*mGame, p, 1.0, 1.0, 1.0);
+            utilities[p] = ChanceCFR(*mGame, p, 1.0, 1.0);
         }
         mGame->averageUtilitySum += utilities[1];
         mGame->averageUtility = mGame->averageUtilitySum / ((float)i);
@@ -98,7 +99,7 @@ void RegretMinimizer<GameType>::Train(int iterations) {
 }
 
 template<typename GameType>
-float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer, float probChance) {
+float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) {
     ++mNodeCount;
 
     std::string type = game.getType();
@@ -116,7 +117,7 @@ float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlaye
         GameType copiedGame(game);
         copiedGame.transition(GameType::Action::None);
         float weightedUtil;
-        weightedUtil = ChanceCFR(copiedGame, updatePlayer, probCounterFactual / (float)game.getChanceActionNum(), probUpdatePlayer, probChance / (float)game.getChanceActionNum());
+        weightedUtil = ChanceCFR(copiedGame, updatePlayer, probCounterFactual, probUpdatePlayer);
         return weightedUtil;
     }
 
@@ -163,7 +164,7 @@ float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlaye
 }
 
 template<typename GameType>
-float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer, float probChance) {
+float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) {//, float probSample) {
     ++mNodeCount;
 
     std::string type = game.getType();
@@ -182,9 +183,7 @@ float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int u
         GameType copiedGame(game);
         copiedGame.transition(GameType::Action::None);
         float weightedUtil;
-        weightedUtil = ExternalSamplingCFR(copiedGame, updatePlayer,
-                                           probCounterFactual / (float) game.getChanceActionNum(), probUpdatePlayer,
-                                           probChance / (float) game.getChanceActionNum());
+        weightedUtil = ExternalSamplingCFR(copiedGame, updatePlayer, probCounterFactual , probUpdatePlayer);
         return weightedUtil;
     }
 
@@ -221,7 +220,7 @@ float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int u
             std::discrete_distribution<int> actionSpread(currentStrategy,currentStrategy+actionNum);
             auto sampledAction = actionSpread(mRNG);
             gamePlusOneAction.transition(actions[sampledAction]);
-            weightedUtil = ExternalSamplingCFR(gamePlusOneAction, updatePlayer, probCounterFactual * currentStrategy[sampledAction], probUpdatePlayer);
+            weightedUtil = ExternalSamplingCFR(gamePlusOneAction, updatePlayer, probCounterFactual, probUpdatePlayer);
         }
         return weightedUtil;
     }
