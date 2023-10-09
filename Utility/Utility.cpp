@@ -34,8 +34,11 @@ bool Utility::initLookup() {
         if (fin == nullptr) {
             fin = fopen("HandRanks.dat", "rb");
             if (fin == nullptr) {
-                std::cout << "did not open properly \n";
-                return false;
+                fin = fopen("../../../HandRanks.dat", "rb");
+                if (fin == nullptr) {
+                    std::cout << "did not open properly \n";
+                    return false;
+                }
             }
         }
     }

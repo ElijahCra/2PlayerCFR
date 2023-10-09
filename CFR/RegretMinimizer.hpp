@@ -5,6 +5,7 @@
 #ifndef INC_2PLAYERCFR_REGRETMINIMIZER_HPP
 #define INC_2PLAYERCFR_REGRETMINIMIZER_HPP
 
+#include <iostream>
 #include <thread>
 #include <random>
 #include "../Game/Preflop/Game.hpp"
@@ -20,7 +21,7 @@ namespace CFR {
 template<typename GameType>
 class RegretMinimizer {
 public:
-    /// @brief constructor always initializes rng engine for game
+    /// @brief constructor needs a seed or one is generated
     explicit RegretMinimizer(uint32_t seed = std::random_device()());
 
     ~RegretMinimizer();
@@ -30,12 +31,13 @@ public:
 
     /// @brief recursively traverse game tree (depth-first) sampling only one chance outcome at each chance node and all actions
     /// @param updatePlayer player whose getStrategy is updated and utilities are retrieved in terms of
-    /// @param probCounterFactual reach contribution of all players and chance except for active player (who is the update player for this implementation)
-    /// @param probUpdatePlayer reach contribution of only the active player (update player)
+    /// @param probCounterFactual probability of reaching the next node given all players actions and chance except for the updatePlayer's actions
+    /// @param probUpdatePlayer probability of reaching next node given only the updatePlayer's actions
+    /// @param game the next node in the dfs
     /// probCounterfactual does not include chance probabilities bc we divivide by the probability the chance outcomes were sampled making them 1 for the calculation
     float ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer);
 
-    /// @brief same as ChanceCFR except at each action node sample one action for non update player, but still sample all actions for update player
+    /// @brief same as ChanceCFR except at each action node sample one action for non update player
     float ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer);
 
 private:
@@ -77,14 +79,11 @@ void RegretMinimizer<GameType>::Train(int iterations) {
     float utilities[GameType::PlayerNum];
     for (int i = 0; i < iterations; ++i) {
         for (int p = 0; p < GameType::PlayerNum; ++p) {
-            utilities[p] = ChanceCFR(*mGame, p, 1.0, 1.0);
+            utilities[p] = ExternalSamplingCFR(*mGame, p, 1.0, 1.0);
         }
         mGame->averageUtilitySum += utilities[1];
         mGame->averageUtility = mGame->averageUtilitySum / ((float)i);
 
-        /*for (auto &itr: mNodeMap) {
-            itr.second->calcUpdatedStrategy();
-        }*/
         if (i % 100 == 0 and i > 1000) {
             //std::cout << utilities[0] << "\n";
             std::cout << mGame->averageUtility << "\n";

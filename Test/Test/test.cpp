@@ -3,11 +3,11 @@
 //
 
 #include <gtest/gtest.h>
-//#include <benchmark/benchmark.h>
-#include "../Game/Texas/Game.hpp"
-#include "../Game/Texas/Game.cpp"
 
-#include "../CFR/RegretMinimizer.hpp"
+#include "Game.hpp"
+#include "Game.cpp"
+
+#include "RegretMinimizer.hpp"
 
 
 #include <filesystem>
