@@ -5,6 +5,7 @@
 #ifndef INC_2PLAYERCFR_REGRETMINIMIZER_HPP
 #define INC_2PLAYERCFR_REGRETMINIMIZER_HPP
 
+#include <thread>
 #include <random>
 #include "../Game/Preflop/Game.hpp"
 #include "../Game/Texas/Game.hpp"
@@ -13,6 +14,8 @@
 #include "../Utility/Utility.hpp"
 
 namespace CFR {
+
+
 
 template<typename GameType>
 class RegretMinimizer {
