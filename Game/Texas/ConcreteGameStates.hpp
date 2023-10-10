@@ -20,6 +20,8 @@ namespace Texas {
 
         static GameState &getInstance();
 
+        void enterTreeGen(Game *game, int i);
+
     private:
         ChanceState() = default;
 

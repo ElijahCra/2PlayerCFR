@@ -148,4 +148,18 @@ namespace Texas {
         std::shuffle(deckCards.begin(),deckCards.end(),RNG);
     }
 
+    void Game::fyShuffle() {
+        int cardNum = (int)deckCards.size();
+        for (int c1 = cardNum - 1; c1 > 0; c1--) {
+            int c2 = std::uniform_int_distribution{0,c1 + 1}(RNG);
+            int tmp = deckCards[c1];
+            deckCards[c1] = deckCards[c2];
+            deckCards[c2] = tmp;
+        }
+    }
+
+    void Game::extensiveShuffle() {
+
+    }
+
 }

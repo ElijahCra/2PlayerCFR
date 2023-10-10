@@ -17,7 +17,19 @@ namespace Texas {
     public:
         explicit Game(std::mt19937 &engine); //boost rng
 
+
+
+        /// Getters
         inline GameState *getCurrentState() const { return currentState; }
+
+        std::vector<Action> getActions() const;
+
+        float getUtility(int payoffPlayer) const;
+
+        std::string getInfoSet(int player) const;
+
+        std::string getType() const;
+
 
         void transition(Action action);
 
@@ -27,13 +39,19 @@ namespace Texas {
 
         void addMoney(float amount);
 
-        std::vector<Action> getActions() const;
+
 
         void setActions(std::vector <Action> actionVec);
 
         void reInitialize();
 
+        ///@brief cpp std shuffle
         void shuffle();
+
+        ///@brief fisher yates shuffle algo
+        void fyShuffle();
+
+        static void extensiveShuffle();
 
         ///@brief deck of cards
         std::array<int, DeckCardNum> deckCards;
@@ -47,7 +65,7 @@ namespace Texas {
         ///@brief rng engine, mersienne twister
         std::mt19937 &RNG;
 
-        float getUtility(int payoffPlayer) const;
+
 
         void updateInfoSet(int player, int card);
 
@@ -55,7 +73,7 @@ namespace Texas {
 
         void updatePlayer();
 
-        std::string getInfoSet(int player) const;
+
 
         static std::string cardIntToStr(int card);
 
@@ -65,7 +83,7 @@ namespace Texas {
 
         void setType(std::string type);
 
-        std::string getType() const;
+
 
         float averageUtility;
 
@@ -73,6 +91,11 @@ namespace Texas {
 
         int currentRound;
 
+        Action prevAction;
+
+        std::array<float,PlayerNum> playerStacks;
+
+        /// Constants
         ///@brief how many unique deals are possible
         constexpr int getChanceActionNum() const{
             if (0 == currentRound) {
@@ -84,10 +107,6 @@ namespace Texas {
                 return DeckCardNum - (currentRound + 5);
             }
         }
-        Action prevAction;
-
-        std::array<float,PlayerNum> playerStacks;
-        
     private:
         std::string type;
         /// @brief the players private info set, contains their cards public cards and all actions played

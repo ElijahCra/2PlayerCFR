@@ -257,9 +257,10 @@ float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int u
 
 template<typename GameType>
 void RegretMinimizer<GameType>::preGenTree() {
+    for (int i=0; i<Game->getChanceActionNum(); ++i) {
+        std::string type = Game->getType();
 
-
-    //todo
+    }
 }
 
 template<typename GameType>
