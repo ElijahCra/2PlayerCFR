@@ -16,18 +16,19 @@
 
 namespace CFR {
 
-
-
 template<typename GameType>
 class RegretMinimizer {
 public:
-    /// @brief constructor needs a seed or one is generated
+    /// @brief constructor takes a seed or one is generated
     explicit RegretMinimizer(uint32_t seed = std::random_device()());
 
     ~RegretMinimizer();
 
-    ///@ brief calls cfr algorithm
+    /// @brief calls cfr algorithm for full game tree (or sampled based on version) traversal the specified number of times
     void Train(int iterations);
+
+    /// @brief calls cfr algorithm the specified number of times
+    void multiTrain(int iterations);
 
     /// @brief recursively traverse game tree (depth-first) sampling only one chance outcome at each chance node and all actions
     /// @param updatePlayer player whose getStrategy is updated and utilities are retrieved in terms of
@@ -41,97 +42,121 @@ public:
     float ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer);
 
 private:
+
     void preGenTree();
     void preGenTreeMultiThreaded();
 
     Utility util;
 
-    std::mt19937 mRNG;
+    std::mt19937 rng;
 
-    std::unordered_map<std::string, Node *> mNodeMap;
+    std::unordered_map<std::string, Node *> nodeMap;
 
-    GameType *mGame;
+    GameType *Game;
 
-    uint64_t mNodeCount;
-
+    uint64_t nodesTouched;
 };
 
 
 ///Implementation of templates above
 template<typename GameType>
-RegretMinimizer<GameType>::RegretMinimizer(const uint32_t seed) : mRNG(seed),
-                                                                  util(),
-                                                                  mNodeCount(0)
-{
-    mGame = new GameType(mRNG);
+RegretMinimizer<GameType>::RegretMinimizer(const uint32_t seed) : rng(seed), util(), nodesTouched(0) {
+        Game = new GameType(rng);
 }
 
 template<typename GameType>
 RegretMinimizer<GameType>::~RegretMinimizer() {
-    for (auto &itr: mNodeMap) {
+    for (auto &itr: nodeMap) {
         delete itr.second;
     }
-    delete mGame;
+    delete Game;
 }
 
 template<typename GameType>
 void RegretMinimizer<GameType>::Train(int iterations) {
-    float utilities[GameType::PlayerNum];
+    float value[GameType::PlayerNum];
     for (int i = 0; i < iterations; ++i) {
         for (int p = 0; p < GameType::PlayerNum; ++p) {
-            utilities[p] = ExternalSamplingCFR(*mGame, p, 1.0, 1.0);
+            value[p] = ExternalSamplingCFR(*Game, p, 1.0, 1.0);
         }
-        mGame->averageUtilitySum += utilities[1];
-        mGame->averageUtility = mGame->averageUtilitySum / ((float)i);
+        Game->averageUtilitySum += value[1];
+        Game->averageUtility = Game->averageUtilitySum / ((float)i);
 
-        if (i % 100 == 0 and i > 1000) {
-            //std::cout << utilities[0] << "\n";
-            std::cout << mGame->averageUtility << "\n";
+        if (i % 1000 == 0 and i > 1000) {
+            //std::cout << value[0] << "\n";
+            std::cout << Game->averageUtility << "\n";
 
-            auto regretSum = mNodeMap["1211"]->getRegretSum();
+            auto regretSum = nodeMap["1211"]->getRegretSum();
             printf("raise: %.6g, call: %.6g, fold: %.6g, iteration: %d \n", regretSum[0],
                    regretSum[1], regretSum[2], i);
 
-            mNodeMap["1211"]->calcAverageStrategy();
-            auto averageStrat = mNodeMap["1211"]->getAverageStrategy();
+            nodeMap["1211"]->calcAverageStrategy();
+            auto averageStrat = nodeMap["1211"]->getAverageStrategy();
             printf("raise: %.6g, call: %.6g, fold: %.6g \n", averageStrat[0],
                    averageStrat[1], averageStrat[2]);
         }
-        mGame->reInitialize();
+        Game->reInitialize();
+    }
+}
+
+template<typename GameType>
+void RegretMinimizer<GameType>::multiTrain(int iterations) {
+    float utilities[GameType::PlayerNum];
+    for (int i = 0; i < iterations; ++i) {
+        for (int p = 0; p < GameType::PlayerNum; ++p) {
+            utilities[p] = ExternalSamplingCFR(*Game, p, 1.0, 1.0);
+        }
+        Game->averageUtilitySum += utilities[1];
+        Game->averageUtility = Game->averageUtilitySum / ((float)i);
+
+        if (i % 1000 == 0 and i > 1000) {
+            //std::cout << utilities[0] << "\n";
+            std::cout << Game->averageUtility << "\n";
+
+            auto regretSum = nodeMap["1211"]->getRegretSum();
+            printf("raise: %.6g, call: %.6g, fold: %.6g, iteration: %d \n", regretSum[0],
+                   regretSum[1], regretSum[2], i);
+
+            nodeMap["1211"]->calcAverageStrategy();
+            auto averageStrat = nodeMap["1211"]->getAverageStrategy();
+            printf("raise: %.6g, call: %.6g, fold: %.6g \n", averageStrat[0],
+                   averageStrat[1], averageStrat[2]);
+        }
+        Game->reInitialize();
     }
 }
 
 template<typename GameType>
 float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) {
-    ++mNodeCount;
+    ++nodesTouched;
 
     std::string type = game.getType();
 
     if ("terminal" == type) {
         return game.getUtility(updatePlayer);
     }
+    else if ("chance" == type) {
+        /// get actions and their size
+        std::vector<typename GameType::Action> const actions = game.getActions();
+        int const actionNum = static_cast<int>(actions.size());
 
-    std::vector<typename GameType::Action> const actions = game.getActions();
-
-    int const actionNum = static_cast<int>(actions.size());
-
-    if ("chance" == type) {
         /// sample one chance outcome at each chance node
         GameType copiedGame(game);
         copiedGame.transition(GameType::Action::None);
-        float weightedUtil;
-        weightedUtil = ChanceCFR(copiedGame, updatePlayer, probCounterFactual, probUpdatePlayer);
-        return weightedUtil;
+        float nodeValue;
+        nodeValue = ChanceCFR(copiedGame, updatePlayer, probCounterFactual, probUpdatePlayer);
+        return nodeValue;
     }
-
     else if ("action" == type) { //Decision Node
-
+        /// get actions and their size
+        std::vector<typename GameType::Action> const actions = game.getActions();
+        int const actionNum = static_cast<int>(actions.size());
         float nodeValue = 0.f;
 
-        Node *node = mNodeMap[game.getInfoSet(game.currentPlayer)];
+        Node *node = nodeMap[game.getInfoSet(game.currentPlayer)];
         if (node == nullptr) {
             node = new Node(actionNum);
-            mNodeMap[game.getInfoSet(game.currentPlayer)] = node;
+            nodeMap[game.getInfoSet(game.currentPlayer)] = node;
         }
 
         const float *currentStrategy = node->getStrategy();
@@ -168,7 +193,7 @@ float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlaye
 
 template<typename GameType>
 float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) {//, float probSample) {
-    ++mNodeCount;
+    ++nodesTouched;
 
     std::string type = game.getType();
 
@@ -192,10 +217,10 @@ float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int u
     else if ("action" == type) { //Decision Node
         float weightedUtil = 0.f;
 
-        Node *node = mNodeMap[game.getInfoSet(game.currentPlayer)];
+        Node *node = nodeMap[game.getInfoSet(game.currentPlayer)];
         if (node == nullptr) {
             node = new Node(actionNum);
-            mNodeMap[game.getInfoSet(game.currentPlayer)] = node;
+            nodeMap[game.getInfoSet(game.currentPlayer)] = node;
         }
 
         const float *currentStrategy = node->getStrategy();
@@ -220,17 +245,20 @@ float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int u
         } else { //sample single player action for non update player
             GameType gamePlusOneAction(game);
             std::discrete_distribution<int> actionSpread(currentStrategy,currentStrategy+actionNum);
-            auto sampledAction = actionSpread(mRNG);
+            auto sampledAction = actionSpread(rng);
             gamePlusOneAction.transition(actions[sampledAction]);
             weightedUtil = ExternalSamplingCFR(gamePlusOneAction, updatePlayer, probCounterFactual, probUpdatePlayer);
         }
         return weightedUtil;
     }
+    throw(std::logic_error("this shouldnt have been reached in external sampling"));
 }
 
 
 template<typename GameType>
 void RegretMinimizer<GameType>::preGenTree() {
+
+
     //todo
 }
 

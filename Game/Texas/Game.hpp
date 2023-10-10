@@ -33,6 +33,8 @@ namespace Texas {
 
         void reInitialize();
 
+        void shuffle();
+
         ///@brief deck of cards
         std::array<int, DeckCardNum> deckCards;
 

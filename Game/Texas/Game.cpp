@@ -144,4 +144,8 @@ namespace Texas {
 
     }
 
+    void Game::shuffle() {
+        std::shuffle(deckCards.begin(),deckCards.end(),RNG);
+    }
+
 }
