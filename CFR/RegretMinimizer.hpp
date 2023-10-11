@@ -42,19 +42,19 @@ public:
     float ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer);
 
 private:
-
-    void preGenTree();
-    void preGenTreeMultiThreaded();
+    std::mt19937 rng;
 
     Utility util;
-
-    std::mt19937 rng;
 
     std::unordered_map<std::string, Node *> nodeMap;
 
     GameType *Game;
 
     uint64_t nodesTouched;
+
+
+    void preGenTree();
+    void preGenTreeMultiThreaded();
 };
 
 
@@ -138,7 +138,6 @@ float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlaye
     else if ("chance" == type) {
         /// get actions and their size
         std::vector<typename GameType::Action> const actions = game.getActions();
-        int const actionNum = static_cast<int>(actions.size());
 
         /// sample one chance outcome at each chance node
         GameType copiedGame(game);
@@ -159,10 +158,10 @@ float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlaye
             nodeMap[game.getInfoSet(game.currentPlayer)] = node;
         }
 
-        const float *currentStrategy = node->getStrategy();
+        const std::vector<float> currentStrategy = node->getStrategy();
 
         /// get counterfactual value and node value by recursively getting utilities and probability we reach them
-        float counterfactualValue[actionNum];
+        std::vector<float> counterfactualValue(actionNum);
         for (int i = 0; i < actionNum; ++i) {
             GameType gamePlusOneAction(game);
             gamePlusOneAction.transition(actions[i]);
@@ -202,20 +201,20 @@ float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int u
     }
 
     //actions available at this game state / node
-    auto const actions = game.getActions();
-    int const actionNum = static_cast<int>(actions.size());
+    const auto actions = game.getActions();
+    const int actionNum = static_cast<int>(actions.size());
 
     if ("chance" == type) {
         //sample one chance outcome at each chance node
         GameType copiedGame(game);
         copiedGame.transition(GameType::Action::None);
-        float weightedUtil;
-        weightedUtil = ExternalSamplingCFR(copiedGame, updatePlayer, probCounterFactual , probUpdatePlayer);
-        return weightedUtil;
+        float nodeValue;
+        nodeValue = ExternalSamplingCFR(copiedGame, updatePlayer, probCounterFactual , probUpdatePlayer);
+        return nodeValue;
     }
 
     else if ("action" == type) { //Decision Node
-        float weightedUtil = 0.f;
+        float nodeValue = 0.f;
 
         Node *node = nodeMap[game.getInfoSet(game.currentPlayer)];
         if (node == nullptr) {
@@ -223,18 +222,18 @@ float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int u
             nodeMap[game.getInfoSet(game.currentPlayer)] = node;
         }
 
-        const float *currentStrategy = node->getStrategy();
-        float oneActionWeightedUtil[actionNum];
+        const std::vector<float> currentStrategy = node->getStrategy();
+        std::vector<float> counterfactualValue(actionNum);
         if (updatePlayer == game.currentPlayer) {
             for (int i = 0; i < actionNum; ++i) {
                 GameType gamePlusOneAction(game); // copy current gamestate
                 gamePlusOneAction.transition(actions[i]); // go one level deeper with action i
-                oneActionWeightedUtil[i] = ExternalSamplingCFR(gamePlusOneAction, updatePlayer, probCounterFactual, probUpdatePlayer * currentStrategy[i]);
-                weightedUtil += currentStrategy[i] * oneActionWeightedUtil[i];
+                counterfactualValue[i] = ExternalSamplingCFR(gamePlusOneAction, updatePlayer, probCounterFactual, probUpdatePlayer * currentStrategy[i]);
+                nodeValue += currentStrategy[i] * counterfactualValue[i];
             }
 
-            for (int i = 0; i < actions.size(); ++i) {
-                const float regret = oneActionWeightedUtil[i] - weightedUtil;
+            for (int i = 0; i < actionNum; ++i) {
+                const float regret = counterfactualValue[i] - nodeValue;
                 node->updateRegretSum(i, regret, probCounterFactual);
             }
             node->updateStrategySum(currentStrategy, probUpdatePlayer);
@@ -244,12 +243,12 @@ float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int u
 
         } else { //sample single player action for non update player
             GameType gamePlusOneAction(game);
-            std::discrete_distribution<int> actionSpread(currentStrategy,currentStrategy+actionNum);
+            std::discrete_distribution<int> actionSpread(currentStrategy.begin(),currentStrategy.end());
             auto sampledAction = actionSpread(rng);
             gamePlusOneAction.transition(actions[sampledAction]);
-            weightedUtil = ExternalSamplingCFR(gamePlusOneAction, updatePlayer, probCounterFactual, probUpdatePlayer);
+            nodeValue = ExternalSamplingCFR(gamePlusOneAction, updatePlayer, probCounterFactual, probUpdatePlayer);
         }
-        return weightedUtil;
+        return nodeValue;
     }
     throw(std::logic_error("this shouldnt have been reached in external sampling"));
 }

@@ -5,31 +5,15 @@
 namespace CFR {
 
     Node::Node(int actionNum) : actionNum(actionNum) {
-
-        regretSum = new float[actionNum];
-        strategy = new float[actionNum];
-        strategySum = new float[actionNum];
-        averageStrategy= new float[actionNum];
-
         for (int i=0; i<actionNum; ++i) {
-            strategy[i] = 1.f / (float) actionNum;
-            regretSum[i] = 0.f;
-            strategySum[i] = 0.f;
-            averageStrategy[i] = 0.f;
+            strategy.push_back(1.f / (float) actionNum);
+            regretSum.push_back(0.f);
+            strategySum.push_back(0.f);
+            averageStrategy.push_back(0.f);
         }
     }
 
-    Node::~Node() {
-        delete[] strategy;
-        delete[] strategySum;
-        delete[] regretSum;
-        delete[] averageStrategy;
-    }
-
     void Node::calcUpdatedStrategy() {
-        /*if (!updateThisStrategy) {
-            return;
-        }*/
         float normalizingSum = 0;
         for (int a = 0; a < actionNum; a++) {
             strategy[a] = regretSum[a] > 0 ? regretSum[a] : 0;
@@ -54,28 +38,26 @@ namespace CFR {
                 averageStrategy[a] = 1.f / (float)actionNum;
     }
 
-    const float *Node::getStrategy() const {
+    const std::vector<float> &Node::getStrategy() const {
         return strategy;
     }
 
-    const float *Node::getRegretSum() const {
+    const std::vector<float> &Node::getRegretSum() const {
         return regretSum;
     }
 
-    const float *Node::getAverageStrategy() const {
+    const std::vector<float> &Node::getAverageStrategy() const {
         return averageStrategy;
     }
-
 
 
     void Node::updateRegretSum(int i, float actionRegret, float probCounterFactual) {
         regretSum[i] += probCounterFactual * actionRegret;
     }
 
-    void Node::updateStrategySum(const float *currentStrategy, float probUpdatePlayer) {
+    void Node::updateStrategySum(const std::vector<float> &currentStrategy, float probUpdatePlayer) {
         for (int i=0; i<actionNum; ++i) {
             strategySum[i] += probUpdatePlayer * currentStrategy[i];
         }
     }
-
 }

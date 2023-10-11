@@ -17,42 +17,34 @@ namespace Texas {
     public:
         explicit Game(std::mt19937 &engine); //boost rng
 
-
-
         /// Getters
         inline GameState *getCurrentState() const { return currentState; }
-
         std::vector<Action> getActions() const;
-
         float getUtility(int payoffPlayer) const;
-
         std::string getInfoSet(int player) const;
-
         std::string getType() const;
 
-
-        void transition(Action action);
-
+        /// Setters
+        void setType(std::string type);
         void setState(GameState &newState, Action action);
-
-        void addMoney();
-
-        void addMoney(float amount);
-
-
-
         void setActions(std::vector <Action> actionVec);
 
+        /// Modifiers
+        void transition(Action action);
+        void addMoney();
+        void addMoney(float amount);
         void reInitialize();
-
         ///@brief cpp std shuffle
         void shuffle();
-
         ///@brief fisher yates shuffle algo
         void fyShuffle();
+        void extensiveShuffle();
+        void updateInfoSet(int player, int card);
+        void updateInfoSet(Action action);
+        void updatePlayer();
 
-        static void extensiveShuffle();
 
+        /// globals
         ///@brief deck of cards
         std::array<int, DeckCardNum> deckCards;
 
@@ -65,25 +57,7 @@ namespace Texas {
         ///@brief rng engine, mersienne twister
         std::mt19937 &RNG;
 
-
-
-        void updateInfoSet(int player, int card);
-
-        void updateInfoSet(Action action);
-
-        void updatePlayer();
-
-
-
-        static std::string cardIntToStr(int card);
-
-        static std::string actionToStr(Action action);
-
         int winner;
-
-        void setType(std::string type);
-
-
 
         float averageUtility;
 
@@ -94,6 +68,13 @@ namespace Texas {
         Action prevAction;
 
         std::array<float,PlayerNum> playerStacks;
+
+
+        /// utils
+        static std::string cardIntToStr(int card);
+
+        static std::string actionToStr(Action action);
+
 
         /// Constants
         ///@brief how many unique deals are possible
@@ -107,6 +88,7 @@ namespace Texas {
                 return DeckCardNum - (currentRound + 5);
             }
         }
+
     private:
         std::string type;
         /// @brief the players private info set, contains their cards public cards and all actions played

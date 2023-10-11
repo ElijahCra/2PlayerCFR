@@ -14,28 +14,26 @@ namespace CFR {
         /// @param actionNum allowable actions at this node
         explicit Node(int actionNum);
 
-        ~Node();
-
         void calcUpdatedStrategy();
 
         void calcAverageStrategy();
 
-        const float *getAverageStrategy() const;
+        const std::vector<float> &getAverageStrategy() const;
 
-        const float *getStrategy() const;
+        const std::vector<float> &getStrategy() const;
 
-        const float *getRegretSum() const;
+        const std::vector<float> &getRegretSum() const;
 
         void updateRegretSum(int i, float actionRegret, float probCounterFactual);
 
-        void updateStrategySum(const float *currentStrategy, float probUpdatePlayer);
+        void updateStrategySum(const std::vector<float> &currentStrategy, float probUpdatePlayer);
 
     private:
 
-        float *regretSum;
-        float *strategy;
-        float *strategySum;
-        float * averageStrategy;
+        std::vector<float> regretSum;
+        std::vector<float> strategy;
+        std::vector<float> strategySum;
+        std::vector<float> averageStrategy;
 
         //bool updateThisStrategy;
         uint8_t actionNum;

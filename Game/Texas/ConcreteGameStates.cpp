@@ -20,7 +20,6 @@ namespace Texas {
                 // shuffle cards
                 game->shuffle();
 
-
                 //deal player cards
                 for (int player = 0; player < Game::PlayerNum; ++player) {
                     int card1 = game->deckCards[2 * player];
