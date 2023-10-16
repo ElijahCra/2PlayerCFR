@@ -22,7 +22,7 @@ add_executable(
         test.cpp
 )
 target_link_libraries(
-        hello_test
+        hello_test PUBLIC
         GTest::gtest_main
         Texas
         #Preflop
@@ -30,6 +30,7 @@ target_link_libraries(
         Utility
         #benchmark::benchmark
         #benchmark::benchmark_main
+        HandAbstraction
 )
 
 include(GoogleTest)

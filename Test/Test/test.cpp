@@ -9,6 +9,7 @@
 
 #include "RegretMinimizer.hpp"
 
+#include "hand_index.h"
 
 #include <filesystem>
 #include <iostream>
@@ -209,7 +210,7 @@ namespace Texas {
             p1look[i - 2] = game3->deckCards[i];
         }
 
-        if (windowsOS){
+        if (windowsOS) {
             EXPECT_EQ(weiUtil, 345.214783f);
         } else {
             EXPECT_EQ(weiUtil, 1773.4375f);
@@ -217,3 +218,49 @@ namespace Texas {
 
     }
 }
+    TEST(HandAbstract, MainTest) {
+
+        hand_indexer_t preflop_indexer;
+        hand_indexer_init(1, (uint8_t[]){2}, &preflop_indexer);
+
+        hand_indexer_t flop_indexer;
+        hand_indexer_init(2, (uint8_t[]){2, 3}, &flop_indexer);
+
+        hand_indexer_t turn_indexer;
+        hand_indexer_init(3, (uint8_t[]){2, 3, 1}, &turn_indexer);
+
+        hand_indexer_t river_indexer;
+        hand_indexer_init(4, (uint8_t[]){2, 3, 1, 1}, &river_indexer);
+
+        EXPECT_EQ(hand_indexer_size(&preflop_indexer, 0) , 169);
+        EXPECT_EQ(hand_indexer_size(&flop_indexer, 0) , 169);
+        EXPECT_EQ(hand_indexer_size(&turn_indexer, 0) , 169);
+        EXPECT_EQ(hand_indexer_size(&river_indexer, 0) , 169);
+        EXPECT_EQ(hand_indexer_size(&flop_indexer, 1) , 1286792);
+        EXPECT_EQ(hand_indexer_size(&turn_indexer, 1) , 1286792);
+        EXPECT_EQ(hand_indexer_size(&river_indexer, 1) , 1286792);
+        EXPECT_EQ(hand_indexer_size(&turn_indexer, 2) , 55190538);
+        EXPECT_EQ(hand_indexer_size(&river_indexer, 2) , 55190538);
+        EXPECT_EQ(hand_indexer_size(&river_indexer, 3) , 2428287420);
+
+        std::array<uint8_t,2> my_cards{};
+        hand_unindex(&preflop_indexer,0,1,my_cards.data());
+
+        EXPECT_EQ(0,my_cards[0]);
+        EXPECT_EQ(5,my_cards[1]);
+
+        hand_indexer_t my_preflop_indexer;
+        hand_indexer_init(1, (uint8_t[]){2}, &my_preflop_indexer);
+
+        hand_unindex(&my_preflop_indexer,0,98,my_cards.data());
+
+        EXPECT_EQ(my_cards[0],4);
+        EXPECT_EQ(my_cards[1],16);
+
+        EXPECT_EQ((uint32_t)hand_index_last(&my_preflop_indexer, my_cards.data()),98);
+
+        hand_indexer_free(&river_indexer);
+        hand_indexer_free(&turn_indexer);
+        hand_indexer_free(&flop_indexer);
+        hand_indexer_free(&preflop_indexer);
+    }
