@@ -8,7 +8,8 @@
 
 #include <vector>
 #include <string>
-#include "GameBase.h"
+#include "Game.hpp"
+
 
 namespace Texas {
 
@@ -16,15 +17,15 @@ namespace Texas {
 
     class GameState {
     public:
-        virtual void enter(Game *game, GameBase::Action action) = 0;
+        virtual void enter(Game &game, GameBase::Action action) = 0;
 
-        virtual void transition(Game *game, GameBase::Action action) = 0;
+        virtual void transition(Game &game, GameBase::Action action) = 0;
 
-        virtual void exit(Game *game, GameBase::Action action) = 0;
+        virtual void exit(Game &game, GameBase::Action action) = 0;
 
         virtual ~GameState() = default;
 
-    private:
+    protected:
 
     };
 }

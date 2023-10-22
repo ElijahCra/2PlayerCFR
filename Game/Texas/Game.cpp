@@ -3,11 +3,12 @@
 //
 
 #include "Game.hpp"
+#include "ConcreteGameStates.hpp"
 #include <utility>
 #include <unordered_map>
 #include <stdexcept>
 #include <cassert>
-#include "ConcreteGameStates.hpp"
+
 
 namespace Texas {
 
@@ -26,19 +27,19 @@ namespace Texas {
                                        prevAction(Action::None),
                                        playerStacks({100.f}){
         currentState = &ChanceState::getInstance();
-        currentState->enter(this, Action::None);
+        currentState->enter(*this, Action::None);
     }
 
     void Game::setState(GameState &newState, Action action) {
-        currentState->exit(this, action); //
+        currentState->exit(*this, action); //
         currentState = &newState;
-        currentState->enter(this, action);
+        currentState->enter(*this, action);
     }
 
     void Game::transition(Action action) {
         auto Actions = getActions();
         assert(std::find(Actions.begin(),Actions.end(),action)!=Actions.end());
-        currentState->transition(this, action);
+        currentState->transition(*this, action);
     }
 
     void Game::addMoney() { //preflop ante's in milliBigBlinds
@@ -140,7 +141,7 @@ namespace Texas {
         type = "chance";
         currentRound = 0;
         currentState = &ChanceState::getInstance();
-        currentState->enter(this, Action::None);
+        currentState->enter(*this, Action::None);
 
     }
 

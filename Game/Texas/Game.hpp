@@ -7,13 +7,15 @@
 
 #include <random>
 #include <array>
-#include "GameBase.h"
+#include "GameBase.hpp"
 #include "GameState.hpp"
 
 namespace Texas {
-
+    class GameState;
 
     class Game : public GameBase {
+        friend class GameState;
+
     public:
         explicit Game(std::mt19937 &engine); //boost rng
 
