@@ -53,7 +53,7 @@ private:
     uint64_t nodesTouched;
 
 
-    void preGenTree();
+    void preGenTree(GameType &game);
     void preGenTreeMultiThreaded();
 };
 
@@ -255,9 +255,9 @@ float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int u
 
 
 template<typename GameType>
-void RegretMinimizer<GameType>::preGenTree() {
-    for (int i=0; i<Game->getChanceActionNum(); ++i) {
-        std::string type = Game->getType();
+void RegretMinimizer<GameType>::preGenTree(GameType &game) {
+    for (int i=0; i<game.getChanceActionNum(); ++i) {
+        std::string type = game.getType();
 
     }
 }

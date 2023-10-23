@@ -17,7 +17,7 @@ namespace Texas {
         friend class GameState;
 
     public:
-        explicit Game(std::mt19937 &engine); //boost rng
+        explicit Game(std::mt19937 &engine); //todo try another rng? boost or xorshift
 
         /// Getters
         inline GameState *getCurrentState() const { return currentState; }
