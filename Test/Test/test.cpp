@@ -36,9 +36,7 @@ namespace Texas {
         game1->transition(Game::Action::Fold);
         EXPECT_EQ(game1->getType(), "terminal");
 
-    }
 
-    TEST(GameTests, Game2) {
         auto rng2 = std::mt19937(std::random_device()());
         Game *game2 = new Game(rng2);
 
@@ -74,94 +72,91 @@ namespace Texas {
         EXPECT_EQ(game2->getType(), "action");
         game2->transition(Game::Action::Check);
         EXPECT_EQ(game2->getType(), "terminal");
-    }
 
-    TEST(GameTests, Game3) {
-        auto rng2 = std::mt19937(std::random_device()());
-        Game *game2 = new Game(rng2);
 
-        EXPECT_EQ(game2->currentRound, 0);
-        EXPECT_EQ(game2->getType(), "chance");
-        game2->transition(Game::Action::None);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Raise1);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Call);
-        EXPECT_EQ(game2->getType(), "chance");
+        auto rng3 = std::mt19937(std::random_device()());
+        Game *game3 = new Game(rng3);
 
-        EXPECT_EQ(game2->currentRound, 1);
-        game2->transition(Game::Action::None);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Check);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Raise1);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Reraise2);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Call);
-        EXPECT_EQ(game2->getType(), "chance");
+        EXPECT_EQ(game3->currentRound, 0);
+        EXPECT_EQ(game3->getType(), "chance");
+        game3->transition(Game::Action::None);
+        EXPECT_EQ(game3->getType(), "action");
+        game3->transition(Game::Action::Raise1);
+        EXPECT_EQ(game3->getType(), "action");
+        game3->transition(Game::Action::Call);
+        EXPECT_EQ(game3->getType(), "chance");
 
-        EXPECT_EQ(game2->currentRound, 2);
-        game2->transition(Game::Action::None);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Raise1);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Reraise2);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Call);
-        EXPECT_EQ(game2->getType(), "chance");
+        EXPECT_EQ(game3->currentRound, 1);
+        game3->transition(Game::Action::None);
+        EXPECT_EQ(game3->getType(), "action");
+        game3->transition(Game::Action::Check);
+        EXPECT_EQ(game3->getType(), "action");
+        game3->transition(Game::Action::Raise1);
+        EXPECT_EQ(game3->getType(), "action");
+        game3->transition(Game::Action::Reraise2);
+        EXPECT_EQ(game3->getType(), "action");
+        game3->transition(Game::Action::Call);
+        EXPECT_EQ(game3->getType(), "chance");
 
-        EXPECT_EQ(game2->currentRound, 3);
-        game2->transition(Game::Action::None);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Raise1);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Fold);
-        EXPECT_EQ(game2->getType(), "terminal");
-    }
+        EXPECT_EQ(game3->currentRound, 2);
+        game3->transition(Game::Action::None);
+        EXPECT_EQ(game3->getType(), "action");
+        game3->transition(Game::Action::Raise1);
+        EXPECT_EQ(game3->getType(), "action");
+        game3->transition(Game::Action::Reraise2);
+        EXPECT_EQ(game3->getType(), "action");
+        game3->transition(Game::Action::Call);
+        EXPECT_EQ(game3->getType(), "chance");
 
-    TEST(GameTests, Game4) {
-        auto rng2 = std::mt19937(std::random_device()());
-        Game *game2 = new Game(rng2);
+        EXPECT_EQ(game3->currentRound, 3);
+        game3->transition(Game::Action::None);
+        EXPECT_EQ(game3->getType(), "action");
+        game3->transition(Game::Action::Raise1);
+        EXPECT_EQ(game3->getType(), "action");
+        game3->transition(Game::Action::Fold);
+        EXPECT_EQ(game3->getType(), "terminal");
 
-        EXPECT_EQ(game2->currentRound, 0);
-        EXPECT_EQ(game2->getType(), "chance");
-        game2->transition(Game::Action::None);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Call);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Check);
-        EXPECT_EQ(game2->getType(), "chance");
+        auto rng4 = std::mt19937(std::random_device()());
+        Game *game4 = new Game(rng4);
 
-        EXPECT_EQ(game2->currentRound, 1);
-        game2->transition(Game::Action::None);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Check);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Raise1);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Reraise2);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Call);
-        EXPECT_EQ(game2->getType(), "chance");
+        EXPECT_EQ(game4->currentRound, 0);
+        EXPECT_EQ(game4->getType(), "chance");
+        game4->transition(Game::Action::None);
+        EXPECT_EQ(game4->getType(), "action");
+        game4->transition(Game::Action::Call);
+        EXPECT_EQ(game4->getType(), "action");
+        game4->transition(Game::Action::Check);
+        EXPECT_EQ(game4->getType(), "chance");
 
-        EXPECT_EQ(game2->currentRound, 2);
-        game2->transition(Game::Action::None);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Check);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Check);
-        EXPECT_EQ(game2->getType(), "chance");
+        EXPECT_EQ(game4->currentRound, 1);
+        game4->transition(Game::Action::None);
+        EXPECT_EQ(game4->getType(), "action");
+        game4->transition(Game::Action::Check);
+        EXPECT_EQ(game4->getType(), "action");
+        game4->transition(Game::Action::Raise1);
+        EXPECT_EQ(game4->getType(), "action");
+        game4->transition(Game::Action::Reraise2);
+        EXPECT_EQ(game4->getType(), "action");
+        game4->transition(Game::Action::Call);
+        EXPECT_EQ(game4->getType(), "chance");
 
-        EXPECT_EQ(game2->currentRound, 3);
-        game2->transition(Game::Action::None);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Check);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Raise1);
-        EXPECT_EQ(game2->getType(), "action");
-        game2->transition(Game::Action::Fold);
-        EXPECT_EQ(game2->getType(), "terminal");
+        EXPECT_EQ(game4->currentRound, 2);
+        game4->transition(Game::Action::None);
+        EXPECT_EQ(game4->getType(), "action");
+        game4->transition(Game::Action::Check);
+        EXPECT_EQ(game4->getType(), "action");
+        game4->transition(Game::Action::Check);
+        EXPECT_EQ(game4->getType(), "chance");
+
+        EXPECT_EQ(game4->currentRound, 3);
+        game4->transition(Game::Action::None);
+        EXPECT_EQ(game4->getType(), "action");
+        game4->transition(Game::Action::Check);
+        EXPECT_EQ(game4->getType(), "action");
+        game4->transition(Game::Action::Raise1);
+        EXPECT_EQ(game4->getType(), "action");
+        game4->transition(Game::Action::Fold);
+        EXPECT_EQ(game4->getType(), "terminal");
     }
 
     TEST(UtilityTests, WorkingTest) {
@@ -242,6 +237,7 @@ namespace Texas {
         EXPECT_EQ(hand_indexer_size(&turn_indexer, 2) , 55190538);
         EXPECT_EQ(hand_indexer_size(&river_indexer, 2) , 55190538);
         EXPECT_EQ(hand_indexer_size(&river_indexer, 3) , 2428287420);
+        EXPECT_EQ(hand_indexer_size(&river_indexer, 0) , 169);
 
         std::array<uint8_t,2> my_cards{};
         hand_unindex(&preflop_indexer,0,1,my_cards.data());
@@ -264,3 +260,4 @@ namespace Texas {
         hand_indexer_free(&flop_indexer);
         hand_indexer_free(&preflop_indexer);
     }
+

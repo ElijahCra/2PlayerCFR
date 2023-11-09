@@ -11,64 +11,7 @@ namespace Texas {
 
     void ChanceState::enter(Game &game, Game::Action action) {
         game.setType("chance");
-        switch (game.currentRound) {
-            case 0: {
-                //deal cards
-                for (int i = 0; i < Game::DeckCardNum; ++i) {
-                    game.deckCards[i] = i + 1;
-                }
-                // shuffle cards
-                game.shuffle();
-
-                //deal player cards
-                for (int player = 0; player < Game::PlayerNum; ++player) {
-                    int card1 = game.deckCards[2 * player];
-                    int card2 = game.deckCards[1 + 2 * player];
-                    if (card1 > card2) {
-                        game.updateInfoSet(player, card1);
-                        game.updateInfoSet(player, card2);
-                    } else {
-                        game.updateInfoSet(player, card2);
-                        game.updateInfoSet(player, card1);
-                    }
-                }
-                //set allowable actions to transfer from this node
-                game.setActions({Game::Action::None});
-
-                //put money into the pot for small and big blind
-                game.addMoney();
-                break;
-            }
-            case 1: {
-                //deal flop cards to both players
-                for (int player = 0; player < Game::PlayerNum; ++player) {
-                    game.updateInfoSet(player, game.deckCards[2 * Game::PlayerNum]);
-                    game.updateInfoSet(player, game.deckCards[2 * Game::PlayerNum + 1]);
-                    game.updateInfoSet(player, game.deckCards[2 * Game::PlayerNum + 2]);
-                }
-                //set allowable actions to transfer from this node
-                game.setActions({Game::Action::None});
-                break;
-            }
-            case 2: {
-                //deal turn card to both players
-                for (int player = 0; player < Game::PlayerNum; ++player) {
-                    game.updateInfoSet(player, game.deckCards[2 * Game::PlayerNum + 3]);
-                }
-                //set allowable actions to transfer from this node
-                game.setActions({Game::Action::None});
-                break;
-            }
-            case 3: {
-                //deal river card to both players
-                for (int player = 0; player < Game::PlayerNum; ++player) {
-                    game.updateInfoSet(player, game.deckCards[2 * Game::PlayerNum + 4]);
-                }
-                //set allowable actions to transfer from this node
-                game.setActions({Game::Action::None});
-                break;
-            }
-        }
+        game.dealCards();
         game.raiseNum = 0;
     }
 
@@ -231,10 +174,9 @@ namespace Texas {
         return singleton;
     }
 
-    void TerminalState::exit(Game &game, Game::Action action) {}
-
-
-
+    void TerminalState::exit(Game &game, Game::Action action) {
+        throw std::logic_error("shouldnt exit terminal state");
+    }
 
 
 

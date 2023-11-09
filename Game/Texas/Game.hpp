@@ -14,10 +14,18 @@ namespace Texas {
     class GameState;
 
     class Game : public GameBase {
-        friend class GameState;
+        friend class ChanceState;
+        friend class ActionStateNoBet;
+        friend class ActionStateBet;
+        friend class TerminalState;
+        friend class GameTests_Game1_Test;
 
     public:
+        ///Constructor
         explicit Game(std::mt19937 &engine); //todo try another rng? boost or xorshift
+
+        ///Modifier
+        void transition(Action action);
 
         /// Getters
         inline GameState *getCurrentState() const { return currentState; }
@@ -26,32 +34,37 @@ namespace Texas {
         std::string getInfoSet(int player) const;
         std::string getType() const;
 
+        ///@brief deck of cards
+        std::array<int, DeckCardNum> deckCards;
+
+        int handIndex;
+
+        /// @brief acting player
+        int currentPlayer;
+
+
+
+
+    protected:
+
+
         /// Setters
         void setType(std::string type);
         void setState(GameState &newState, Action action);
         void setActions(std::vector <Action> actionVec);
 
         /// Modifiers
-        void transition(Action action);
         void addMoney();
         void addMoney(float amount);
         void reInitialize();
-        ///@brief cpp std shuffle
-        void shuffle();
-        ///@brief fisher yates shuffle algo
-        void fyShuffle();
-        void extensiveShuffle();
+        void dealCards();
+
         void updateInfoSet(int player, int card);
         void updateInfoSet(Action action);
         void updatePlayer();
 
 
-        /// globals
-        ///@brief deck of cards
-        std::array<int, DeckCardNum> deckCards;
-
-        /// @brief acting player
-        int currentPlayer;
+        /// members
 
         /// @brief number of raises + reraises played this round
         uint8_t raiseNum;

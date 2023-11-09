@@ -2,7 +2,7 @@
 // Created by Elijah Crain on 8/27/23.
 //
 
-#include "Game.hpp"
+#include "GameBase.hpp"
 #include "ConcreteGameStates.hpp"
 #include <utility>
 #include <unordered_map>
@@ -145,22 +145,64 @@ namespace Texas {
 
     }
 
-    void Game::shuffle() {
-        std::shuffle(deckCards.begin(),deckCards.end(),RNG);
-    }
+    void Game::dealCards() {
+        switch (currentRound) {
+            case 0: {
+                //deal cards
+                for (int i = 0; i < Game::DeckCardNum; ++i) {
+                    deckCards[i] = i + 1;
+                }
+                // shuffle cards
+                std::shuffle(deckCards.begin(),deckCards.end(),RNG);
 
-    void Game::fyShuffle() {
-        int cardNum = (int)deckCards.size();
-        for (int c1 = cardNum - 1; c1 > 0; c1--) {
-            int c2 = std::uniform_int_distribution{0,c1 + 1}(RNG);
-            int tmp = deckCards[c1];
-            deckCards[c1] = deckCards[c2];
-            deckCards[c2] = tmp;
+                //deal player cards
+                for (int player = 0; player < Game::PlayerNum; ++player) {
+                    int card1 = deckCards[2 * player];
+                    int card2 = deckCards[1 + 2 * player];
+                    if (card1 > card2) {
+                        updateInfoSet(player, card1);
+                        updateInfoSet(player, card2);
+                    } else {
+                        updateInfoSet(player, card2);
+                        updateInfoSet(player, card1);
+                    }
+                }
+                //set allowable actions to transfer from this node
+                setActions({Game::Action::None});
+
+                //put money into the pot for small and big blind
+                addMoney();
+                break;
+            }
+            case 1: {
+                //deal flop cards to both players
+                for (int player = 0; player < Game::PlayerNum; ++player) {
+                    updateInfoSet(player, deckCards[2 * Game::PlayerNum]);
+                    updateInfoSet(player, deckCards[2 * Game::PlayerNum + 1]);
+                    updateInfoSet(player, deckCards[2 * Game::PlayerNum + 2]);
+                }
+                //set allowable actions to transfer from this node
+                setActions({Game::Action::None});
+                break;
+            }
+            case 2: {
+                //deal turn card to both players
+                for (int player = 0; player < Game::PlayerNum; ++player) {
+                    updateInfoSet(player, deckCards[2 * Game::PlayerNum + 3]);
+                }
+                //set allowable actions to transfer from this node
+                setActions({Game::Action::None});
+                break;
+            }
+            case 3: {
+                //deal river card to both players
+                for (int player = 0; player < Game::PlayerNum; ++player) {
+                    updateInfoSet(player, deckCards[2 * Game::PlayerNum + 4]);
+                }
+                //set allowable actions to transfer from this node
+                setActions({Game::Action::None});
+                break;
+            }
         }
     }
-
-    void Game::extensiveShuffle() {
-
-    }
-
 }
