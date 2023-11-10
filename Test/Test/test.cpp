@@ -216,16 +216,20 @@ namespace Texas {
     TEST(HandAbstract, MainTest) {
 
         hand_indexer_t preflop_indexer;
-        hand_indexer_init(1, (uint8_t[]){2}, &preflop_indexer);
+        uint8_t cards1[] ={2};
+        uint8_t cards2[] ={2,3};
+        uint8_t cards3[] ={2,3,1};
+        uint8_t cards4[] ={2,3,1,1};
+        hand_indexer_init(1, cards1, &preflop_indexer);
 
         hand_indexer_t flop_indexer;
-        hand_indexer_init(2, (uint8_t[]){2, 3}, &flop_indexer);
+        hand_indexer_init(2, cards2, &flop_indexer);
 
         hand_indexer_t turn_indexer;
-        hand_indexer_init(3, (uint8_t[]){2, 3, 1}, &turn_indexer);
+        hand_indexer_init(3, cards3, &turn_indexer);
 
         hand_indexer_t river_indexer;
-        hand_indexer_init(4, (uint8_t[]){2, 3, 1, 1}, &river_indexer);
+        hand_indexer_init(4, cards4, &river_indexer);
 
         EXPECT_EQ(hand_indexer_size(&preflop_indexer, 0) , 169);
         EXPECT_EQ(hand_indexer_size(&flop_indexer, 0) , 169);
@@ -246,7 +250,7 @@ namespace Texas {
         EXPECT_EQ(5,my_cards[1]);
 
         hand_indexer_t my_preflop_indexer;
-        hand_indexer_init(1, (uint8_t[]){2}, &my_preflop_indexer);
+        hand_indexer_init(1, cards1, &my_preflop_indexer);
 
         hand_unindex(&my_preflop_indexer,0,98,my_cards.data());
 
