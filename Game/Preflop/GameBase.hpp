@@ -2,8 +2,8 @@
 // Created by elijah on 9/28/2023.
 //
 
-#ifndef INC_2PLAYERCFR_PREFLOP_H
-#define INC_2PLAYERCFR_PREFLOP_H
+#ifndef INC_2PLAYERCFR_PREFLOP_HPP
+#define INC_2PLAYERCFR_PREFLOP_HPP
 
 namespace Preflop {
     class GameBase {
@@ -29,4 +29,4 @@ namespace Preflop {
 
 } // Preflop
 
-#endif //INC_2PLAYERCFR_PREFLOP_H
+#endif //INC_2PLAYERCFR_PREFLOP_HPP

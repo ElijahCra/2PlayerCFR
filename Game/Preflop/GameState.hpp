@@ -8,7 +8,7 @@
 
 #include <vector>
 #include <string>
-#include "GameBase.h"
+#include "GameBase.hpp"
 
 
 namespace Preflop {

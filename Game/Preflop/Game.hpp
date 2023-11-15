@@ -7,7 +7,7 @@
 
 #include <random>
 #include <array>
-#include "GameBase.h"
+#include "GameBase.hpp"
 #include "GameState.hpp"
 
 namespace Preflop {
