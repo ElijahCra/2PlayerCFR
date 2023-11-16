@@ -16,12 +16,12 @@ namespace Preflop {
         }
 
         // shuffle cards
-        std::shuffle(game->deckCards.begin(), game->deckCards.end(), game->RNG);
+        std::ranges::shuffle(game->deckCards.begin(), game->deckCards.end(), game->RNG);
 
         //deal player cards
         for (int player = 0; player < Game::PlayerNum; ++player) {
-            int card1 = game->deckCards[2 * player];
-            int card2 = game->deckCards[1 + 2 * player];
+            const int card1 = game->deckCards[2 * player];
+            const int card2 = game->deckCards[1 + 2 * player];
             if (card1 > card2) {
                 game->updateInfoSet(player, card1);
                 game->updateInfoSet(player, card2);
