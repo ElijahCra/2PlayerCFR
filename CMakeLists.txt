@@ -8,7 +8,7 @@ add_subdirectory(Game)
 add_subdirectory(Utility)
 add_subdirectory(CFR)
 add_subdirectory(Test)
-add_subdirectory(HandAbstraction)
+add_subdirectory(Cards)
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 
