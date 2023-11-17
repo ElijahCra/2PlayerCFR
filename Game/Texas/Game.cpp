@@ -10,11 +10,12 @@
 #include <cassert>
 
 
+
 namespace Texas {
 
     Game::Game(std::mt19937 &engine) : RNG(engine),
                                        currentPlayer(0),
-                                       deckCards(),
+                                       deckCards(baseDeck),
                                        raiseNum(0),
                                        utilities({0.f}),
                                        availActions(),
@@ -53,7 +54,7 @@ namespace Texas {
         utilities[2] += amount;
     }
 
-    std::vector<GameBase::Action> Game::getActions() const {
+    std::vector<GameBase::Action> Game::getActions() const noexcept{
         return availActions;
     }
 
@@ -61,7 +62,7 @@ namespace Texas {
         availActions = std::move(actionVec);
     }
 
-    float Game::getUtility(int payoffPlayer) const {
+    float Game::getUtility(int payoffPlayer) const noexcept{
 
         if (3 == winner) {
             return utilities[2] / 2.f + utilities[payoffPlayer];
@@ -85,7 +86,7 @@ namespace Texas {
         infoSet[player].append(cardIntToStr(card));
     }
 
-    std::string Game::getInfoSet(int player) const {
+    std::string Game::getInfoSet(int player) const noexcept {
         return infoSet[player];
     }
 
@@ -125,7 +126,7 @@ namespace Texas {
         type = std::move(type1);
     }
 
-    std::string Game::getType() const {
+    std::string Game::getType() const noexcept{
         return type;
     }
 

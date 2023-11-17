@@ -5,15 +5,21 @@
 #ifndef INC_2PLAYERCFR_G_H
 #define INC_2PLAYERCFR_G_H
 
+#include <ranges>
+
+
 namespace Texas {
     class GameBase {
     public:
         /// constants
         static constexpr int PlayerNum = 2;
 
-        static constexpr int DeckCardNum = 12;
+        static constexpr int DeckCardNum = 52;
 
         static constexpr int maxRaises = 2;
+
+        std::views::iota(1,52)
+        static constexpr std::array<uint8_t,DeckCardNum> baseDeck = {};
 
         enum class Action : int {
             None = -1,

@@ -28,26 +28,21 @@ namespace Texas {
         void transition(Action action);
 
         /// Getters
-        inline GameState *getCurrentState() const { return currentState; }
-        std::vector<Action> getActions() const;
-        float getUtility(int payoffPlayer) const;
-        std::string getInfoSet(int player) const;
-        std::string getType() const;
+        [[nodiscard]] inline GameState *getCurrentState() const noexcept{ return currentState; }
+        [[nodiscard]] std::vector<Action> getActions() const noexcept;
+        [[nodiscard]] float getUtility(int payoffPlayer) const noexcept;
+        [[nodiscard]] std::string getInfoSet(int player) const noexcept;
+        [[nodiscard]] std::string getType() const noexcept;
 
         ///@brief deck of cards
-        std::array<int, DeckCardNum> deckCards;
+        std::array<uint8_t, DeckCardNum> deckCards;
 
-        int handIndex;
+        std::array<std::array<uint8_t,7>,2> playerHands;
 
         /// @brief acting player
         int currentPlayer;
 
-
-
-
     protected:
-
-
         /// Setters
         void setType(std::string type);
         void setState(GameState &newState, Action action);
@@ -84,12 +79,10 @@ namespace Texas {
 
         std::array<float,PlayerNum> playerStacks;
 
-
         /// utils
         static std::string cardIntToStr(int card);
 
         static std::string actionToStr(Action action);
-
 
         /// Constants
         ///@brief how many unique deals are possible
@@ -103,7 +96,6 @@ namespace Texas {
                 return DeckCardNum - (currentRound + 5);
             }
         }
-
     private:
         std::string type;
         /// @brief the players private info set, contains their cards public cards and all actions played
