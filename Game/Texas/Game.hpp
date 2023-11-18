@@ -26,6 +26,7 @@ namespace Texas {
 
         ///Modifier
         void transition(Action action);
+        void reInitialize();
 
         /// Getters
         [[nodiscard]] inline GameState *getCurrentState() const noexcept{ return currentState; }
@@ -42,6 +43,10 @@ namespace Texas {
         /// @brief acting player
         int currentPlayer;
 
+        float averageUtility;
+
+        float averageUtilitySum;
+
     protected:
         /// Setters
         void setType(std::string type);
@@ -51,7 +56,7 @@ namespace Texas {
         /// Modifiers
         void addMoney();
         void addMoney(float amount);
-        void reInitialize();
+
         void dealCards();
 
         void updateInfoSet(int player, int card);
@@ -69,9 +74,7 @@ namespace Texas {
 
         int winner;
 
-        float averageUtility;
 
-        float averageUtilitySum;
 
         int currentRound;
 

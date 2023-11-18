@@ -4,22 +4,30 @@
 
 #ifndef INC_2PLAYERCFR_G_H
 #define INC_2PLAYERCFR_G_H
+#include <cstdint>
+#include <array>
 
-#include <ranges>
 
 
 namespace Texas {
     class GameBase {
     public:
         /// constants
-        static constexpr int PlayerNum = 2;
+        static constexpr uint8_t PlayerNum = 2;
 
-        static constexpr int DeckCardNum = 52;
+        static constexpr uint8_t DeckCardNum = 52;
 
-        static constexpr int maxRaises = 2;
+        static constexpr uint8_t maxRaises = 2;
 
-        std::views::iota(1,52)
-        static constexpr std::array<uint8_t,DeckCardNum> baseDeck = {};
+        static constexpr auto createRange = [] {
+            std::array<uint8_t, DeckCardNum> arr{};
+            for (std::size_t i = 0; i < DeckCardNum; ++i) {
+                arr[i] = static_cast<uint8_t>(i + 1);
+            }
+            return arr;
+        }();
+
+        static constexpr auto baseDeck = createRange;
 
         enum class Action : int {
             None = -1,
