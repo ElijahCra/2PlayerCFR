@@ -11,7 +11,7 @@ namespace Preflop {
 
     void ChanceState::enter(Game *game, Game::Action action) {
         // shuffle cards
-        std::ranges::shuffle(game->deckCards.begin(), game->deckCards.end(), game->RNG);
+        std::shuffle(game->deckCards.begin(), game->deckCards.end(), game->RNG);
 
         //deal player cards
         for (int player = 0; player < Game::PlayerNum; ++player) {

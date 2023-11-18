@@ -19,15 +19,17 @@ namespace Texas {
 
         static constexpr uint8_t maxRaises = 2;
 
-        static constexpr auto createRange = [] {
-            std::array<uint8_t, DeckCardNum> arr{};
-            for (std::size_t i = 0; i < DeckCardNum; ++i) {
-                arr[i] = static_cast<uint8_t>(i + 1);
+        static constexpr std::array<uint8_t,DeckCardNum> rangeDeck = [] {
+            std::array<uint8_t, DeckCardNum> deck{};
+
+            for (uint8_t i = 0; i <DeckCardNum; ++i) {
+                deck[i] = i+1;
             }
-            return arr;
+
+            return deck;
         }();
 
-        static constexpr auto baseDeck = createRange;
+        static constexpr std::array<uint8_t, DeckCardNum> baseDeck = rangeDeck;
 
         enum class Action : int {
             None = -1,

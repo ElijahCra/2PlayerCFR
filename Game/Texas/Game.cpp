@@ -15,10 +15,9 @@ namespace Texas {
 
     Game::Game(std::mt19937 &engine) : RNG(engine),
                                        currentPlayer(0),
-                                       deckCards(baseDeck),
                                        raiseNum(0),
+                                       deckCards(baseDeck),
                                        utilities({0.f}),
-                                       availActions(),
                                        infoSet({""}),
                                        winner(-1),
                                        type("chance"),
@@ -27,6 +26,7 @@ namespace Texas {
                                        currentRound(0),
                                        prevAction(Action::None),
                                        playerStacks({100.f}){
+
         currentState = &ChanceState::getInstance();
         currentState->enter(*this, Action::None);
     }
