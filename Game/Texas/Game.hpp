@@ -36,9 +36,7 @@ namespace Texas {
         [[nodiscard]] std::string getType() const noexcept;
 
         ///@brief deck of cards
-        std::array<uint8_t, DeckCardNum> deckCards;
-
-        std::array<std::array<uint8_t,7>,2> playerHands;
+        std::array<uint8_t, 2*PlayerNum+5> playableCards;
 
         /// @brief acting player
         int currentPlayer;

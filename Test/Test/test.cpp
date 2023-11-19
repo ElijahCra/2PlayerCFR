@@ -198,11 +198,11 @@ namespace Texas {
 
         game3->transition(Game::Action::Call);
 
-        int polook[7] = {game3->deckCards[0], game3->deckCards[1], 0, 0, 0, 0, 0};
-        int p1look[7] = {game3->deckCards[2], game3->deckCards[3], 0, 0, 0, 0, 0};
+        int polook[7] = {game3->playableCards[0], game3->playableCards[1], 0, 0, 0, 0, 0};
+        int p1look[7] = {game3->playableCards[2], game3->playableCards[3], 0, 0, 0, 0, 0};
         for (int i = 4; i < 9; ++i) {
-            polook[i - 2] = game3->deckCards[i];
-            p1look[i - 2] = game3->deckCards[i];
+            polook[i - 2] = game3->playableCards[i];
+            p1look[i - 2] = game3->playableCards[i];
         }
 
         if (windowsOS) {

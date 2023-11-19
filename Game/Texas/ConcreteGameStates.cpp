@@ -155,12 +155,12 @@ namespace Texas {
             return;
         }
 
-        //std::copy(game.deckCards.begin()+4,game.deckCards.begin()+8,game.);
-        std::array<int, 7> p0cards{game.deckCards[0], game.deckCards[1]};
-        std::array<int, 7> p1cards{game.deckCards[2], game.deckCards[3]};
+        //std::copy(game.playableCards.begin()+4,game.playableCards.begin()+8,game.);
+        std::array<int, 7> p0cards{game.playableCards[0], game.playableCards[1]};
+        std::array<int, 7> p1cards{game.playableCards[2], game.playableCards[3]};
 
-        std::copy(game.deckCards.begin() + 4, game.deckCards.begin() + 9, p0cards.begin() + 2);
-        std::copy(game.deckCards.begin() + 4, game.deckCards.begin() + 9, p1cards.begin() + 2);
+        std::copy(game.playableCards.begin() + 4, game.playableCards.begin() + 9, p0cards.begin() + 2);
+        std::copy(game.playableCards.begin() + 4, game.playableCards.begin() + 9, p1cards.begin() + 2);
 
         game.winner = Utility::getWinner(p0cards.begin(), p1cards.begin());
     }
