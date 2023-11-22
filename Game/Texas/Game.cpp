@@ -16,7 +16,6 @@ namespace Texas {
     Game::Game(std::mt19937 &engine) : RNG(engine),
                                        currentPlayer(0),
                                        raiseNum(0),
-                                       deckCards(baseDeck),
                                        utilities({0.f}),
                                        infoSet({""}),
                                        winner(-1),
@@ -27,8 +26,13 @@ namespace Texas {
                                        prevAction(Action::None),
                                        playerStacks({100.f}){
 
+        std::array<uint8_t,DeckCardNum> temp = baseDeck;
+        std::shuffle(temp.begin(),temp.end(),RNG);
+        std::copy(temp.begin(),temp.begin()+2*PlayerNum+5, playableCards.begin());
+
         currentState = &ChanceState::getInstance();
         currentState->enter(*this, Action::None);
+
     }
 
     void Game::setState(GameState &newState, Action action) {
@@ -149,17 +153,9 @@ namespace Texas {
     void Game::dealCards() {
         switch (currentRound) {
             case 0: {
-                //deal cards
-                for (int i = 0; i < Game::DeckCardNum; ++i) {
-                    deckCards[i] = i + 1;
-                }
-                // shuffle cards
-                std::shuffle(deckCards.begin(),deckCards.end(),RNG);
-
-                //deal player cards
                 for (int player = 0; player < Game::PlayerNum; ++player) {
-                    int card1 = deckCards[2 * player];
-                    int card2 = deckCards[1 + 2 * player];
+                    int card1 = playableCards[2 * player];
+                    int card2 = playableCards[1 + 2 * player];
                     if (card1 > card2) {
                         updateInfoSet(player, card1);
                         updateInfoSet(player, card2);
@@ -178,9 +174,9 @@ namespace Texas {
             case 1: {
                 //deal flop cards to both players
                 for (int player = 0; player < Game::PlayerNum; ++player) {
-                    updateInfoSet(player, deckCards[2 * Game::PlayerNum]);
-                    updateInfoSet(player, deckCards[2 * Game::PlayerNum + 1]);
-                    updateInfoSet(player, deckCards[2 * Game::PlayerNum + 2]);
+                    updateInfoSet(player, playableCards[2 * Game::PlayerNum]);
+                    updateInfoSet(player, playableCards[2 * Game::PlayerNum + 1]);
+                    updateInfoSet(player, playableCards[2 * Game::PlayerNum + 2]);
                 }
                 //set allowable actions to transfer from this node
                 setActions({Game::Action::None});
@@ -189,7 +185,7 @@ namespace Texas {
             case 2: {
                 //deal turn card to both players
                 for (int player = 0; player < Game::PlayerNum; ++player) {
-                    updateInfoSet(player, deckCards[2 * Game::PlayerNum + 3]);
+                    updateInfoSet(player, playableCards[2 * Game::PlayerNum + 3]);
                 }
                 //set allowable actions to transfer from this node
                 setActions({Game::Action::None});
@@ -198,7 +194,7 @@ namespace Texas {
             case 3: {
                 //deal river card to both players
                 for (int player = 0; player < Game::PlayerNum; ++player) {
-                    updateInfoSet(player, deckCards[2 * Game::PlayerNum + 4]);
+                    updateInfoSet(player, playableCards[2 * Game::PlayerNum + 4]);
                 }
                 //set allowable actions to transfer from this node
                 setActions({Game::Action::None});

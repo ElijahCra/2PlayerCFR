@@ -29,6 +29,7 @@ namespace Texas {
             return deck;
         }();
 
+
         static constexpr std::array<uint8_t, DeckCardNum> baseDeck = rangeDeck;
 
         enum class Action : int {
