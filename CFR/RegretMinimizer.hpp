@@ -82,21 +82,21 @@ void RegretMinimizer<GameType>::Train(int iterations) {
         Game->averageUtilitySum += value[1];
         Game->averageUtility = Game->averageUtilitySum / ((float)i);
 
-        if (i % 1000 == 0 and i > 1000) {
+        if (i % 1000 == 0 and i > 5000) {
             //std::cout << value[0] << "\n";
             std::cout << Game->averageUtility << "\n";
 
 
-            auto regretSum = nodeMap["1211"]->getRegretSum();
+            auto regretSum = nodeMap["5251"]->getRegretSum();
             printf("raise: %.6g, call: %.6g, fold: %.6g, iteration: %d \n", regretSum[0],
                    regretSum[1], regretSum[2], i);
 
-            auto currentStrat = nodeMap["1211"]->getStrategy();
+            auto currentStrat = nodeMap["5251"]->getStrategy();
             printf("raise: %.6g, call: %.6g, fold: %.6g, iteration: %d \n", currentStrat[0],
                    currentStrat[1], currentStrat[2], i);
 
-            nodeMap["1211"]->calcAverageStrategy();
-            auto averageStrat = nodeMap["1211"]->getAverageStrategy();
+            nodeMap["5251"]->calcAverageStrategy();
+            auto averageStrat = nodeMap["5251"]->getAverageStrategy();
             printf("raise: %.6g, call: %.6g, fold: %.6g \n", averageStrat[0],
                    averageStrat[1], averageStrat[2]);
         }

@@ -5,6 +5,7 @@
 #include <benchmark/benchmark.h>
 #include "../../CFR/RegretMinimizer.hpp"
 #include "../../Game/Texas/Game.hpp"
+#include "../../Cards/HandAbstraction/hand_index.h"
 
 static void BM_TrainIterations(benchmark::State& state) {
     CFR::RegretMinimizer<Texas::Game> Minimize{(std::random_device()())};
@@ -53,4 +54,11 @@ static void BM_GameCopy(benchmark::State& state) {
 }
 BENCHMARK(BM_GameCopy);
 
+static void BM_HandAbstract1(benchmark::State& state) {
+    uint8_t cards4[] ={2,3,1,1};
+    hand_indexer_t river_indexer;
+    hand_indexer_init(4, cards4, &river_indexer);
+}
+
+static void BM_HandAbstract2(benchmark::State& state) {}
 
