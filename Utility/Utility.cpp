@@ -15,6 +15,15 @@ Utility::Utility() {
     if (Utility::LookupSingleHands()!=4145){
         throw(std::logic_error("hand ranks not loaded properly try changing path"));
     };
+
+    uint8_t cards1[] ={2};
+    uint8_t cards2[] ={2,3};
+    uint8_t cards3[] ={2,3,1};
+    uint8_t cards4[] ={2,3,1,1};
+    hand_indexer_init(1, cards1, &preflop_indexer);
+    hand_indexer_init(2, cards2, &flop_indexer);
+    hand_indexer_init(3, cards3, &turn_indexer);
+    hand_indexer_init(4, cards4, &river_indexer);
 }
 
 int Utility::HR[32487834];
@@ -155,4 +164,14 @@ int Utility::getWinner(int *p0Cards, int *p1Cards) {
     } else {
         return 1;
     }
+}
+
+uint64_t Utility::cardsToIndex(int round, std::vector<uint32_t> cards) {
+    switch (round) {
+        case 0: {
+
+        }
+
+    }
+
 }

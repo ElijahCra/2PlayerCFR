@@ -215,11 +215,13 @@ namespace Texas {
 }
     TEST(HandAbstract, MainTest) {
 
-        hand_indexer_t preflop_indexer;
+
         uint8_t cards1[] ={2};
         uint8_t cards2[] ={2,3};
         uint8_t cards3[] ={2,3,1};
         uint8_t cards4[] ={2,3,1,1};
+
+        hand_indexer_t preflop_indexer;
         hand_indexer_init(1, cards1, &preflop_indexer);
 
         hand_indexer_t flop_indexer;
@@ -251,13 +253,17 @@ namespace Texas {
 
         hand_indexer_t my_preflop_indexer;
         hand_indexer_init(1, cards1, &my_preflop_indexer);
-
         hand_unindex(&my_preflop_indexer,0,98,my_cards.data());
+
+        hand_indexer_t my_flop_indexer;
+        hand_indexer_init(1, cards4, &my_flop_indexer);
+
 
         EXPECT_EQ(my_cards[0],4);
         EXPECT_EQ(my_cards[1],16);
 
         EXPECT_EQ((uint32_t)hand_index_last(&my_preflop_indexer, my_cards.data()),98);
+        EXPECT_EQ((uint32_t)hand_index_last(&my_flop_indexer,))
 
         hand_indexer_free(&river_indexer);
         hand_indexer_free(&turn_indexer);
