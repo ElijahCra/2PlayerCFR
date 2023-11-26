@@ -12,15 +12,18 @@
 
 
 class Cards {
-Cards(int card1, int card2);
-Cards(int card1, int card2, int card3);
+explicit Cards(std::array<uint8_t,9> cards);
 
 public:
+
     static hand_index_t plHandtoIndex();
     static std::vector<int> indexToCards();
 
-    std::array<std::variant<int,hand_index_t>,5> publicCards;
-    std::vector<std::variant<int,hand_index_t>> privateCards;
+    std::array<uint64_t,8> playerIndices{};
+private:
+    static hand_indexer_t riverIndexer;
+    static inline bool init = false;
+    static void indexerInit();
 };
 
 
