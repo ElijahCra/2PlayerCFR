@@ -9,19 +9,23 @@
 #include <variant>
 #include <vector>
 #include <array>
+#include <span>
 
 
 class Cards {
-explicit Cards(std::array<uint8_t,9> cards);
+
 
 public:
+    explicit Cards();
+    void initIndices(std::span<uint8_t, 9> cards);
 
-    static hand_index_t plHandtoIndex();
-    static std::vector<int> indexToCards();
+    //static hand_index_t plHandtoIndex();
+    //static std::vector<int> indexToCards();
 
     std::array<uint64_t,8> playerIndices{};
-private:
     static hand_indexer_t riverIndexer;
+private:
+
     static inline bool init = false;
     static void indexerInit();
 };

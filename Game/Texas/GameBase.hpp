@@ -23,7 +23,7 @@ namespace Texas {
             std::array<uint8_t, DeckCardNum> deck{};
 
             for (uint8_t i = 0; i <DeckCardNum; ++i) {
-                deck[i] = i+1;
+                deck[i] = i;
             }
 
             return deck;

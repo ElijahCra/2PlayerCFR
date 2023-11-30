@@ -9,35 +9,23 @@
 #include <vector>
 #include <sys/types.h>
 
-#include "../Cards/HandAbstraction/hand_index.h"
-
-
 class Utility {
 
 public:
 
     Utility();
 
-
-
-    static int LookupHand(int* pCards);
-
-
+    static int LookupHandValue(int* pCards);
 
     static int getWinner(int *p0Cards, int *p1Cards);
 
     static void EnumerateAll7CardHands();
 
-    static int LookupSingleHands();
+    //static int LookupSingleHands();
 
-    static hand_indexer_t preflop_indexer;
-    static hand_indexer_t flop_indexer;
-    static hand_indexer_t turn_indexer;
-    static hand_indexer_t river_indexer;
-
-    static uint64_t cardsToIndex(int round, std::vector<uint32_t> cards);
-private:
     static bool initLookup();
+
+private:
     static int HR[32487834];
     static bool initialized;
 };

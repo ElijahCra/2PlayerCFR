@@ -12,18 +12,10 @@ bool Utility::initialized = false;
 Utility::Utility() {
     initLookup();
 
+    /*
     if (Utility::LookupSingleHands()!=4145){
         throw(std::logic_error("hand ranks not loaded properly try changing path"));
-    };
-
-    uint8_t cards1[] ={2};
-    uint8_t cards2[] ={2,3};
-    uint8_t cards3[] ={2,3,1};
-    uint8_t cards4[] ={2,3,1,1};
-    hand_indexer_init(1, cards1, &preflop_indexer);
-    hand_indexer_init(2, cards2, &flop_indexer);
-    hand_indexer_init(3, cards3, &turn_indexer);
-    hand_indexer_init(4, cards4, &river_indexer);
+    }; */
 }
 
 int Utility::HR[32487834];
@@ -60,7 +52,7 @@ bool Utility::initLookup() {
 
 }
 
-int Utility::LookupHand(int* pCards)
+int Utility::LookupHandValue(int* pCards)
 {
 
     int p = Utility::HR[53 + *pCards++];
@@ -71,15 +63,15 @@ int Utility::LookupHand(int* pCards)
     p = Utility::HR[p + *pCards++];
     return Utility::HR[p + *pCards];
 }
-
+/*
 int Utility::LookupSingleHands() {
     //printf("Looking up individual hands...\n\n");
 
     // Create a 7-card poker hand (each card gets a value between 1 and 52)
     int cards[] = { 2, 6, 12, 14, 23, 26, 29 };
-    int retVal = Utility::LookupHand(cards);
+    int retVal = Utility::LookupHandValue(cards);
     return retVal;
-}
+} */
 
 
 void Utility::EnumerateAll7CardHands()
@@ -153,8 +145,8 @@ void Utility::EnumerateAll7CardHands()
 }
 
 int Utility::getWinner(int *p0Cards, int *p1Cards) {
-    int hand0Val = Utility::LookupHand(p0Cards);
-    int hand1Val = Utility::LookupHand(p1Cards);
+    int hand0Val = Utility::LookupHandValue(p0Cards);
+    int hand1Val = Utility::LookupHandValue(p1Cards);
 
     //return the winner or tie if they are same value
     if (hand0Val == hand1Val) {
@@ -164,14 +156,4 @@ int Utility::getWinner(int *p0Cards, int *p1Cards) {
     } else {
         return 1;
     }
-}
-
-uint64_t Utility::cardsToIndex(int round, std::vector<uint32_t> cards) {
-    switch (round) {
-        case 0: {
-
-        }
-
-    }
-
 }

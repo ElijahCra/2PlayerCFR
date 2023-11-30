@@ -11,8 +11,9 @@ namespace Texas {
 
     void ChanceState::enter(Game &game, Game::Action action) {
         game.setType("chance");
-        game.dealCards();
         game.raiseNum = 0;
+        game.setActions({Game::Action::None});
+        game.updateInfoSet();
     }
 
     void ChanceState::exit(Game &game, Game::Action action) {

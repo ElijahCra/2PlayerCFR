@@ -9,6 +9,7 @@
 #include <array>
 #include "GameBase.hpp"
 #include "GameState.hpp"
+#include "../../Cards/Cards.hpp"
 
 namespace Texas {
     class GameState;
@@ -31,21 +32,24 @@ namespace Texas {
         /// Getters
         [[nodiscard]] inline GameState *getCurrentState() const noexcept{ return currentState; }
         [[nodiscard]] std::vector<Action> getActions() const noexcept;
-        [[nodiscard]] float getUtility(int payoffPlayer) const noexcept;
+        [[nodiscard]] float getUtility(int payoffPlayer) const;
         [[nodiscard]] std::string getInfoSet(int player) const noexcept;
         [[nodiscard]] std::string getType() const noexcept;
 
         ///@brief deck of cards
-        std::array<uint8_t, 2*PlayerNum+5> playableCards;
+        std::array<uint8_t, 2*PlayerNum+5> playableCards{};
+
+        Cards cards;
 
         /// @brief acting player
         int currentPlayer;
 
-        float averageUtility;
+        float averageUtility{};
 
-        float averageUtilitySum;
+        float averageUtilitySum{};
 
     protected:
+
         /// Setters
         void setType(std::string type);
         void setState(GameState &newState, Action action);
@@ -55,9 +59,7 @@ namespace Texas {
         void addMoney();
         void addMoney(float amount);
 
-        void dealCards();
-
-        void updateInfoSet(int player, int card);
+        void updateInfoSet();
         void updateInfoSet(Action action);
         void updatePlayer();
 
@@ -65,14 +67,12 @@ namespace Texas {
         /// members
 
         /// @brief number of raises + reraises played this round
-        uint8_t raiseNum;
+        uint8_t raiseNum{};
 
         ///@brief rng engine, mersienne twister
         std::mt19937 &RNG;
 
         int winner;
-
-
 
         int currentRound;
 
@@ -81,13 +81,11 @@ namespace Texas {
         std::array<float,PlayerNum> playerStacks;
 
         /// utils
-        static std::string cardIntToStr(int card);
-
         static std::string actionToStr(Action action);
 
         /// Constants
         ///@brief how many unique deals are possible
-        constexpr int getChanceActionNum() const{
+        [[nodiscard]] constexpr int getChanceActionNum() const{
             if (0 == currentRound) {
                 //(cardNum choose 2) * (cardNum-2 choose 2)
                 return DeckCardNum * (DeckCardNum - 1) * (DeckCardNum - 2) * (DeckCardNum - 3);

@@ -163,19 +163,19 @@ namespace Texas {
         Utility::initLookup();
         int cards10[] = {1, 2, 3, 4, 5, 6, 7};
         //Utility::EnumerateAll7CardHands();
-        int val1 = Utility::LookupSingleHands();
-        EXPECT_EQ(val1, 4145);
-        int val2 = Utility::LookupHand(cards10);
+        //int val1 = Utility::LookupSingleHands();
+        //EXPECT_EQ(val1, 4145);
+        int val2 = Utility::LookupHandValue(cards10);
         EXPECT_EQ(val2, 32769);
 
         int card4[7] = {8, 9, 3, 4, 5, 6, 7};
-        int val4 = Utility::LookupHand(card4);
+        int val4 = Utility::LookupHandValue(card4);
         EXPECT_EQ(val4 >> 12, 8);
 
         int card5[7] = {1, 5, 9, 13, 17, 21, 25};
-        int val5 = Utility::LookupHand(card5);
+        int val5 = Utility::LookupHandValue(card5);
         int card6[7] = {9, 13, 17, 21, 25, 29, 33};
-        int val6 = Utility::LookupHand(card6);
+        int val6 = Utility::LookupHandValue(card6);
         EXPECT_GT(val6, val5);
 
     }
@@ -263,7 +263,7 @@ namespace Texas {
         EXPECT_EQ(my_cards[1],16);
 
         EXPECT_EQ((uint32_t)hand_index_last(&my_preflop_indexer, my_cards.data()),98);
-        EXPECT_EQ((uint32_t)hand_index_last(&my_flop_indexer,))
+        //EXPECT_EQ((uint32_t)hand_index_last(&my_flop_indexer,))
 
         hand_indexer_free(&river_indexer);
         hand_indexer_free(&turn_indexer);

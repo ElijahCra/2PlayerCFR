@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <stdexcept>
 #include <cassert>
+#include <span>
 
 
 
@@ -15,20 +16,17 @@ namespace Texas {
 
     Game::Game(std::mt19937 &engine) : RNG(engine),
                                        currentPlayer(0),
-                                       raiseNum(0),
-                                       utilities({0.f}),
-                                       infoSet({""}),
                                        winner(-1),
                                        type("chance"),
-                                       averageUtility(0.f),
-                                       averageUtilitySum(0.f),
                                        currentRound(0),
                                        prevAction(Action::None),
-                                       playerStacks({100.f}){
+                                       playerStacks({100.0f}){
 
         std::array<uint8_t,DeckCardNum> temp = baseDeck;
         std::shuffle(temp.begin(),temp.end(),RNG);
         std::copy(temp.begin(),temp.begin()+2*PlayerNum+5, playableCards.begin());
+
+        cards.initIndices(std::span<uint8_t, 9>(temp.begin(), 9));
 
         currentState = &ChanceState::getInstance();
         currentState->enter(*this, Action::None);
@@ -66,7 +64,7 @@ namespace Texas {
         availActions = std::move(actionVec);
     }
 
-    float Game::getUtility(int payoffPlayer) const noexcept{
+    float Game::getUtility(int payoffPlayer) const {
 
         if (3 == winner) {
             return utilities[2] / 2.f + utilities[payoffPlayer];
@@ -83,24 +81,25 @@ namespace Texas {
         for (int i = 0; i < PlayerNum; ++i) {
             infoSet[i].append(actionToStr(action));
         }
-
     }
 
-    void Game::updateInfoSet(int player, int card) {
-        infoSet[player].append(cardIntToStr(card));
+    void Game::updateInfoSet() {
+        // Find the end of the numeric part
+
+        for (int j =0; j<2;++j){
+            size_t i = 0;
+            while (i < infoSet[j].length() && std::isdigit(infoSet[j][i])) {
+                ++i;
+            }
+            infoSet[j] = std::to_string(cards.playerIndices[currentRound + (4 * j)]) + infoSet[j].substr(i);
+        }
+
     }
 
     std::string Game::getInfoSet(int player) const noexcept {
         return infoSet[player];
     }
 
-    std::string Game::cardIntToStr(int card) {
-        if (card < 10) {
-            return '0' + std::to_string(card);
-        } else {
-            return std::to_string(card);
-        }
-    }
 
      std::string Game::actionToStr(Action action) {
         static std::unordered_map<Action, std::string> converter = {
@@ -142,64 +141,20 @@ namespace Texas {
             infoSet[i] = "";
             utilities[i] = 0;
         }
+
+        std::array<uint8_t,DeckCardNum> temp = baseDeck;
+        std::shuffle(temp.begin(),temp.end(),RNG);
+        std::copy(temp.begin(),temp.begin()+2*PlayerNum+5, playableCards.begin());
+
+        cards.initIndices(std::span<uint8_t, 9>(temp.begin(), 9));
+
         winner = -1;
         type = "chance";
         currentRound = 0;
         currentState = &ChanceState::getInstance();
         currentState->enter(*this, Action::None);
 
-    }
 
-    void Game::dealCards() {
-        switch (currentRound) {
-            case 0: {
-                for (int player = 0; player < Game::PlayerNum; ++player) {
-                    int card1 = playableCards[2 * player];
-                    int card2 = playableCards[1 + 2 * player];
-                    if (card1 > card2) {
-                        updateInfoSet(player, card1);
-                        updateInfoSet(player, card2);
-                    } else {
-                        updateInfoSet(player, card2);
-                        updateInfoSet(player, card1);
-                    }
-                }
-                //set allowable actions to transfer from this node
-                setActions({Game::Action::None});
 
-                //put money into the pot for small and big blind
-                addMoney();
-                break;
-            }
-            case 1: {
-                //deal flop cards to both players
-                for (int player = 0; player < Game::PlayerNum; ++player) {
-                    updateInfoSet(player, playableCards[2 * Game::PlayerNum]);
-                    updateInfoSet(player, playableCards[2 * Game::PlayerNum + 1]);
-                    updateInfoSet(player, playableCards[2 * Game::PlayerNum + 2]);
-                }
-                //set allowable actions to transfer from this node
-                setActions({Game::Action::None});
-                break;
-            }
-            case 2: {
-                //deal turn card to both players
-                for (int player = 0; player < Game::PlayerNum; ++player) {
-                    updateInfoSet(player, playableCards[2 * Game::PlayerNum + 3]);
-                }
-                //set allowable actions to transfer from this node
-                setActions({Game::Action::None});
-                break;
-            }
-            case 3: {
-                //deal river card to both players
-                for (int player = 0; player < Game::PlayerNum; ++player) {
-                    updateInfoSet(player, playableCards[2 * Game::PlayerNum + 4]);
-                }
-                //set allowable actions to transfer from this node
-                setActions({Game::Action::None});
-                break;
-            }
-        }
     }
 }
