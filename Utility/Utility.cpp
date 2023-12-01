@@ -3,6 +3,8 @@
 //
 
 #include "Utility.hpp"
+
+#include <cassert>
 #include <iostream>
 #include <cstring>
 #include <filesystem>
@@ -37,14 +39,20 @@ bool Utility::initLookup() {
             if (fin == nullptr) {
                 fin = fopen("../../../HandRanks.dat", "rb");
                 if (fin == nullptr) {
-                    std::cout << "did not open properly \n";
-                    return false;
+                    fin = fopen("/mnt/c/Users/Elijah/CLionProjects/2PlayerCFR/HandRanks.dat","rb");
+                    if (fin == nullptr) {
+                        std::cout << "did not open properly \n";
+                        return false;
+                    }
                 }
             }
         }
     }
 
-    fread(HR, sizeof(HR), 1, fin);	// get the HandRank Array
+    bool succ = fread(HR, sizeof(HR), 1, fin);	// get the HandRank Array
+    if (!succ) {
+        throw std::logic_error("didnt read file");
+    }
     fclose(fin);
     printf("complete.\n\n");
     initialized = true;
