@@ -26,6 +26,8 @@ namespace Texas {
         std::shuffle(temp.begin(),temp.end(),RNG);
         std::copy(temp.begin(),temp.begin()+2*PlayerNum+5, playableCards.begin());
 
+        addMoney();
+
         cards.initIndices(std::span<uint8_t, 9>(temp.begin(), 9));
 
         currentState = &ChanceState::getInstance();
@@ -153,8 +155,5 @@ namespace Texas {
         currentRound = 0;
         currentState = &ChanceState::getInstance();
         currentState->enter(*this, Action::None);
-
-
-
     }
 }

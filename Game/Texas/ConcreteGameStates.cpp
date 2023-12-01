@@ -163,6 +163,11 @@ namespace Texas {
         std::copy(game.playableCards.begin() + 4, game.playableCards.begin() + 9, p0cards.begin() + 2);
         std::copy(game.playableCards.begin() + 4, game.playableCards.begin() + 9, p1cards.begin() + 2);
 
+        for (int i=0; i<7;++i){
+            p0cards[i] += 1;
+            p1cards[i] += 1;
+        }
+
         game.winner = Utility::getWinner(p0cards.begin(), p1cards.begin());
     }
 
