@@ -22,6 +22,13 @@ target_link_libraries(2PlayerCFR PUBLIC CFR Cards Utility Texas)
 message(STATUS "Current binary directory: ${CMAKE_BINARY_DIR}")
 message(STATUS "Current source directory: ${CMAKE_CURRENT_SOURCE_DIR}")
 
+add_custom_target(build_all
+        DEPENDS 2PlayerCFR generate_table)
+
+add_dependencies(2PlayerCFR generate_table)
+
+
+
 if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/HandRanks.dat")
     message(STATUS "No Handrank")
 
@@ -35,8 +42,8 @@ if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/HandRanks.dat")
     add_custom_command(
             TARGET 2PlayerCFR POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy
-            ${CMAKE_CURRENT_BINARY_DIR}/TwoPlusTwoHandEvaluator/HandRanks.dat
-            ${CMAKE_CURRENT_SOURCE_DIR}/TwoPlusTwoHandEvaluator/HandRanks.dat
+            ${CMAKE_CURRENT_BINARY_DIR}/HandRanks.dat
+            ${CMAKE_CURRENT_SOURCE_DIR}/HandRanks.dat
     )
 
 endif ()
