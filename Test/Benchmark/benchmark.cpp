@@ -56,9 +56,10 @@ BENCHMARK(BM_GameCopy);
 
 static void BM_HandAbstract1(benchmark::State& state) {
     uint8_t cards4[] ={2,3,1,1};
+    uint8_t playerCards[]= {4,6,10,12,20,21,22};
     hand_indexer_t river_indexer;
     hand_indexer_init(4, cards4, &river_indexer);
-    river_indexer.
+    hand_index_last(&river_indexer, playerCards);
 }
 
 static void BM_HandAbstract2(benchmark::State& state) {}
