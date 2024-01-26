@@ -91,7 +91,7 @@ void RegretMinimizer<GameType>::Train(int iterations) {
             auto currentStrat = nodeMap["90"]->getStrategy();
             nodeMap["90"]->calcAverageStrategy();
             auto averageStrat = nodeMap["90"]->getAverageStrategy();
-            printf("  \nValues for a pair of Aces on the first round first action \nAverage Utility: %.4g \nRegret Sum \n raise: %.4g, call: %.4g, fold: %.4g, iteration: %d \nStrategy on this iteration \n raise: %.3g%, call: %.3g%, fold: %.3g% \nAverage Strategy \n raise: %.3g%, call: %.3g%, fold: %.3g% \n",
+            printf("  \nValues for a pair of Aces on the first round first action \nAverage Utility: %.4g \nRegret Sum \n raise: %.4g, call: %.4g, fold: %.4g, iteration: %d \nStrategy on this iteration \n raise: %.3g%%, call: %.3g%%, fold: %.3g%% \nAverage Strategy \n raise: %.3g%%, call: %.3g%%, fold: %.3g%% \n",
             Game->averageUtility, regretSum[0],regretSum[1], regretSum[2], i,currentStrat[0]*100, currentStrat[1]*100, currentStrat[2]*100, averageStrat[0]*100, averageStrat[1]*100, averageStrat[2]*100);
         }
         Game->reInitialize();
