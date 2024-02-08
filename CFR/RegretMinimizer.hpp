@@ -8,8 +8,8 @@
 #include <iostream>
 #include <thread>
 #include <random>
-#include "../Game/Preflop/Game.hpp"
-#include "../Game/Texas/Game.hpp"
+#include "../Game/GameImpl/Preflop/Game.hpp"
+#include "../Game/GameImpl/Texas/Game.hpp"
 #include <unordered_map>
 #include "Node.hpp"
 #include "../Utility/Utility.hpp"
@@ -85,8 +85,7 @@ void RegretMinimizer<GameType>::Train(int iterations) {
         if (i % 1000 == 0 and i > 5000) {
             //std::cout << value[0] << "\n";
             //std::cout << Game->averageUtility << "\n";
-
-
+            
             auto regretSum = nodeMap["90"]->getRegretSum();
             auto currentStrat = nodeMap["90"]->getStrategy();
             nodeMap["90"]->calcAverageStrategy();

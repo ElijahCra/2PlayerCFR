@@ -6,12 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 
 
-add_subdirectory(Cards)
+
 add_subdirectory(CFR)
 add_subdirectory(Game)
 add_subdirectory(Test)
-add_subdirectory(Utility)
-add_subdirectory(TwoPlusTwoHandEvaluator)
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 

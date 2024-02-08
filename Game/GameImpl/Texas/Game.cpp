@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <cassert>
 #include <span>
+#include <algorithm>
 
 
 
