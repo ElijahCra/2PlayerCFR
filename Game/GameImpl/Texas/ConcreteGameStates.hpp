@@ -7,83 +7,82 @@
 
 #include "Game.hpp"
 
-
 namespace Texas {
 
-    class ChanceState : public GameState {
-    public:
-        void enter(Game &game, GameBase::Action action) override;
+class ChanceState : public GameState {
+ public:
+  void enter(Game &game, GameBase::Action action) override;
 
-        void transition(Game &game, GameBase::Action action) override;
+  void transition(Game &game, GameBase::Action action) override;
 
-        void exit(Game &game, GameBase::Action action) override;
+  void exit(Game &game, GameBase::Action action) override;
 
-        static GameState &getInstance();
-
-
-    private:
-        ChanceState() = default;
-
-        ChanceState(const ChanceState &copy);
-
-        ChanceState &operator=(const ChanceState &copy);
-    };
+  static GameState &getInstance();
 
 
-    class ActionStateNoBet : public GameState {
-    public:
-        void enter(Game &game, GameBase::Action action) override;
+ private:
+  ChanceState() = default;
 
-        void transition(Game &game, GameBase::Action action) override;
+  ChanceState(const ChanceState &copy);
 
-        void exit(Game &game, GameBase::Action action) override;
-
-        static GameState &getInstance();
-
-    private:
-        ActionStateNoBet() = default;
-
-        ActionStateNoBet(const ActionStateNoBet &copy);
-
-        ActionStateNoBet &operator=(const ActionStateNoBet &copy);
-    };
+  ChanceState &operator=(const ChanceState &copy);
+};
 
 
-    class ActionStateBet : public GameState {
-    public:
-        void enter(Game &game, GameBase::Action action) override;
+class ActionStateNoBet : public GameState {
+ public:
+  void enter(Game &game, GameBase::Action action) override;
 
-        void transition(Game &game, GameBase::Action action) override;
+  void transition(Game &game, GameBase::Action action) override;
 
-        void exit(Game &game, GameBase::Action action) override;
+  void exit(Game &game, GameBase::Action action) override;
 
-        static GameState &getInstance();
+  static GameState &getInstance();
 
-    private:
-        ActionStateBet() = default;
+ private:
+  ActionStateNoBet() = default;
 
-        ActionStateBet(const ActionStateBet &copy);
+  ActionStateNoBet(const ActionStateNoBet &copy);
 
-        ActionStateBet &operator=(const ActionStateBet &copy);
-    };
+  ActionStateNoBet &operator=(const ActionStateNoBet &copy);
+};
 
 
-    class TerminalState : public GameState {
-    public:
-        void enter(Game &game, GameBase::Action action) override;
+class ActionStateBet : public GameState {
+ public:
+  void enter(Game &game, GameBase::Action action) override;
 
-        void transition(Game &game, GameBase::Action action) override;
+  void transition(Game &game, GameBase::Action action) override;
 
-        void exit(Game &game, GameBase::Action action) override;
+  void exit(Game &game, GameBase::Action action) override;
 
-        static GameState &getInstance();
+  static GameState &getInstance();
 
-    private:
-        TerminalState() = default;
+ private:
+  ActionStateBet() = default;
 
-        TerminalState(const TerminalState &copy);
+  ActionStateBet(const ActionStateBet &copy);
 
-        TerminalState &operator=(const TerminalState &copy);
-    };
+  ActionStateBet &operator=(const ActionStateBet &copy);
+};
+
+
+class TerminalState : public GameState {
+ public:
+  void enter(Game &game, GameBase::Action action) override;
+
+  void transition(Game &game, GameBase::Action action) override;
+
+  void exit(Game &game, GameBase::Action action) override;
+
+  static GameState &getInstance();
+
+ private:
+  TerminalState() = default;
+
+  TerminalState(const TerminalState &copy);
+
+  TerminalState &operator=(const TerminalState &copy);
+};
 }
 #endif //INC_TEXAS_CONCRETEGAMESTATES_HPP

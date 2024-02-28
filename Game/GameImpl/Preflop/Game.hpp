@@ -9,85 +9,105 @@
 #include <array>
 #include "GameBase.hpp"
 #include "GameState.hpp"
+#include "PreCards/PreCards.hpp"
 
 namespace Preflop {
+class GameState;
 
-    class Game : public GameBase {
-    public:
+class Game : public GameBase {
+  friend class ChanceState;
+  friend class ActionStateNoBet;
+  friend class ActionStateBet;
+  friend class TerminalState;
 
-        explicit Game(std::mt19937 &engine);
+ public:
+  ///Constructor
+  explicit Game(std::mt19937 &engine); //todo try another rng? boost or xorshift
 
-        inline Preflop::GameState *getCurrentState() const { return currentState; }
+  ///Modifier
+  void transition(Action action);
+  void reInitialize();
 
-        void transition(Action action);
+  /// Getters
+  [[nodiscard]] inline GameState *getCurrentState() const noexcept{ return currentState; }
+  [[nodiscard]] std::vector<Action> getActions() const noexcept;
+  [[nodiscard]] float getUtility(int payoffPlayer) const;
+  [[nodiscard]] std::string getInfoSet(int player) const noexcept;
+  [[nodiscard]] std::string getType() const noexcept;
 
-        void setState(GameState &newState, Action action);
+  ///@brief deck of cards
+  std::array<uint8_t, 2*PlayerNum+5> playableCards{};
 
-        void addMoney();
+  PreCards cards;
 
-        void addMoney(double amount);
+  /// @brief acting player
+  int currentPlayer;
 
-        std::vector<Action> getActions() const;
+  float averageUtility{};
 
-        void setActions(std::vector<Action> actionVec);
+  float averageUtilitySum{};
 
-        void reInitialize();
+ protected:
 
-        ///@brief deck of cards
-        std::array<int, DeckCardNum> deckCards;
+  /// Setters
+  void setType(std::string type);
+  void setState(GameState &newState, Action action);
+  void setActions(std::vector <Action> actionVec);
 
-        /// @brief acting player
-        int currentPlayer;
+  /// Modifiers
+  void addMoney();
+  void addMoney(float amount);
 
-        /// @brief number of raises + reraises played this round
-        uint8_t raiseNum;
-
-        ///@brief rng engine, mersienne twister
-        std::mt19937 &RNG;
-
-        double getUtility(int payoffPlayer) const;
-
-        void updateInfoSet(int player, int card);
-
-        void updateInfoSet(Action action);
-
-        void updatePlayer();
-
-        std::string getInfoSet(int player) const;
-
-        static std::string cardIntToStr(int card);
-
-        static std::string actionToStr(Action action);
-
-        int winner;
-
-        void setType(std::string type);
-
-        std::string getType() const;
-
-        double averageUtility;
-
-        double averageUtilitySum;
-
-        constexpr int getChanceActionNum() const {
-            return DeckCardNum * (DeckCardNum - 1) * (DeckCardNum - 2) * (DeckCardNum - 3);
-        }
+  void updateInfoSet();
+  void updateInfoSet(Action action);
+  void updatePlayer();
 
 
-            private:
-        std::string type;
-        /// @brief the players private info set, contains their cards public cards and all actions played
-        std::array<std::string, PlayerNum> infoSet{};
+  /// members
 
-        /// @brief array of payoff, 1 per player final is the pot
-        std::array<double, PlayerNum + 1> utilities{};
+  /// @brief number of raises + reraises played this round
+  uint8_t raiseNum{};
 
-        ///@brief current gamestate i.e. preflop chance or preflopnobet
-        GameState *currentState;
+  ///@brief rng engine, mersienne twister
+  std::mt19937 &RNG;
 
-        ///@brief actions available at this point in the game
-        std::vector<Action> availActions;
-    };
+  int winner;
+
+  int currentRound;
+
+  Action prevAction;
+
+  std::array<float,PlayerNum> playerStacks;
+
+  /// utils
+  static std::string actionToStr(Action action);
+
+  /// Constants
+  ///@brief how many unique deals are possible
+  [[nodiscard]] constexpr int getChanceActionNum() const{
+    if (0 == currentRound) {
+      //(cardNum choose 2) * (cardNum-2 choose 2)
+      return DeckCardNum * (DeckCardNum - 1) * (DeckCardNum - 2) * (DeckCardNum - 3);
+    } else if (1 == currentRound) {
+      return (DeckCardNum - 4) * (DeckCardNum - 5) * (DeckCardNum - 6);
+    } else {
+      return DeckCardNum - (currentRound + 5);
+    }
+  }
+ private:
+  std::string type;
+  /// @brief the players private info set, contains their cards public cards and all actions played
+  std::array <std::string, PlayerNum> infoSet{};
+
+  /// @brief array of payoff, 1 per player final is the pot
+  std::array<float, PlayerNum + 1> utilities{};
+
+  ///@brief current gamestate i.e. preflop chance or preflopnobet
+  GameState *currentState;
+
+  ///@brief actions available at this point in the game
+  std::vector <Action> availActions;
+};
 }
 
 

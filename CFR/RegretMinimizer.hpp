@@ -12,7 +12,7 @@
 #include "../Game/GameImpl/Texas/Game.hpp"
 #include <unordered_map>
 #include "Node.hpp"
-#include "../Utility/Utility.hpp"
+#include "../Game/Utility/Utility.hpp"
 
 namespace CFR {
 

@@ -2,21 +2,20 @@
 // Created by elijah on 11/15/2023.
 //
 
-#ifndef CARDS_HPP
-#define CARDS_HPP
+#ifndef TEXASCARDS_HPP
+#define TEXASCARDS_HPP
 
-#include "./HandAbstraction/hand_index.h"
+#include "hand_index.h"
 #include <variant>
 #include <vector>
 #include <array>
 #include <span>
 
-
-class Cards {
-
+namespace Texas {
+class TexasCards {
 
 public:
-    explicit Cards();
+    explicit TexasCards();
     void initIndices(std::span<uint8_t, 9> cards);
 
     //static hand_index_t plHandtoIndex();
@@ -29,7 +28,5 @@ private:
     static inline bool init = false;
     static void indexerInit();
 };
-
-
-
-#endif //CARDS_HPP
+}
+#endif //TEXASCARDS_HPP

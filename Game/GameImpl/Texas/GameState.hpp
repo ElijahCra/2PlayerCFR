@@ -24,9 +24,6 @@ namespace Texas {
         virtual void exit(Game &game, GameBase::Action action) = 0;
 
         virtual ~GameState() = default;
-
-    protected:
-
     };
 }
 #endif //INC_TEXAS_GAMESTATE_HPP

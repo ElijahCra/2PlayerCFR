@@ -8,25 +8,22 @@
 
 #include <vector>
 #include <string>
-#include "GameBase.hpp"
+#include "Game.hpp"
 
 
 namespace Preflop {
 
-    class Game;
+class Game;
 
-    class GameState {
-    public:
-        virtual void enter(Game *game, GameBase::Action action) = 0;
+class GameState {
+ public:
+  virtual void enter(Game &game, GameBase::Action action) = 0;
 
-        virtual void transition(Game *game, GameBase::Action action) = 0;
+  virtual void transition(Game &game, GameBase::Action action) = 0;
 
-        virtual void exit(Game *game, GameBase::Action action) = 0;
+  virtual void exit(Game &game, GameBase::Action action) = 0;
 
-        virtual ~GameState() = default;
-
-    private:
-
-    };
+  virtual ~GameState() = default;
+};
 }
 #endif //INC_2PLAYERCFR_GAMESTATE_HPP

@@ -183,8 +183,4 @@ namespace Texas {
     void TerminalState::exit(Game &game, Game::Action action) {
         throw std::logic_error("shouldnt exit terminal state");
     }
-
-
-
-
 }

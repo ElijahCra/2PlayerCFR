@@ -5,150 +5,83 @@
 #ifndef INC_2PLAYERCFR_CONCRETEGAMESTATES_HPP
 #define INC_2PLAYERCFR_CONCRETEGAMESTATES_HPP
 
-#include "GameState.hpp"
 #include "Game.hpp"
 
 namespace Preflop {
 
-    class ChanceState : public GameState {
-    public:
-        void enter(Game *game, GameBase::Action action) override;
+class ChanceState : public GameState {
+ public:
+  void enter(Game &game, GameBase::Action action) override;
 
-        void transition(Game *game, GameBase::Action action) override;
+  void transition(Game &game, GameBase::Action action) override;
 
-        void exit(Game *game, GameBase::Action action) override;
+  void exit(Game &game, GameBase::Action action) override;
 
-        static GameState &getInstance();
+  static GameState &getInstance();
 
-    private:
-        ChanceState() = default;
+ private:
+  ChanceState() = default;
 
-        ChanceState(const ChanceState &other);
+  ChanceState(const ChanceState &copy);
 
-        ChanceState &operator=(const ChanceState &other);
-    };
-
-
-    class ActionStateNoBet : public GameState {
-    public:
-        void enter(Game *game, GameBase::Action action) override;
-
-        void transition(Game *game, GameBase::Action action) override;
-
-        void exit(Game *game, GameBase::Action action) override;
-
-        static GameState &getInstance();
-
-    private:
-        ActionStateNoBet() = default;
-
-        ActionStateNoBet(const ActionStateNoBet &other);
-
-        ActionStateNoBet &operator=(const ActionStateNoBet &other);
-    };
-
-
-    class ActionStateBet : public GameState {
-    public:
-        void enter(Game *game, GameBase::Action action) override;
-
-        void transition(Game *game, GameBase::Action action) override;
-
-        void exit(Game *game, GameBase::Action action) override;
-
-        static GameState &getInstance();
-
-    private:
-        ActionStateBet() = default;
-
-        ActionStateBet(const ActionStateBet &other);
-
-        ActionStateBet &operator=(const ActionStateBet &other);
-    };
-
-
-    class TerminalState : public GameState {
-    public:
-        void enter(Game *game, GameBase::Action action) override;
-
-        void transition(Game *game, GameBase::Action action) override;
-
-        void exit(Game *game, GameBase::Action action) override;
-
-        static GameState &getInstance();
-
-    private:
-        TerminalState() = default;
-
-        TerminalState(const TerminalState &other);
-
-        TerminalState &operator=(const TerminalState &other);
-    };
-
-
-    /*
-class FlopChance : public GameState {
-public:
-    void enter(Game* game, Action action);
-    void transition(Game* game, Action action);
-    void exit(Game* game, Action action);
-    static GameState& getInstance();
-
-private:
-    FlopChance() = default;
-    FlopChance(const FlopChance& other);
-    FlopChance& operator=(const FlopChance& other);
-};
-
-class PostFlopActionP0NoBet : public GameState {
-public:
-    void enter(Game* game, Action action);
-    void transition(Game* game, Action action);
-    void exit(Game* game, Action action);
-    static GameState& getInstance();
-private:
-    PostFlopActionP0NoBet() = default;
-    PostFlopActionP0NoBet(const PostFlopActionP0NoBet& other);
-    PostFlopActionP0NoBet& operator=(const PostFlopActionP0NoBet& other);
+  ChanceState &operator=(const ChanceState &copy);
 };
 
 
-class PostFlopActionP0Bet : public GameState {
-public:
-    void enter(Game* game, Action action) override;
-    void transition(Game* game, Action action) override;
-    void exit(Game* game, Action action) override;
-    static GameState& getInstance();
-private:
-    PostFlopActionP0Bet() = default;
-    PostFlopActionP0Bet(const PostFlopActionP0Bet& other);
-    PostFlopActionP0Bet& operator=(const PostFlopActionP0Bet& other);
+class ActionStateNoBet : public GameState {
+ public:
+  void enter(Game &game, GameBase::Action action) override;
+
+  void transition(Game &game, GameBase::Action action) override;
+
+  void exit(Game &game, GameBase::Action action) override;
+
+  static GameState &getInstance();
+
+ private:
+  ActionStateNoBet() = default;
+
+  ActionStateNoBet(const ActionStateNoBet &copy);
+
+  ActionStateNoBet &operator=(const ActionStateNoBet &copy);
 };
 
 
-class PostFlopActionP1Bet : public GameState {
-public:
-    void enter(Game* game, Action action);
-    void transition(Game* game, Action action);
-    void exit(Game* game, Action action);
-    static GameState& getInstance();
-private:
-    PostFlopActionP1Bet() = default;
-    PostFlopActionP1Bet(const PostFlopActionP1Bet& other);
-    PostFlopActionP1Bet& operator=(const PostFlopActionP1Bet& other);
+class ActionStateBet : public GameState {
+ public:
+  void enter(Game &game, GameBase::Action action) override;
+
+  void transition(Game &game, GameBase::Action action) override;
+
+  void exit(Game &game, GameBase::Action action) override;
+
+  static GameState &getInstance();
+
+ private:
+  ActionStateBet() = default;
+
+  ActionStateBet(const ActionStateBet &copy);
+
+  ActionStateBet &operator=(const ActionStateBet &copy);
 };
 
 
-class PostFlopActionP1NoBet : public GameState {
-public:
-    void enter(Game* game, Action action);
-    void transition(Game* game, Action action);
-    void exit(Game* game, Action action);
-    static GameState& getInstance();
-private:
-    PostFlopActionP1NoBet() = default;
-    PostFlopActionP1NoBet(const PostFlopActionP1NoBet& other);
-    PostFlopActionP1NoBet& operator=(const PostFlopActionP1NoBet& other);
-};*/
+class TerminalState : public GameState {
+ public:
+  void enter(Game &game, GameBase::Action action) override;
+
+  void transition(Game &game, GameBase::Action action) override;
+
+  void exit(Game &game, GameBase::Action action) override;
+
+  static GameState &getInstance();
+
+ private:
+  TerminalState() = default;
+
+  TerminalState(const TerminalState &copy);
+
+  TerminalState &operator=(const TerminalState &copy);
+};
 }
 #endif //INC_2PLAYERCFR_CONCRETEGAMESTATES_HPP
