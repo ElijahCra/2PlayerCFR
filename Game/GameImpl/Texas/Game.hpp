@@ -19,15 +19,17 @@ class Game : public GameBase {
   friend class ActionStateNoBet;
   friend class ActionStateBet;
   friend class TerminalState;
-  friend class GameTests_Game1_Test;
+  friend class TexasTests_Game1_Test;
 
  public:
   ///Constructor
-  explicit Game(std::mt19937 &engine); //todo try another rng? boost or xorshift
+  explicit Game(std::mt19937 &engine); //try another rng? boost or xorshift
 
   ///Modifier
   void transition(Action action);
   void reInitialize();
+
+
 
   /// Getters
   [[nodiscard]] inline GameState *getCurrentState() const noexcept{ return currentState; }
@@ -35,19 +37,11 @@ class Game : public GameBase {
   [[nodiscard]] float getUtility(int payoffPlayer) const;
   [[nodiscard]] std::string getInfoSet(int player) const noexcept;
   [[nodiscard]] std::string getType() const noexcept;
+  [[nodiscard]] int getCurrentPlayer() const noexcept;
+  [[nodiscard]] float getAverageUtility() const noexcept;
 
   ///@brief deck of cards
   std::array<uint8_t, 2*PlayerNum+5> playableCards{};
-
-  TexasCards cards;
-
-  /// @brief acting player
-  int currentPlayer;
-
-  float averageUtility{};
-
-  float averageUtilitySum{};
-
  protected:
 
   /// Setters
@@ -61,24 +55,13 @@ class Game : public GameBase {
 
   void updateInfoSet();
   void updateInfoSet(Action action);
+
+  void updateAverageUtilitySum(float value);
+  void updateAverageUtility(int i);
   void updatePlayer();
 
 
   /// members
-
-  /// @brief number of raises + reraises played this round
-  uint8_t raiseNum{};
-
-  ///@brief rng engine, mersienne twister
-  std::mt19937 &RNG;
-
-  int winner;
-
-  int currentRound;
-
-  Action prevAction;
-
-  std::array<float,PlayerNum> playerStacks;
 
   /// utils
   static std::string actionToStr(Action action);
@@ -96,7 +79,16 @@ class Game : public GameBase {
     }
   }
  private:
-  std::string type;
+  std::string type = "chance";
+
+  Action prevAction = Action::None;
+
+  std::array<float,PlayerNum> playerStacks = {100.0f};
+
+  int winner = -1;
+
+  int currentRound = 0;
+
   /// @brief the players private info set, contains their cards public cards and all actions played
   std::array <std::string, PlayerNum> infoSet{};
 
@@ -108,6 +100,23 @@ class Game : public GameBase {
 
   ///@brief actions available at this point in the game
   std::vector <Action> availActions;
+
+  TexasCards cards;
+
+  /// @brief acting player
+  int currentPlayer;
+
+  float averageUtility{};
+
+  float averageUtilitySum{};
+
+  /// @brief number of raises + reraises played this round
+  uint8_t raiseNum{};
+
+  ///@brief rng engine, mersienne twister
+  std::mt19937 &RNG;
+
+
 };
 }
 

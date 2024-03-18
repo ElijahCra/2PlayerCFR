@@ -4,6 +4,6 @@
 
 
 int main() {
-    CFR::RegretMinimizer<Texas::Game> Minimize{(std::random_device()())};
+    CFR::RegretMinimizer<Preflop::Game> Minimize{(std::random_device()())};
     Minimize.Train(101000);
 }

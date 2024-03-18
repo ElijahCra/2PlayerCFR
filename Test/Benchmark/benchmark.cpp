@@ -4,13 +4,14 @@
 
 #include <benchmark/benchmark.h>
 #include "../../CFR/RegretMinimizer.hpp"
-#include "../../Game/Texas/Game.hpp"
-#include "../../Cards/HandAbstraction/hand_index.h"
+#include "../../Game/GameImpl/Texas/Game.hpp"
+#include "../../Game/GameImpl/Preflop/Game.hpp"
+#include "../../Utility/HandAbstraction/hand_index.h"
 
 static void BM_TrainIterations(benchmark::State& state) {
     CFR::RegretMinimizer<Texas::Game> Minimize{(std::random_device()())};
     for (auto _ : state)
-        Minimize.Train(1);
+        Minimize.Train(100);
 }
 BENCHMARK(BM_TrainIterations);
 

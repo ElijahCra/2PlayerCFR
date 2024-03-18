@@ -10,18 +10,14 @@
 #include <cassert>
 #include <span>
 #include <algorithm>
+#include <format>
 
 namespace Texas {
-Game::Game(std::mt19937 &engine) : RNG(engine),
-                                   currentPlayer(0),
-                                   winner(-1),
-                                   type("chance"),
-                                   currentRound(0),
-                                   prevAction(Action::None),
-                                   playerStacks({100.0f}){
+Game::Game(std::mt19937 &engine) : RNG(engine)
+{
 
   std::array<uint8_t,DeckCardNum> temp = baseDeck;
-  std::shuffle(temp.begin(),temp.end(),RNG);
+  std::ranges::shuffle(temp.begin(),temp.end(),RNG);
   std::copy(temp.begin(),temp.begin()+2*PlayerNum+5, playableCards.begin());
 
   addMoney();
@@ -65,13 +61,11 @@ void Game::setActions(std::vector<GameBase::Action> actionVec) {
 }
 
 float Game::getUtility(int payoffPlayer) const {
-
+  assert(-1 != winner);
   if (3 == winner) {
     return utilities[2] / 2.f + utilities[payoffPlayer];
   } else if (payoffPlayer == winner) {
     return utilities[2] + utilities[payoffPlayer];
-  } else if (-1 == winner) {
-    throw std::logic_error("game winner not updated from initialization");
   } else {
     return utilities[payoffPlayer];
   }
@@ -85,15 +79,13 @@ void Game::updateInfoSet(Action action) {
 
 void Game::updateInfoSet() {
   // Find the end of the numeric part
-
   for (int j =0; j<2;++j){
     size_t i = 0;
     while (i < infoSet[j].length() && std::isdigit(infoSet[j][i])) {
       ++i;
     }
-    infoSet[j] = std::to_string(cards.playerIndices[currentRound + (4 * j)]) + infoSet[j].substr(i);
+    infoSet[j] = infoSet[j] = std::format("{}{}", cards.playerIndices[currentRound + (4 * j)], infoSet[j].substr(i));
   }
-
 }
 
 std::string Game::getInfoSet(int player) const noexcept {
@@ -102,21 +94,22 @@ std::string Game::getInfoSet(int player) const noexcept {
 
 
 std::string Game::actionToStr(Action action) {
+  using enum Texas::GameBase::Action;
   static std::unordered_map<Action, std::string> converter = {
-      {Action::Check, "Ch"},
-      {Action::Fold, "Fo"},
-      {Action::Call, "Ca"},
-      {Action::Raise1, "Ra1"},
-      {Action::Raise2, "Ra2"},
-      {Action::Raise3, "Ra3"},
-      {Action::Raise5, "Ra5"},
-      {Action::Raise10, "Ra10"},
-      {Action::Reraise2, "Re2"},
-      {Action::Reraise4, "Re4"},
-      {Action::Reraise6, "Re6"},
-      {Action::Reraise10, "Re10"},
-      {Action::Reraise20, "Re20"},
-      {Action::AllIn, "AI"}
+      {Check, "Ch"},
+      {Fold, "Fo"},
+      {Call, "Ca"},
+      {Raise1, "Ra1"},
+      {Raise2, "Ra2"},
+      {Raise3, "Ra3"},
+      {Raise5, "Ra5"},
+      {Raise10, "Ra10"},
+      {Reraise2, "Re2"},
+      {Reraise4, "Re4"},
+      {Reraise6, "Re6"},
+      {Reraise10, "Re10"},
+      {Reraise20, "Re20"},
+      {AllIn, "AI"}
   };
   return converter[action];
 }
@@ -143,7 +136,7 @@ void Game::reInitialize() {
   }
 
   std::array<uint8_t,DeckCardNum> temp = baseDeck;
-  std::shuffle(temp.begin(),temp.end(),RNG);
+  std::ranges::shuffle(temp.begin(),temp.end(),RNG);
   std::copy(temp.begin(),temp.begin()+2*PlayerNum+5, playableCards.begin());
 
   cards.initIndices(std::span<uint8_t, 9>(temp.begin(), 9));
@@ -153,5 +146,21 @@ void Game::reInitialize() {
   currentRound = 0;
   currentState = &ChanceState::getInstance();
   currentState->enter(*this, Action::None);
+}
+
+float Game::getAverageUtility() const noexcept {
+  return averageUtility;
+}
+
+void Game::updateAverageUtilitySum(float value) {
+  averageUtilitySum += value;
+}
+
+void Game::updateAverageUtility(int i) {
+  averageUtility = averageUtilitySum / ((float)i);
+}
+
+int Game::getCurrentPlayer() const noexcept{
+  return currentPlayer;
 }
 }

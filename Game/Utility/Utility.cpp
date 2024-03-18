@@ -39,7 +39,7 @@ bool Utility::initLookup() {
             if (fin == nullptr) {
                 fin = fopen("../../../HandRanks.dat", "rb");
                 if (fin == nullptr) {
-                    fin = fopen("/mnt/c/Users/Elijah/CLionProjects/2PlayerCFR/HandRanks.dat","rb");
+                    fin = fopen("/Users/elijahcrain/CLionProjects/2PlayerCFR/Game/Utility/HandRanks.dat","rb");
                     if (fin == nullptr) {
                         throw(std::runtime_error("did not open properly \n"));
                     }

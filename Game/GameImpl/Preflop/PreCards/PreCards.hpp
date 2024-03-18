@@ -18,11 +18,8 @@ class PreCards {
   explicit PreCards();
   void initIndices(std::span<uint8_t, 9> cards);
 
-  //static hand_index_t plHandtoIndex();
-  //static std::vector<int> indexToCards();
-
   std::array<uint64_t, 4> playerIndices{};
-  static hand_indexer_t riverIndexer;
+  static hand_indexer_t flopIndexer;
  private:
 
   static inline bool init = false;

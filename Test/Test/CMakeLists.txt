@@ -19,13 +19,14 @@ enable_testing()
 
 add_executable(
         hello_test
-        test.cpp
+        texastest.cpp
+        prefloptest.cpp
 )
 target_link_libraries(
         hello_test PUBLIC
         GTest::gtest_main
         Texas
-        #Preflop
+        Preflop
         CFR
         Utility
         #benchmark::benchmark

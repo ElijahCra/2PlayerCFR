@@ -35,43 +35,45 @@ GameState &ChanceState::getInstance() {
 }
 
 void ActionStateNoBet::enter(Game &game, Game::Action action) {
+  using enum Preflop::GameBase::Action;
   if (0 == game.currentRound) {
-    if (Game::Action::None == action) {
-      game.setActions({Game::Action::Raise1, Game::Action::Call, Game::Action::Fold});
-    } else if (Game::Action::Call == action) {
-      game.setActions({Game::Action::Raise1, Game::Action::Check});
+    if (None == action) {
+      game.setActions({Raise1, Call, Fold});
+    } else if (Call == action) {
+      game.setActions({Raise1, Check});
     }
   } else {
-    game.setActions({Game::Action::Raise1, Game::Action::Check});
+    game.setActions({Raise1, Check});
   }
   game.setType("action");
 }
 
 void ActionStateNoBet::transition(Game &game, Game::Action action) {
-  if (Game::Action::Call == action) { //first action small-blind calls/limps
+  using enum Preflop::GameBase::Action;
+  if (Call == action) { //first action small-blind calls/limps
     game.setState(ActionStateNoBet::getInstance(), action);
-  } else if (Game::Action::Check == action) {
+  } else if (Check == action) {
     if (1 == game.currentRound) {
-      if (Game::Action::Check == game.prevAction) {
+      if (Check == game.prevAction) {
         game.setState(TerminalState::getInstance(), action);
       } else {
         game.setState(ActionStateNoBet::getInstance(), action);
-        game.prevAction = Game::Action::Check;
+        game.prevAction = Check;
       }
     } else if (0 == game.currentRound){
       game.setState(ChanceState::getInstance(), action);
     } else {
-      if (Game::Action::Check == game.prevAction) {
+      if (Check == game.prevAction) {
         game.setState(ChanceState::getInstance(), action);
       } else {
         game.setState(ActionStateNoBet::getInstance(), action);
-        game.prevAction = Game::Action::Check;
+        game.prevAction = Check;
       }
     }
-  } else if (Game::Action::Fold == action) { //first action small-blind folds
+  } else if (Fold == action) { //first action small-blind folds
     game.setState(TerminalState::getInstance(),
                   action);          // or second action bb checks -> post flop chance node
-  } else if (Game::Action::Raise1 == action) { //first action small blind raises
+  } else if (Raise1 == action) { //first action small blind raises
     game.setState(ActionStateBet::getInstance(), action);
   }
 }
@@ -82,45 +84,48 @@ GameState &ActionStateNoBet::getInstance() {
 }
 
 void ActionStateNoBet::exit(Game &game, Game::Action action) {
-  if (Game::Action::Call == action) {
+  using enum Preflop::GameBase::Action;
+  if (Call == action) {
     game.addMoney(500);
-  } else if (Game::Action::Raise1 == action) {
+  } else if (Raise1 == action) {
     game.addMoney(1500);
     ++game.raiseNum;
-  } else if (Game::Action::Check == action) {
+  } else if (Check == action) {
     if (game.currentRound == 0) {
       ++game.currentRound;
-    } else if (Game::Action::Check == game.prevAction) {
+    } else if (Check == game.prevAction) {
       ++game.currentRound;
     }
-  } else if (Game::Action::Fold == action) {}
-  game.updatePlayer();
+  }
+  game.updateCurrentPlayer();
   game.updateInfoSet(action);
 }
 
 
 void ActionStateBet::enter(Game &game, Game::Action action) {
-  if (Game::Action::Raise1 == action) {
-    game.setActions(std::vector<Game::Action>{Game::Action::Fold, Game::Action::Call, Game::Action::Reraise2});
-  } else if (Game::Action::Reraise2 == action) {
+  using enum Preflop::GameBase::Action;
+  if (Raise1 == action) {
+    game.setActions(std::vector<Game::Action>{Fold, Call, Reraise2});
+  } else if (Reraise2 == action) {
     if (game.raiseNum >= Game::maxRaises) {
-      game.setActions(std::vector<Game::Action>{Game::Action::Fold, Game::Action::Call});
+      game.setActions(std::vector<Game::Action>{Fold, Call});
     } else {
-      game.setActions(std::vector<Game::Action>{Game::Action::Fold, Game::Action::Call, Game::Action::Reraise2});
+      game.setActions(std::vector<Game::Action>{Fold, Call, Reraise2});
     }
   }
 }
 
 void ActionStateBet::transition(Game &game, Game::Action action) {
-  if (Game::Action::Call == action) {
+  using enum Preflop::GameBase::Action;
+  if (Call == action) {
     if (1 == game.currentRound) {
       game.setState(TerminalState::getInstance(), action);
     } else {
       game.setState(ChanceState::getInstance(), action);
     }
-  } else if (Game::Action::Fold == action) {
+  } else if (Fold == action) {
     game.setState(TerminalState::getInstance(), action);
-  } else if (Game::Action::Reraise2 == action) {
+  } else if (Reraise2 == action) {
     if (Game::maxRaises < game.raiseNum) {
       throw std::logic_error("reraised more than allowed in actionbet");
     }
@@ -135,15 +140,16 @@ GameState &ActionStateBet::getInstance() {
 
 
 void ActionStateBet::exit(Game &game, Game::Action action) {
-  if (Game::Action::Call == action) {
+  using enum Preflop::GameBase::Action;
+  if (Call == action) {
     game.addMoney(1000);
     ++game.currentRound;
-  } else if (Game::Action::Reraise2 == action) {
+  } else if (Reraise2 == action) {
     game.addMoney(2000);
     ++game.raiseNum;
-  } else if (Game::Action::Fold == action) {}
+  }
   game.updateInfoSet(action);
-  game.updatePlayer();
+  game.updateCurrentPlayer();
 }
 
 
@@ -156,7 +162,6 @@ void TerminalState::enter(Game &game, Game::Action action) {
     return;
   }
 
-  //std::copy(game.playableCards.begin()+4,game.playableCards.begin()+8,game.);
   std::array<int, 7> p0cards{game.playableCards[0], game.playableCards[1]};
   std::array<int, 7> p1cards{game.playableCards[2], game.playableCards[3]};
 
