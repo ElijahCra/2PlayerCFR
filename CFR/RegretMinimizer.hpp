@@ -28,6 +28,8 @@ class RegretMinimizer {
   /// @brief calls cfr algorithm for full game tree (or sampled based on version) traversal the specified number of times
   void Train(int iterations);
 
+  [[nodiscard]] std::vector<float> getNodeStrategy(std::string node) const noexcept;
+
 
   /// @brief recursively traverse game tree (depth-first) sampling only one chance outcome at each chance node and all actions
   /// @param updatePlayer player whose getStrategy is updated and utilities are retrieved in terms of
@@ -213,6 +215,10 @@ float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int u
     }
     return nodeValue;
   }
+}
+template <typename GameType>
+std::vector<float> RegretMinimizer<GameType>::getNodeStrategy(std::string index) const noexcept{
+  return nodeMap[index]->getStrategy;
 }
 }
 #endif //INC_2PLAYERCFR_REGRETMINIMIZER_HPP

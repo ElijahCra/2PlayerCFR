@@ -4,6 +4,8 @@
 
 #include "GameBase.hpp"
 #include "ConcreteGameStates.hpp"
+#include "Game.hpp"
+
 #include <utility>
 #include <unordered_map>
 #include <stdexcept>
@@ -135,7 +137,7 @@ void Game::reInitialize() {
 
   std::array<uint8_t,DeckCardNum> temp = baseDeck;
   std::ranges::shuffle(temp.begin(),temp.end(),RNG);
-  std::copy(temp.begin(),temp.begin()+2*PlayerNum+5, playableCards.begin());
+  std::copy(temp.begin(),temp.begin()+2*PlayerNum+5, playableCardsBegin());
 
   cards.initIndices(std::span<uint8_t, 9>(temp.begin(), 9));
 
@@ -160,5 +162,11 @@ float Game::getAverageUtility() const noexcept {
 
 int Game::getCurrentPlayer() const noexcept{
   return currentPlayer;
+}
+int Game::getPlayableCards(int index) const noexcept {
+  return playableCards[index];
+}
+std::array<unsigned char, 9>::const_iterator Game::playableCardsBegin() const noexcept{
+  return playableCards.begin();
 }
 }

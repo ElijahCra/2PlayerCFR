@@ -162,11 +162,11 @@ void TerminalState::enter(Game &game, Game::Action action) {
     return;
   }
 
-  std::array<int, 7> p0cards{game.playableCards[0], game.playableCards[1]};
-  std::array<int, 7> p1cards{game.playableCards[2], game.playableCards[3]};
+  std::array<int, 7> p0cards{game.getPlayableCards(0), game.getPlayableCards(1)};
+  std::array<int, 7> p1cards{game.getPlayableCards(2), game.getPlayableCards(3)};
 
-  std::copy(game.playableCards.begin() + 4, game.playableCards.begin() + 9, p0cards.begin() + 2);
-  std::copy(game.playableCards.begin() + 4, game.playableCards.begin() + 9, p1cards.begin() + 2);
+  std::copy(game.playableCardsBegin() + 4, game.playableCardsBegin() + 9, p0cards.begin() + 2);
+  std::copy(game.playableCardsBegin() + 4, game.playableCardsBegin() + 9, p1cards.begin() + 2);
 
   for (int i=0; i<7;++i){
     p0cards[i] += 1;

@@ -40,9 +40,9 @@ class Game : public GameBase {
   [[nodiscard]] std::string getType() const noexcept;
   [[nodiscard]] int getCurrentPlayer() const noexcept;
   [[nodiscard]] float getAverageUtility() const noexcept;
+  [[nodiscard]] int getPlayableCards(int index) const noexcept;
+  [[nodiscard]] std::array<unsigned char, 9>::const_iterator playableCardsBegin() const noexcept;
 
-  ///@brief deck of cards
-  std::array<uint8_t, 2*PlayerNum+5> playableCards{};
  protected:
   /// Setters
   void setType(std::string type);
@@ -62,7 +62,7 @@ class Game : public GameBase {
 
   /// Constants
   ///@brief how many unique deals are possible
-  [[nodiscard]] constexpr int getChanceActionNum() const{
+  [[nodiscard]] constexpr int getChanceActionNum() {
     if (0 == currentRound) {
       //(cardNum choose 2) * (cardNum-2 choose 2)
       return DeckCardNum * (DeckCardNum - 1) * (DeckCardNum - 2) * (DeckCardNum - 3);
@@ -73,6 +73,8 @@ class Game : public GameBase {
     }
   }
  private:
+  std::array<uint8_t, 2*GameBase::PlayerNum+5> playableCards{};
+
   /// @brief number of raises + reraises played this round
   uint8_t raiseNum{};
 
