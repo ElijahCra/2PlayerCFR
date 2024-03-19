@@ -41,7 +41,7 @@ class Game : public GameBase {
   [[nodiscard]] int getCurrentPlayer() const noexcept;
   [[nodiscard]] float getAverageUtility() const noexcept;
   [[nodiscard]] int getPlayableCards(int index) const noexcept;
-  [[nodiscard]] std::array<unsigned char, 9>::const_iterator playableCardsBegin() const noexcept;
+  [[nodiscard]] std::array<unsigned char, 9>::iterator playableCardsBegin();
 
  protected:
   /// Setters

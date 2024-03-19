@@ -143,11 +143,11 @@ TEST(PreflopRegretMinTests, Test1) {
 
   game3->transition(Game::Action::Call);
 
-  int polook[7] = {game3->playableCards[0], game3->playableCards[1], 0, 0, 0, 0, 0};
-  int p1look[7] = {game3->playableCards[2], game3->playableCards[3], 0, 0, 0, 0, 0};
+  int polook[7] = {game3->getPlayableCards(0), game3->getPlayableCards(1), 0, 0, 0, 0, 0};
+  int p1look[7] = {game3->getPlayableCards(2), game3->getPlayableCards(3), 0, 0, 0, 0, 0};
   for (int i = 4; i < 9; ++i) {
-    polook[i - 2] = game3->playableCards[i];
-    p1look[i - 2] = game3->playableCards[i];
+    polook[i - 2] = game3->getPlayableCards(i);
+    p1look[i - 2] = game3->getPlayableCards(i);
   }
 
   if (windowsOS) {

@@ -166,7 +166,7 @@ int Game::getCurrentPlayer() const noexcept{
 int Game::getPlayableCards(int index) const noexcept {
   return playableCards[index];
 }
-std::array<unsigned char, 9>::const_iterator Game::playableCardsBegin() const noexcept{
+std::array<unsigned char, 9>::iterator Game::playableCardsBegin() {
   return playableCards.begin();
 }
 }
