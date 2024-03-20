@@ -5,7 +5,7 @@
 #ifndef CARDS_HPP
 #define CARDS_HPP
 
-#include "hand_index.h"
+#include "../../../Utility/HandAbstraction/hand_index.h"
 #include <variant>
 #include <vector>
 #include <array>

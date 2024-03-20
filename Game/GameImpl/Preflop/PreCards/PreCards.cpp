@@ -3,7 +3,6 @@
 //
 
 #include "PreCards.hpp"
-#include "hand_index.h"
 
 namespace Preflop {
 hand_indexer_t PreCards::flopIndexer;

@@ -9,7 +9,7 @@
 #include <array>
 #include "GameBase.hpp"
 #include "GameState.hpp"
-#include "TexasCards.hpp"
+#include "./TexasCards/TexasCards.hpp"
 
 namespace Texas {
 class GameState;
