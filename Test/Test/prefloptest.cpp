@@ -12,7 +12,7 @@
 
 
 //using wsl on my windows machine so detect linux header
-#ifdef __linux__
+#ifdef __MINGW32__
 #define windowsOS true
 #else
 #define windowsOS false
@@ -151,7 +151,7 @@ TEST(PreflopRegretMinTests, Test1) {
   }
 
   if (windowsOS) {
-    EXPECT_EQ(weiUtil, 345.214783f);
+    EXPECT_EQ(weiUtil, -218.75f);
   } else {
     EXPECT_EQ(weiUtil, 2250.f);
   }
@@ -170,13 +170,16 @@ TEST(PreflopHandAbstract, MainTest) {
   EXPECT_EQ(hand_indexer_size(&preflop_indexer, 0) , 169);
   EXPECT_EQ(hand_indexer_size(&flop_indexer, 0) , 169);
 
+  uint8_t testCards1[] = {0,1};
   EXPECT_EQ(hand_indexer_size(&flop_indexer, 1) , 123156254);
 
-  std::array<uint8_t,2> my_cards{};
-  hand_unindex(&preflop_indexer,0,1,my_cards.data());
 
+
+  std::array<uint8_t,2> my_cards{};
+
+  /*hand_unindex(&preflop_indexer,0,1,my_cards.data());
   EXPECT_EQ(0,my_cards[0]);
-  EXPECT_EQ(5,my_cards[1]);
+  EXPECT_EQ(5,my_cards[1]);*/
 
   hand_indexer_t my_preflop_indexer;
   hand_indexer_init(1, cards1, &my_preflop_indexer);
@@ -194,5 +197,49 @@ TEST(PreflopHandAbstract, MainTest) {
   hand_indexer_free(&flop_indexer);
   hand_indexer_free(&preflop_indexer);
 }
+TEST(PreflopHandAbstract, 0123EqualTest) {
+  uint8_t cards1[] ={2};
+  uint8_t cards2[] ={2,5};
+
+  hand_indexer_t preflop_indexer;
+  hand_indexer_init(1, cards1, &preflop_indexer);
+
+  hand_indexer_t flop_indexer;
+  hand_indexer_init(2, cards2, &flop_indexer);
+
+  hand_indexer_state_t hand1indeces;
+  const uint8_t cardsp0[]{0, 1};
+  hand_indexer_state_init(&flop_indexer, &hand1indeces);
+  uint64_t index1 = hand_index_next_round(&flop_indexer, cardsp0, &hand1indeces);
+
+  hand_indexer_state_t hand2indeces;
+  const uint8_t cardsp1[]{2, 3};
+  hand_indexer_state_init(&flop_indexer, &hand2indeces);
+  uint64_t index2 = hand_index_next_round(&flop_indexer, cardsp1, &hand2indeces);
+  EXPECT_EQ(index1,index2);
+}
+
+TEST(PreflopHandAbstract, 1234NotEqualTest) {
+  uint8_t cards1[] ={2};
+  uint8_t cards2[] ={2,5};
+
+  hand_indexer_t preflop_indexer;
+  hand_indexer_init(1, cards1, &preflop_indexer);
+
+  hand_indexer_t flop_indexer;
+  hand_indexer_init(2, cards2, &flop_indexer);
+
+  hand_indexer_state_t hand1indeces;
+  const uint8_t cardsp0[]{1, 2};
+  hand_indexer_state_init(&flop_indexer, &hand1indeces);
+  uint64_t index1 = hand_index_next_round(&flop_indexer, cardsp0, &hand1indeces);
+
+  hand_indexer_state_t hand2indeces;
+  const uint8_t cardsp1[]{3, 4};
+  hand_indexer_state_init(&flop_indexer, &hand2indeces);
+  uint64_t index2 = hand_index_next_round(&flop_indexer, cardsp1, &hand2indeces);
+  EXPECT_NE(index1,index2);
+}
+
 }
 

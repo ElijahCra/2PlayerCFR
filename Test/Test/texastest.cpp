@@ -10,7 +10,7 @@
 #include "RegretMinimizer.hpp"
 
 //using wsl on my windows machine so detect linux header
-#ifdef __linux__
+#ifdef __MINGW32__
 #define windowsOS true
 #else
 #define windowsOS false
