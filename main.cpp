@@ -5,5 +5,5 @@
 
 int main() {
     CFR::RegretMinimizer<Preflop::Game> Minimize{(std::random_device()())};
-    Minimize.Train(101000);
+    Minimize.Train(1010000);
 }

@@ -78,7 +78,7 @@ void RegretMinimizer<GameType>::Train(int iterations) {
     Game.updateAverageUtilitySum(value[1]);
     Game.updateAverageUtility(i);
 
-    if (i % 1000 == 0 && i > 5000) {
+    if (i % 5000 == 0 && i > 5000) {
 
       std::string checkCards = "90";
       auto regretSum = nodeMap[checkCards]->getRegretSum();
