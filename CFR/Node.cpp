@@ -6,10 +6,10 @@ namespace CFR {
 
     Node::Node(uint8_t actionNum) : actionNum(actionNum) {
         for (int i=0; i<actionNum; ++i) {
-            strategy.push_back(1.f / (float) actionNum);
-            regretSum.push_back(0.f);
-            strategySum.push_back(0.f);
-            averageStrategy.push_back(0.f);
+            strategy.push_back(1.F / (float) actionNum);
+            regretSum.push_back(0.F);
+            strategySum.push_back(0.F);
+            averageStrategy.push_back(0.F);
         }
     }
 
@@ -20,33 +20,37 @@ namespace CFR {
             normalizingSum += strategy[a];
         }
         for (int a = 0; a < actionNum; a++) {
-            if (normalizingSum > 0)
+            if (normalizingSum > 0) {
                 strategy[a] /= normalizingSum;
-            else
-                strategy[a] = 1.f / (float)actionNum;
+            } else {
+                strategy[a] = 1.F / static_cast<float>(actionNum);
+            }
         }
     }
 
     void Node::calcAverageStrategy() {
         float normalizingSum = 0;
-        for (int a = 0; a < actionNum; a++)
+        for (int a = 0; a < actionNum; a++) {
             normalizingSum += strategySum[a];
-        for (int a = 0; a < actionNum; a++)
-            if (normalizingSum > 0)
+        }
+        for (int a = 0; a < actionNum; a++) {
+            if (normalizingSum > 0) {
                 averageStrategy[a] = strategySum[a] / normalizingSum;
-            else
+            } else {
                 averageStrategy[a] = 1.f / (float)actionNum;
+            }
+        }
     }
 
-    const std::vector<float> &Node::getStrategy() const {
+    auto Node::getStrategy() const -> const std::vector<float> & {
         return strategy;
     }
 
-    const std::vector<float> &Node::getRegretSum() const {
+    auto Node::getRegretSum() const -> const std::vector<float> & {
         return regretSum;
     }
 
-    const std::vector<float> &Node::getAverageStrategy() const {
+    auto Node::getAverageStrategy() const -> const std::vector<float> & {
         return averageStrategy;
     }
 

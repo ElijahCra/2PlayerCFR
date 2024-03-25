@@ -35,7 +35,7 @@ class Game : public GameBase {
   [[nodiscard]] inline GameState *getCurrentState() const noexcept{ return currentState; }
   [[nodiscard]] std::vector<Action> getActions() const noexcept;
   [[nodiscard]] float getUtility(int payoffPlayer) const;
-  [[nodiscard]] std::string getInfoSet(int player) const noexcept;
+  [[nodiscard]] auto getInfoSet(int player) const noexcept -> std::string;
   [[nodiscard]] std::string getType() const noexcept;
   [[nodiscard]] int getCurrentPlayer() const noexcept;
   [[nodiscard]] float getAverageUtility() const noexcept;
@@ -83,7 +83,7 @@ class Game : public GameBase {
 
   Action prevAction = Action::None;
 
-  std::array<float,PlayerNum> playerStacks = {100.0f};
+  std::array<float,PlayerNum> playerStacks = {100.F,100.F};
 
   int winner = -1;
 

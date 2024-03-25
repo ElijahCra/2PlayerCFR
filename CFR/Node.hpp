@@ -18,11 +18,11 @@ namespace CFR {
 
         void calcAverageStrategy();
 
-        [[nodiscard]] const std::vector<float> &getAverageStrategy() const;
+        [[nodiscard]] auto getAverageStrategy() const -> const std::vector<float> &;
 
-        [[nodiscard]] const std::vector<float> &getStrategy() const;
+        [[nodiscard]] auto getStrategy() const -> const std::vector<float> &;
 
-        [[nodiscard]] const std::vector<float> &getRegretSum() const;
+        [[nodiscard]] auto getRegretSum() const -> const std::vector<float> &;
 
         void updateRegretSum(int i, float actionRegret, float probCounterFactual);
 
