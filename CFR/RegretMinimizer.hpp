@@ -28,7 +28,8 @@ class RegretMinimizer {
   /// @brief calls cfr algorithm for full game tree (or sampled based on version) traversal the specified number of times
   void Train(int iterations);
 
-  [[nodiscard]] std::vector<float> getNodeAverageStrategy(const std::string& node) const noexcept;
+  [[nodiscard]]
+  auto getNodeInformation(const std::string& index) noexcept -> std::vector<std::vector<float>>;
 
 
   /// @brief recursively traverse game tree (depth-first) sampling only one chance outcome at each chance node and all actions
@@ -74,19 +75,6 @@ void RegretMinimizer<GameType>::Train(int iterations) {
   for (int i = 0; i < iterations; ++i) {
     for (int p = 0; p < GameType::PlayerNum; ++p) {
       value[p] = ExternalSamplingCFR(Game, p, 1.0, 1.0);
-    }
-    Game.updateAverageUtilitySum(value[1]);
-    Game.updateAverageUtility(i);
-
-    if (i % 5000 == 0 && i > 5000) {
-
-      std::string checkCards = "90";
-      auto regretSum = nodeMap[checkCards]->getRegretSum();
-      auto currentStrat = nodeMap[checkCards]->getStrategy();
-      nodeMap[checkCards]->calcAverageStrategy();
-      auto averageStrat = nodeMap[checkCards]->getAverageStrategy();
-      printf("  \nValues for a pair of Aces on the first round first action \nAverage Utility: %.4g \nRegret Sum \n raise: %.4g, call: %.4g, fold: %.4g, iteration: %d \nStrategy on this iteration \n raise: %.3g%%, call: %.3g%%, fold: %.3g%% \nAverage Strategy \n raise: %.3g%%, call: %.3g%%, fold: %.3g%% \n",
-             Game.getAverageUtility(), regretSum[0],regretSum[1], regretSum[2], i,currentStrat[0]*100, currentStrat[1]*100, currentStrat[2]*100, averageStrat[0]*100, averageStrat[1]*100, averageStrat[2]*100);
     }
     Game.reInitialize();
   }
@@ -217,9 +205,13 @@ float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int u
   }
 }
 template <typename GameType>
-std::vector<float> RegretMinimizer<GameType>::getNodeAverageStrategy(const std::string& index) const noexcept{
-  nodeMap.at(index)->calcAverageStrategy();
-  return nodeMap.at(index)->getAverageStrategy();
+auto RegretMinimizer<GameType>::getNodeInformation(const std::string& index) noexcept -> std::vector<std::vector<float>>{
+  std::vector<std::vector<float>> res;
+  res.push_back(nodeMap[index]->getRegretSum());
+  res.push_back(nodeMap[index]->getStrategy());
+  nodeMap[index]->calcAverageStrategy();
+  res.push_back(nodeMap[index]->getAverageStrategy());
+  return res;
 }
 }
 #endif //INC_2PLAYERCFR_REGRETMINIMIZER_HPP
