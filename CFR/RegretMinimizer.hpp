@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include "Node.hpp"
 #include "../Game/Utility/Utility.hpp"
+#include "CustomExceptions.h"
 
 namespace CFR {
 
@@ -21,8 +22,8 @@ class RegretMinimizer {
  public:
   /// @brief constructor takes a seed or one is generated
   explicit RegretMinimizer(uint32_t seed = std::random_device()());
-  RegretMinimizer(RegretMinimizer& other)=delete;
-  RegretMinimizer& operator=(RegretMinimizer& other)=delete;
+  RegretMinimizer(RegretMinimizer& other) = delete;
+  auto operator=(RegretMinimizer& other) -> RegretMinimizer& = delete;
   ~RegretMinimizer();
 
   /// @brief calls cfr algorithm for full game tree (or sampled based on version) traversal the specified number of times
@@ -38,10 +39,10 @@ class RegretMinimizer {
   /// @param probUpdatePlayer probability of reaching next node given only the updateCurrentPlayer's actions
   /// @param game the next node in the dfs
   /// probCounterfactual does not include chance probabilities bc we divivide by the probability the chance outcomes were sampled making them 1 for the calculation
-  float ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer);
+  auto ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) -> float;
 
   /// @brief same as ChanceCFR except at each action node sample one action for non update player
-  float ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer);
+  auto ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) -> float;
 
 
  private:
@@ -64,8 +65,8 @@ RegretMinimizer<GameType>::RegretMinimizer(const uint32_t seed) : rng(seed), Gam
 
 template<typename GameType>
 RegretMinimizer<GameType>::~RegretMinimizer() {
-  for (const auto& [first, second] : nodeMap) {
-    delete second;
+  for (auto &itr: nodeMap) {
+    delete itr.second;
   }
 }
 
@@ -80,7 +81,7 @@ void RegretMinimizer<GameType>::Train(int iterations) {
   }
 }
 template<typename GameType>
-float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) {
+auto RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) -> float {
   ++nodesTouched;
 
   std::string type = game.getType();
@@ -88,7 +89,7 @@ float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlaye
   if ("terminal" == type) {
     return game.getUtility(updatePlayer);
   }
-  else if ("chance" == type) {
+  if ("chance" == type) {
     /// get actions and their size
     std::vector<typename GameType::Action> const actions = game.getActions();
 
@@ -99,7 +100,7 @@ float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlaye
     nodeValue = ChanceCFR(copiedGame, updatePlayer, probCounterFactual, probUpdatePlayer);
     return nodeValue;
   }
-  else if ("action" == type) { //Decision Node
+  if ("action" == type) { //Decision Node
     /// get actions and their size
     std::vector<typename GameType::Action> const actions = game.getActions();
     const auto actionNum = static_cast<int>(actions.size());
@@ -132,19 +133,17 @@ float RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlaye
         const float actionRegret = counterfactualValue[i] - nodeValue;
         node->updateRegretSum(i, actionRegret, probCounterFactual);
       }
-
       /// update average getStrategy across all training iterations
       node->updateStrategySum(currentStrategy, probUpdatePlayer);
-
       node->calcUpdatedStrategy();
     }
-
     return nodeValue;
   }
+  throw GameStageViolation("did not match a game type in ChanceSamplingCFR");
 }
 
 template<typename GameType>
-float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) {
+auto RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) -> float {
   ++nodesTouched;
 
   std::string type = game.getType();
@@ -166,7 +165,7 @@ float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int u
     return nodeValue;
   }
 
-  else if ("action" == type) { //Decision Node
+  if ("action" == type) { //Decision Node
     float nodeValue = 0.f;
 
     Node *node = nodeMap[game.getInfoSet(game.getCurrentPlayer())];
@@ -203,6 +202,7 @@ float RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int u
     }
     return nodeValue;
   }
+  throw GameStageViolation("did not match a game type in ExternalSamplingCFR");
 }
 template <typename GameType>
 auto RegretMinimizer<GameType>::getNodeInformation(const std::string& index) noexcept -> std::vector<std::vector<float>>{

@@ -6,7 +6,7 @@ namespace CFR {
 
     Node::Node(uint8_t actionNum) : actionNum(actionNum) {
         for (int i=0; i<actionNum; ++i) {
-            strategy.push_back(1.F / (float) actionNum);
+            strategy.push_back(1.F / static_cast<float>(actionNum));
             regretSum.push_back(0.F);
             strategySum.push_back(0.F);
             averageStrategy.push_back(0.F);
