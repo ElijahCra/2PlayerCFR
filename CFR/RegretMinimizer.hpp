@@ -27,7 +27,7 @@ class RegretMinimizer {
   ~RegretMinimizer();
 
   /// @brief calls cfr algorithm for full game tree (or sampled based on version) traversal the specified number of times
-  void Train(int iterations);
+  void Train(uint32_t iterations);
 
   [[nodiscard]]
   auto getNodeInformation(const std::string& index) noexcept -> std::vector<std::vector<float>>;
@@ -71,7 +71,7 @@ RegretMinimizer<GameType>::~RegretMinimizer() {
 }
 
 template<typename GameType>
-void RegretMinimizer<GameType>::Train(int iterations) {
+void RegretMinimizer<GameType>::Train(uint32_t iterations) {
   std::array<float,GameType::PlayerNum> value;
   for (int i = 0; i < iterations; ++i) {
     for (int p = 0; p < GameType::PlayerNum; ++p) {
