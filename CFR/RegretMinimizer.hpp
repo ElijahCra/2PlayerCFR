@@ -14,6 +14,7 @@
 #include "Node.hpp"
 #include "../Game/Utility/Utility.hpp"
 #include "CustomExceptions.h"
+#include "HybridNodeStorage.hpp"
 
 namespace CFR {
 
@@ -21,16 +22,21 @@ template<typename GameType>
 class RegretMinimizer {
  public:
   /// @brief constructor takes a seed or one is generated
-  explicit RegretMinimizer(uint32_t seed = std::random_device()());
+  explicit RegretMinimizer(uint32_t seed = std::random_device()(), 
+                          size_t cacheCapacity = 100000,
+                          const std::string& dbPath = "./cfr_nodes_db");
   RegretMinimizer(RegretMinimizer& other) = delete;
   auto operator=(RegretMinimizer& other) -> RegretMinimizer& = delete;
-  ~RegretMinimizer();
+  ~RegretMinimizer() = default;
 
   /// @brief calls cfr algorithm for full game tree (or sampled based on version) traversal the specified number of times
   void Train(uint32_t iterations);
 
   [[nodiscard]]
   auto getNodeInformation(const std::string& index) noexcept -> std::vector<std::vector<float>>;
+
+  /// @brief Get storage statistics
+  void printStorageStats() const;
 
 
   /// @brief recursively traverse game tree (depth-first) sampling only one chance outcome at each chance node and all actions
@@ -50,7 +56,7 @@ class RegretMinimizer {
 
   [[no_unique_address]] Utility util;
 
-  std::unordered_map<std::string, Node *> nodeMap;
+  std::unique_ptr<HybridNodeStorage> nodeStorage;
 
   GameType Game;
 
@@ -61,13 +67,9 @@ class RegretMinimizer {
 
 ///Implementation of templates above
 template<typename GameType>
-RegretMinimizer<GameType>::RegretMinimizer(const uint32_t seed) : rng(seed), Game(rng) {}
-
-template<typename GameType>
-RegretMinimizer<GameType>::~RegretMinimizer() {
-  for (auto &itr: nodeMap) {
-    delete itr.second;
-  }
+RegretMinimizer<GameType>::RegretMinimizer(const uint32_t seed, size_t cacheCapacity, const std::string& dbPath) 
+    : rng(seed), Game(rng) {
+  nodeStorage = std::make_unique<HybridNodeStorage>(cacheCapacity, dbPath);
 }
 
 template<typename GameType>
@@ -106,10 +108,11 @@ auto RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlayer
     const auto actionNum = static_cast<int>(actions.size());
     float nodeValue = 0.f;
 
-    Node *node = nodeMap[game.getInfoSet(game.getCurrentPlayer())];
+    std::string infoSet = game.getInfoSet(game.getCurrentPlayer());
+    std::shared_ptr<Node> node = nodeStorage->getNode(infoSet);
     if (node == nullptr) {
-      node = new Node(actionNum);
-      nodeMap[game.getInfoSet(game.getCurrentPlayer())] = node;
+      node = std::make_shared<Node>(actionNum);
+      nodeStorage->putNode(infoSet, node);
     }
 
     const std::vector<float> currentStrategy = node->getStrategy();
@@ -168,10 +171,11 @@ auto RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int up
   if ("action" == type) { //Decision Node
     float nodeValue = 0.f;
 
-    Node *node = nodeMap[game.getInfoSet(game.getCurrentPlayer())];
+    std::string infoSet = game.getInfoSet(game.getCurrentPlayer());
+    std::shared_ptr<Node> node = nodeStorage->getNode(infoSet);
     if (node == nullptr) {
-      node = new Node(actionNum);
-      nodeMap[game.getInfoSet(game.getCurrentPlayer())] = node;
+      node = std::make_shared<Node>(actionNum);
+      nodeStorage->putNode(infoSet, node);
     }
 
     const std::vector<float> currentStrategy = node->getStrategy();
@@ -207,11 +211,19 @@ auto RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int up
 template <typename GameType>
 auto RegretMinimizer<GameType>::getNodeInformation(const std::string& index) noexcept -> std::vector<std::vector<float>>{
   std::vector<std::vector<float>> res;
-  res.push_back(nodeMap[index]->getRegretSum());
-  res.push_back(nodeMap[index]->getStrategy());
-  nodeMap[index]->calcAverageStrategy();
-  res.push_back(nodeMap[index]->getAverageStrategy());
+  auto node = nodeStorage->getNode(index);
+  if (node) {
+    res.push_back(node->getRegretSum());
+    res.push_back(node->getStrategy());
+    node->calcAverageStrategy();
+    res.push_back(node->getAverageStrategy());
+  }
   return res;
+}
+
+template <typename GameType>
+void RegretMinimizer<GameType>::printStorageStats() const {
+  nodeStorage->printStats();
 }
 }
 #endif //INC_2PLAYERCFR_REGRETMINIMIZER_HPP
