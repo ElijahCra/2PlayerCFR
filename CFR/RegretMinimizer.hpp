@@ -27,7 +27,13 @@ class RegretMinimizer {
                           const std::string& dbPath = "./cfr_nodes_db");
   RegretMinimizer(RegretMinimizer& other) = delete;
   auto operator=(RegretMinimizer& other) -> RegretMinimizer& = delete;
-  ~RegretMinimizer() = default;
+
+  ~RegretMinimizer() {
+    if (nodeStorage) {
+      nodeStorage->flushCache();
+    }
+  }
+
 
   /// @brief calls cfr algorithm for full game tree (or sampled based on version) traversal the specified number of times
   void Train(uint32_t iterations);
