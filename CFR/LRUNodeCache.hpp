@@ -1,6 +1,7 @@
 #ifndef INC_2PLAYERCFR_LRUNODECACHE_HPP
 #define INC_2PLAYERCFR_LRUNODECACHE_HPP
 
+#include <atomic>
 #include <unordered_map>
 #include <list>
 #include <mutex>
@@ -53,15 +54,14 @@ private:
     void evictLRU();
     void moveToFront(typename CacheList::iterator it);
     
-    mutable std::shared_mutex mutex_;
     size_t capacity_;
     CacheList cacheList_;
     CacheMap cacheMap_;
     EvictionCallback evictionCallback_;
     
     // Statistics
-    mutable std::atomic<uint64_t> hits_{0};
-    mutable std::atomic<uint64_t> misses_{0};
+    uint64_t hits_{0};
+    uint64_t misses_{0};
 };
 
 } // namespace CFR

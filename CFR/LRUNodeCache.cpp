@@ -11,15 +11,14 @@ LRUNodeCache::LRUNodeCache(size_t capacity, EvictionCallback evictionCallback)
 }
 
 std::shared_ptr<Node> LRUNodeCache::getNode(const std::string& infoSet) {
-    std::unique_lock<std::shared_mutex> lock(mutex_);
-    
+
     auto it = cacheMap_.find(infoSet);
     if (it == cacheMap_.end()) {
-        misses_.fetch_add(1, std::memory_order_relaxed);
+        misses_+=1;
         return nullptr;
     }
     
-    hits_.fetch_add(1, std::memory_order_relaxed);
+    hits_+=1;
     
     // Move accessed item to front
     moveToFront(it->second);
@@ -28,8 +27,7 @@ std::shared_ptr<Node> LRUNodeCache::getNode(const std::string& infoSet) {
 }
 
 void LRUNodeCache::putNode(const std::string& infoSet, std::shared_ptr<Node> node) {
-    std::unique_lock<std::shared_mutex> lock(mutex_);
-    
+
     auto it = cacheMap_.find(infoSet);
     if (it != cacheMap_.end()) {
         // Update existing entry
@@ -48,13 +46,10 @@ void LRUNodeCache::putNode(const std::string& infoSet, std::shared_ptr<Node> nod
 }
 
 bool LRUNodeCache::hasNode(const std::string& infoSet) {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
     return cacheMap_.find(infoSet) != cacheMap_.end();
 }
 
 void LRUNodeCache::removeNode(const std::string& infoSet) {
-    std::unique_lock<std::shared_mutex> lock(mutex_);
-    
     auto it = cacheMap_.find(infoSet);
     if (it == cacheMap_.end()) {
         return;
@@ -65,13 +60,10 @@ void LRUNodeCache::removeNode(const std::string& infoSet) {
 }
 
 size_t LRUNodeCache::size() const {
-    std::shared_lock<std::shared_mutex> lock(mutex_);
     return cacheList_.size();
 }
 
 void LRUNodeCache::clear() {
-    std::unique_lock<std::shared_mutex> lock(mutex_);
-    
     if (evictionCallback_) {
         for (const auto& entry : cacheList_) {
             evictionCallback_(entry.key, entry.node);
@@ -83,16 +75,16 @@ void LRUNodeCache::clear() {
 }
 
 double LRUNodeCache::getHitRate() const {
-    uint64_t h = hits_.load(std::memory_order_relaxed);
-    uint64_t m = misses_.load(std::memory_order_relaxed);
+    uint64_t h = hits_;
+    uint64_t m = misses_;
     uint64_t total = h + m;
     
     return total > 0 ? static_cast<double>(h) / static_cast<double>(total) : 0.0;
 }
 
 void LRUNodeCache::resetStats() {
-    hits_.store(0, std::memory_order_relaxed);
-    misses_.store(0, std::memory_order_relaxed);
+    hits_=0;
+    misses_=0;
 }
 
 void LRUNodeCache::evictLRU() {
