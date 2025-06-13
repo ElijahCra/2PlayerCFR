@@ -104,10 +104,10 @@ void LRUNodeCache::evictLRU() {
 
 void LRUNodeCache::moveToFront(typename CacheList::iterator it) {
     if (it == cacheList_.begin()) {
-        return; // Already at front
+        return;
     }
     
-    // Move to front
+
     cacheList_.splice(cacheList_.begin(), cacheList_, it);
 }
 

@@ -35,8 +35,6 @@ std::shared_ptr<Node> HybridNodeStorage::getNode(const std::string& infoSet) {
 void HybridNodeStorage::putNode(const std::string& infoSet, std::shared_ptr<Node> node) {
     // Always put in cache first
     cache_->putNode(infoSet, node);
-    
-    // The eviction callback will handle moving to persistent storage when needed
 }
 
 bool HybridNodeStorage::hasNode(const std::string& infoSet) {
@@ -49,8 +47,6 @@ void HybridNodeStorage::removeNode(const std::string& infoSet) {
 }
 
 size_t HybridNodeStorage::size() const {
-    // Note: This may count some nodes twice if they're in both cache and storage
-    // For exact count, we'd need to track unique keys
     return cache_->size() + storage_->size();
 }
 
@@ -70,8 +66,7 @@ void HybridNodeStorage::printStats() const {
 }
 
 void HybridNodeStorage::flushCache() {
-    // This would require iterating through all cache entries
-    // For now, just clear the cache (eviction callback will save to storage)
+    // eviction callback will save to storage
     cache_->clear();
 }
 

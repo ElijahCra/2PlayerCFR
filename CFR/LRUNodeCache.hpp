@@ -25,7 +25,6 @@ public:
     
     ~LRUNodeCache() override = default;
     
-    // NodeStorage interface
     std::shared_ptr<Node> getNode(const std::string& infoSet) override;
     void putNode(const std::string& infoSet, std::shared_ptr<Node> node) override;
     bool hasNode(const std::string& infoSet) override;
@@ -59,7 +58,6 @@ private:
     CacheMap cacheMap_;
     EvictionCallback evictionCallback_;
     
-    // Statistics
     uint64_t hits_{0};
     uint64_t misses_{0};
 };

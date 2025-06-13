@@ -17,24 +17,19 @@ std::string NodeSerializer::serialize(const Node& node) {
     std::string result(totalSize, '\0');
     char* ptr = result.data();
     
-    // Write header
     SerializedNode header{actionNum};
     std::memcpy(ptr, &header, sizeof(SerializedNode));
     ptr += sizeof(SerializedNode);
     
-    // Write regretSum
     std::memcpy(ptr, regretSum.data(), actionNum * sizeof(float));
     ptr += actionNum * sizeof(float);
     
-    // Write strategy
     std::memcpy(ptr, strategy.data(), actionNum * sizeof(float));
     ptr += actionNum * sizeof(float);
     
-    // Write strategySum
     std::memcpy(ptr, strategySum.data(), actionNum * sizeof(float));
     ptr += actionNum * sizeof(float);
     
-    // Write averageStrategy
     std::memcpy(ptr, averageStrategy.data(), actionNum * sizeof(float));
     
     return result;
@@ -47,20 +42,17 @@ std::shared_ptr<Node> NodeSerializer::deserialize(const std::string& data) {
     
     const char* ptr = data.data();
     
-    // Read header
     SerializedNode header;
     std::memcpy(&header, ptr, sizeof(SerializedNode));
     ptr += sizeof(SerializedNode);
     
     uint8_t actionNum = header.actionNum;
     
-    // Validate size
     size_t expectedSize = sizeof(SerializedNode) + 4 * actionNum * sizeof(float);
     if (data.size() != expectedSize) {
         return nullptr;
     }
     
-    // Create new node
     auto node = std::make_shared<Node>(actionNum);
     
     // Read and restore data
