@@ -6,6 +6,7 @@
 #include "NodeStorage.hpp"
 #include "LRUNodeCache.hpp"
 #include "RocksDBNodeStorage.hpp"
+#include "ShardedLRUCache.hpp"
 
 namespace CFR {
 
@@ -38,8 +39,8 @@ public:
 
 private:
     void onCacheEviction(const std::string& key, std::shared_ptr<Node> node);
-    
-    std::unique_ptr<LRUNodeCache> cache_;
+
+    std::unique_ptr<ShardedLRUCache> cache_;
     std::unique_ptr<RocksDBNodeStorage> storage_;
 };
 

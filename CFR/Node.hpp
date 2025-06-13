@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <cstdint>
+#include <mutex>
 
 namespace CFR {
 /// @class Node
@@ -37,6 +38,7 @@ namespace CFR {
         void updateStrategySum(const std::vector<float> &currentStrategy, float probUpdatePlayer);
 
     private:
+        mutable std::mutex mutex_;
         std::vector<float> regretSum;
         std::vector<float> strategy;
         std::vector<float> strategySum;

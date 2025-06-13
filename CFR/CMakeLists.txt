@@ -5,6 +5,7 @@ add_library(CFR STATIC
     RocksDBNodeStorage.cpp 
     HybridNodeStorage.cpp
     RegretMinimizer.hpp
+    ShardedLRUCache.cpp
 )
 
 # Find RocksDB

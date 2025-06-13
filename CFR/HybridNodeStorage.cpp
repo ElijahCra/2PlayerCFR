@@ -1,6 +1,8 @@
 #include "HybridNodeStorage.hpp"
 #include <iostream>
 
+#include "ShardedLRUCache.hpp"
+
 namespace CFR {
 
 HybridNodeStorage::HybridNodeStorage(size_t cacheCapacity, const std::string& dbPath) {
@@ -12,7 +14,7 @@ HybridNodeStorage::HybridNodeStorage(size_t cacheCapacity, const std::string& db
         this->onCacheEviction(key, node);
     };
     
-    cache_ = std::make_unique<LRUNodeCache>(cacheCapacity, evictionCallback);
+    cache_ = std::make_unique<ShardedLRUCache>(cacheCapacity, 16,evictionCallback);
 }
 
 std::shared_ptr<Node> HybridNodeStorage::getNode(const std::string& infoSet) {
