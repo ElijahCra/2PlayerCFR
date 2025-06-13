@@ -40,6 +40,21 @@ class RegretMinimizer {
   /// @brief Get storage statistics
   void printStorageStats() const;
 
+  void printPreflopStats() const
+  {
+      for (int i = 0; i < 11; ++i)
+      {
+          std::shared_ptr<Node> nod =nodeStorage->getNode(std::to_string(i));
+        if (nod)
+        {
+          std::cout << i <<"bet: "<< nod->getStrategy()[0] <<" check: "<< nod->getStrategy()[1]<< " fold: "<< nod->getStrategy()[2]<< std::endl;
+        } else
+        {
+          std::cout << i << "no node found" << std::endl;
+        }
+
+      }
+  }
 
   /// @brief recursively traverse game tree (depth-first) sampling only one chance outcome at each chance node and all actions
   /// @param updatePlayer player whose getStrategy is updated and utilities are retrieved in terms of

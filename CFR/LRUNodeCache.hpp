@@ -1,6 +1,7 @@
 #ifndef INC_2PLAYERCFR_LRUNODECACHE_HPP
 #define INC_2PLAYERCFR_LRUNODECACHE_HPP
 
+#include <atomic>
 #include <unordered_map>
 #include <list>
 #include <mutex>
