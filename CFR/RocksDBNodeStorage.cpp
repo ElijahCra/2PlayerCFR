@@ -1,6 +1,7 @@
 #include "RocksDBNodeStorage.hpp"
 #include <stdexcept>
 #include <rocksdb/statistics.h>
+#include <rocksdb/table.h>
 
 namespace CFR {
 
