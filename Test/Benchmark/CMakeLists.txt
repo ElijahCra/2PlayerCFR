@@ -28,6 +28,3 @@ target_link_libraries(benchmarkmain
         benchmark::benchmark_main
         )
 
-add_executable(cfr_benchmark cfr_benchmark.cpp)
-target_link_libraries(cfr_benchmark PRIVATE CFR Texas Preflop Utility)
-
