@@ -16,6 +16,8 @@
 #include "CustomExceptions.h"
 #include "HybridNodeStorage.hpp"
 
+
+
 namespace CFR {
 
 template<typename GameType>
@@ -24,7 +26,7 @@ class RegretMinimizer {
   /// @brief constructor takes a seed or one is generated
   explicit RegretMinimizer(uint32_t seed = std::random_device()(), 
                           size_t cacheCapacity = 100000,
-                          const std::string& dbPath = "./cfr_nodes_db");
+                          const std::string& dbPath = DEFAULT_DB_PATH);
   RegretMinimizer(RegretMinimizer& other) = delete;
   auto operator=(RegretMinimizer& other) -> RegretMinimizer& = delete;
   ~RegretMinimizer() = default;
