@@ -6,6 +6,8 @@ int main() {
     
     std::cout << "Starting training...\n";
     Minimize.printStorageStats();
+    Minimize.printPreflopStats();
+
     
     auto start = std::chrono::high_resolution_clock::now();
     Minimize.Train(101000);

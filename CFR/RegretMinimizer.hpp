@@ -24,7 +24,7 @@ class RegretMinimizer {
   /// @brief constructor takes a seed or one is generated
   explicit RegretMinimizer(uint32_t seed = std::random_device()(), 
                           size_t cacheCapacity = 100000,
-                          const std::string& dbPath = "./cfr_nodes_db");
+                          const std::string& dbPath = DEFAULT_DB_PATH);
   RegretMinimizer(RegretMinimizer& other) = delete;
   auto operator=(RegretMinimizer& other) -> RegretMinimizer& = delete;
 
@@ -43,6 +43,22 @@ class RegretMinimizer {
 
   /// @brief Get storage statistics
   void printStorageStats() const;
+
+  void printPreflopStats() const
+  {
+      for (int i = 0; i < 11; ++i)
+      {
+          std::shared_ptr<Node> nod =nodeStorage->getNode(std::to_string(i));
+        if (nod)
+        {
+          std::cout << i <<"bet: "<< nod->getStrategy()[0] <<" check: "<< nod->getStrategy()[1]<< " fold: "<< nod->getStrategy()[2]<< std::endl;
+        } else
+        {
+          std::cout << i << "no node found" << std::endl;
+        }
+
+      }
+  }
 
 
   /// @brief recursively traverse game tree (depth-first) sampling only one chance outcome at each chance node and all actions

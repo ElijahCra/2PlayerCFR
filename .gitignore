@@ -40,3 +40,4 @@ cmake-build*/
 
 /libs/benchmark/
 /libs/
+/cfr_nodes_db/
