@@ -43,6 +43,13 @@ class RegretMinimizer {
 
   /// @brief Get storage statistics
   void printStorageStats() const;
+  
+  /// @brief Flush cache to persistent storage
+  void flushStorageCache() {
+    if (nodeStorage) {
+      nodeStorage->flushCache();
+    }
+  }
 
   void printPreflopStats() const
   {
