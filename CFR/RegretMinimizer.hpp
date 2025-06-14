@@ -8,6 +8,7 @@
 #include <iostream>
 #include <thread>
 #include <random>
+#include <atomic>
 #include "../Game/GameImpl/Preflop/Game.hpp"
 #include "../Game/GameImpl/Texas/Game.hpp"
 #include <unordered_map>
@@ -37,6 +38,12 @@ class RegretMinimizer {
 
   /// @brief calls cfr algorithm for full game tree (or sampled based on version) traversal the specified number of times
   void Train(uint32_t iterations);
+  
+  /// @brief Set cancellation flag to interrupt training
+  void setCancelled(bool cancelled) { cancelled_ = cancelled; }
+  
+  /// @brief Check if training should be cancelled
+  bool isCancelled() const { return cancelled_; }
 
   [[nodiscard]]
   auto getNodeInformation(const std::string& index) noexcept -> std::vector<std::vector<float>>;
@@ -90,6 +97,8 @@ class RegretMinimizer {
   GameType Game;
 
   uint64_t nodesTouched{};
+  
+  std::atomic<bool> cancelled_{false};
 
 };
 
@@ -106,6 +115,7 @@ void RegretMinimizer<GameType>::Train(uint32_t iterations) {
   std::array<float,GameType::PlayerNum> value;
   for (uint32_t i = 0; i < iterations; ++i) {
     for (uint32_t p = 0; p < GameType::PlayerNum; ++p) {
+      if (cancelled_) break;
       value[p] = ExternalSamplingCFR(Game, p, 1.0, 1.0);
     }
     Game.reInitialize();
