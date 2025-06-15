@@ -37,7 +37,7 @@ void HybridNodeStorage::putNode(const std::string& infoSet, std::shared_ptr<Node
     cache_->putNode(infoSet, node);
 }
 
-bool HybridNodeStorage::hasNode(const std::string& infoSet) {
+bool HybridNodeStorage::hasNode(const std::string& infoSet) const {
     return cache_->hasNode(infoSet) || storage_->hasNode(infoSet);
 }
 

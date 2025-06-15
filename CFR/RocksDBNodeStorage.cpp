@@ -55,7 +55,7 @@ void RocksDBNodeStorage::putNode(const std::string& infoSet, std::shared_ptr<Nod
     }
 }
 
-bool RocksDBNodeStorage::hasNode(const std::string& infoSet) {
+bool RocksDBNodeStorage::hasNode(const std::string& infoSet) const {
     std::lock_guard<std::mutex> lock(mutex_);
     
     if (!db_) {
