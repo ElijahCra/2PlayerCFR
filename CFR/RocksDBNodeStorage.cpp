@@ -24,8 +24,6 @@ RocksDBNodeStorage::~RocksDBNodeStorage() {
 }
 
 std::shared_ptr<Node> RocksDBNodeStorage::getNode(const std::string& infoSet) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    
     if (!db_) {
         return nullptr;
     }
@@ -41,8 +39,6 @@ std::shared_ptr<Node> RocksDBNodeStorage::getNode(const std::string& infoSet) {
 }
 
 void RocksDBNodeStorage::putNode(const std::string& infoSet, std::shared_ptr<Node> node) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    
     if (!db_ || !node) {
         return;
     }
@@ -56,8 +52,6 @@ void RocksDBNodeStorage::putNode(const std::string& infoSet, std::shared_ptr<Nod
 }
 
 bool RocksDBNodeStorage::hasNode(const std::string& infoSet) const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    
     if (!db_) {
         return false;
     }
@@ -69,8 +63,6 @@ bool RocksDBNodeStorage::hasNode(const std::string& infoSet) const {
 }
 
 void RocksDBNodeStorage::removeNode(const std::string& infoSet) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    
     if (!db_) {
         return;
     }
@@ -83,8 +75,6 @@ void RocksDBNodeStorage::removeNode(const std::string& infoSet) {
 }
 
 size_t RocksDBNodeStorage::size() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    
     if (!db_) {
         return 0;
     }
@@ -101,8 +91,6 @@ size_t RocksDBNodeStorage::size() const {
 }
 
 void RocksDBNodeStorage::clear() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    
     if (!db_) {
         return;
     }
@@ -124,13 +112,10 @@ void RocksDBNodeStorage::clear() {
 }
 
 bool RocksDBNodeStorage::isOpen() const {
-    std::lock_guard<std::mutex> lock(mutex_);
     return db_ != nullptr;
 }
 
 std::string RocksDBNodeStorage::getStats() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    
     if (!db_) {
         return "Database not open";
     }
@@ -141,8 +126,6 @@ std::string RocksDBNodeStorage::getStats() const {
 }
 
 void RocksDBNodeStorage::compact() {
-    std::lock_guard<std::mutex> lock(mutex_);
-    
     if (!db_) {
         return;
     }

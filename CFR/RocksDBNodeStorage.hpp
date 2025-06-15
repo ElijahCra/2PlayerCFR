@@ -3,7 +3,6 @@
 
 #include <memory>
 #include <string>
-#include <mutex>
 #include <rocksdb/db.h>
 #include <rocksdb/options.h>
 #include "NodeStorage.hpp"
@@ -39,7 +38,6 @@ public:
 
 private:
     std::unique_ptr<rocksdb::DB> db_;
-    mutable std::mutex mutex_;
     std::string dbPath_;
     
     rocksdb::Options getDefaultOptions() const;

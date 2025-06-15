@@ -2,6 +2,7 @@ add_library(CFR STATIC
     Node.cpp 
     LRUNodeCache.cpp 
     ShardedLRUCache.cpp
+    AsyncHybridStorage.cpp
     NodeSerializer.cpp 
     RocksDBNodeStorage.cpp 
     HybridNodeStorage.cpp
