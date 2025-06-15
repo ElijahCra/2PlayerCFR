@@ -13,7 +13,8 @@ private:
 
 public:
     explicit GameStageViolation(std::string msg) : message(std::move(msg)) {}
-    const char* what () {
+    [[nodiscard]] const char* what () const noexcept override
+    {
         return message.c_str();
     }
 };

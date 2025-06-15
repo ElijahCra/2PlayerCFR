@@ -22,10 +22,10 @@ namespace CFR {
 class AsyncHybridStorage : public NodeStorage {
 public:
     /// @brief Constructor
-    /// @param cacheCapacityPerShard Maximum nodes per cache shard
+    /// @param cacheCapacity Total nodes across all shards
     /// @param dbPath Path to RocksDB database directory
     /// @param numBackgroundThreads Number of background threads for RocksDB operations
-    explicit AsyncHybridStorage(size_t cacheCapacityPerShard, 
+    explicit AsyncHybridStorage(size_t cacheCapacity,
                                const std::string& dbPath,
                                size_t numBackgroundThreads = 2);
     

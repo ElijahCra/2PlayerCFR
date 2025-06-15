@@ -4,7 +4,7 @@
 
 namespace CFR {
 
-AsyncHybridStorage::AsyncHybridStorage(size_t cacheCapacityPerShard, 
+AsyncHybridStorage::AsyncHybridStorage(size_t cacheCapacity,
                                      const std::string& dbPath,
                                      size_t numBackgroundThreads) {
     // Create RocksDB storage first
@@ -14,8 +14,8 @@ AsyncHybridStorage::AsyncHybridStorage(size_t cacheCapacityPerShard,
     auto evictionCallback = [this](const std::string& key, std::shared_ptr<Node> node) {
         this->onCacheEviction(key, node);
     };
-    
-    cache_ = std::make_unique<ShardedLRUCache>(cacheCapacityPerShard, evictionCallback);
+    int perShardCapacity = std::ceil(static_cast<double>(cacheCapacity) / 64.0f);
+    cache_ = std::make_unique<ShardedLRUCache>(perShardCapacity, evictionCallback);
     
     // Start background threads
     backgroundThreads_.reserve(numBackgroundThreads);

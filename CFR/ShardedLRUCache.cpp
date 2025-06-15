@@ -3,7 +3,7 @@
 
 namespace CFR {
 
-ShardedLRUCache::ShardedLRUCache(size_t capacityPerShard, const EvictionCallback& evictionCallback)
+ShardedLRUCache::ShardedLRUCache(const size_t capacityPerShard, const EvictionCallback& evictionCallback)
     : capacityPerShard_(capacityPerShard) {
     if (capacityPerShard_ == 0) {
         throw std::invalid_argument("Cache capacity per shard must be greater than 0");

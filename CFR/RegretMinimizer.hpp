@@ -16,6 +16,7 @@
 #include "../Game/Utility/Utility.hpp"
 #include "CustomExceptions.h"
 #include "HybridNodeStorage.hpp"
+#include "AsyncHybridStorage.hpp"
 
 namespace CFR {
 
@@ -25,14 +26,14 @@ class RegretMinimizer {
   /// @brief constructor takes a seed or one is generated
   explicit RegretMinimizer(uint32_t seed = std::random_device()(), 
                           size_t cacheCapacity = 100000,
-                          const std::string& dbPath = DEFAULT_DB_PATH);
+                          const std::string& dbPath = DEFAULT_DB_PATH,
+                          bool useAsyncStorage = false,
+                          size_t numBackgroundThreads = 2);
   RegretMinimizer(RegretMinimizer& other) = delete;
   auto operator=(RegretMinimizer& other) -> RegretMinimizer& = delete;
 
   ~RegretMinimizer() {
-    if (nodeStorage) {
-      nodeStorage->flushCache();
-    }
+    flushStorageCache();
   }
 
 
@@ -53,8 +54,10 @@ class RegretMinimizer {
   
   /// @brief Flush cache to persistent storage
   void flushStorageCache() {
-    if (nodeStorage) {
-      nodeStorage->flushCache();
+    if (auto hybridStorage = dynamic_cast<HybridNodeStorage*>(nodeStorage.get())) {
+      hybridStorage->flushCache();
+    } else if (auto asyncStorage = dynamic_cast<AsyncHybridStorage*>(nodeStorage.get())) {
+      asyncStorage->flushAndWait();
     }
   }
 
@@ -92,7 +95,7 @@ class RegretMinimizer {
 
   [[no_unique_address]] Utility util;
 
-  std::unique_ptr<HybridNodeStorage> nodeStorage;
+  std::unique_ptr<NodeStorage> nodeStorage;
 
   GameType Game;
 
@@ -105,9 +108,14 @@ class RegretMinimizer {
 
 ///Implementation of templates above
 template<typename GameType>
-RegretMinimizer<GameType>::RegretMinimizer(const uint32_t seed, size_t cacheCapacity, const std::string& dbPath) 
+RegretMinimizer<GameType>::RegretMinimizer(const uint32_t seed, size_t cacheCapacity, const std::string& dbPath,
+                                          bool useAsyncStorage, size_t numBackgroundThreads) 
     : rng(seed), Game(rng) {
-  nodeStorage = std::make_unique<HybridNodeStorage>(cacheCapacity, dbPath);
+  if (useAsyncStorage) {
+    nodeStorage = std::make_unique<AsyncHybridStorage>(cacheCapacity, dbPath, numBackgroundThreads);
+  } else {
+    nodeStorage = std::make_unique<HybridNodeStorage>(cacheCapacity, dbPath);
+  }
 }
 
 template<typename GameType>
@@ -262,7 +270,11 @@ auto RegretMinimizer<GameType>::getNodeInformation(const std::string& index) noe
 
 template <typename GameType>
 void RegretMinimizer<GameType>::printStorageStats() const {
-  nodeStorage->printStats();
+  if (auto hybridStorage = dynamic_cast<HybridNodeStorage*>(nodeStorage.get())) {
+    hybridStorage->printStats();
+  } else if (auto asyncStorage = dynamic_cast<AsyncHybridStorage*>(nodeStorage.get())) {
+    asyncStorage->printStats();
+  }
 }
 }
 #endif //INC_2PLAYERCFR_REGRETMINIMIZER_HPP
