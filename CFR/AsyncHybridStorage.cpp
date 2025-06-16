@@ -1,6 +1,7 @@
 #include "AsyncHybridStorage.hpp"
 #include <iostream>
 #include <future>
+#include <cmath>
 
 namespace CFR {
 
