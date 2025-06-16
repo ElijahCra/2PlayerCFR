@@ -151,9 +151,10 @@ size_t AsyncHybridStorage::getPendingOpsCount() {
 
 void AsyncHybridStorage::onCacheEviction(const std::string& key, std::shared_ptr<Node> node) {
     // Queue evicted node for background persistence
+    // The shared_ptr copy here is intentional to ensure thread safety
     {
         std::lock_guard<std::mutex> lock(evictionMutex_);
-        evictionQueue_.emplace(key, node);
+        evictionQueue_.emplace(key, std::move(node));
     }
     evictionCV_.notify_one();
 }

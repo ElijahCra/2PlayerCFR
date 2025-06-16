@@ -1,50 +1,110 @@
 #include <iostream>
 #include <chrono>
+#include <thread>
 #include "CFR/RegretMinimizer.hpp"
 
 int main() {
-    // Configuration options:
-    // 1. Single-threaded: useAsyncStorage = false (default)
-    // 2. Multi-threaded: useAsyncStorage = true
+    const uint32_t iterations = 80000;
+    const uint32_t cacheSize = 100000;
+    const uint32_t numCFRThreads = std::thread::hardware_concurrency();
+    const uint32_t backgroundThreads = 2;
     
-    std::cout << "=== Single-threaded training ===\n";
-    CFR::RegretMinimizer<Preflop::Game> singleThreaded{
-        std::random_device()(),  // seed
-        100000,                   // cache capacity
-        "./cfr_single_db",       // db path
-        false                    // use sync storage
-    };
+    std::cout << "Hardware threads available: " << numCFRThreads << "\n\n";
     
-    std::cout << "Starting single-threaded training...\n";
-    singleThreaded.printStorageStats();
-    
-    auto start = std::chrono::high_resolution_clock::now();
-    singleThreaded.Train(101000);
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    
-    std::cout << "Single-threaded completed in " << duration.count() << " ms\n";
-    singleThreaded.printStorageStats();
-    
-    std::cout << "\n=== Multi-threaded training ===\n";
-    CFR::RegretMinimizer<Preflop::Game> multiThreaded{
-        std::random_device()(),  // seed
-        100000,                    // cache capacity per shard
-        "./cfr_async_db",        // db path  
-        true,                    // use async storage
-        4                        // background threads
-    };
-    
-    std::cout << "Starting multi-threaded training...\n";
-    multiThreaded.printStorageStats();
-    
-    start = std::chrono::high_resolution_clock::now();
-    multiThreaded.Train(101000);
-    end = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    
-    std::cout << "Multi-threaded completed in " << duration.count() << " ms\n";
-    multiThreaded.printStorageStats();
+    // =====================================================
+    // Single-threaded setup with synchronous storage
+    // =====================================================
+    bool singleSync = true;
+    if (singleSync) {
+        std::cout << "=== Single-threaded CFR + Sync Storage ===\n";
+        CFR::RegretMinimizer<Preflop::Game> singleThreaded{
+            std::random_device()(),  // seed
+            cacheSize,                  // cache capacity
+            "./cfr_single_db",       // db path
+            false                    // sync storage
+        };
+
+        std::cout << "Starting single-threaded training...\n";
+        singleThreaded.printStorageStats();
+
+        auto start = std::chrono::high_resolution_clock::now();
+        singleThreaded.Train(numCFRThreads*iterations);
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+        std::cout << "Single-threaded completed in " << duration.count() << " ms\n";
+        singleThreaded.printStorageStats();
+        singleThreaded.flushStorageCache();
+    }
+
+    // =====================================================
+    // Single-threaded setup with Asynchronous storage
+    // =====================================================
+    bool singleASync = true;
+    if (singleASync) {
+        std::cout << "=== Single-threaded CFR + async Storage ===\n";
+        CFR::RegretMinimizer<Preflop::Game> singleThreaded{
+            std::random_device()(),  // seed
+            cacheSize,                  // cache capacity
+            "./cfr_single_db",       // db path
+            true,                   // sync storage,
+            backgroundThreads
+        };
+
+        std::cout << "Starting single-threaded training...\n";
+        singleThreaded.printStorageStats();
+
+        auto start = std::chrono::high_resolution_clock::now();
+        singleThreaded.Train(numCFRThreads*iterations);
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+        std::cout << "Single-threaded completed in " << duration.count() << " ms\n";
+        singleThreaded.printStorageStats();
+        singleThreaded.flushStorageCache();
+    }
+
+    // =====================================================
+    // Multi-threaded CFR with async storage
+    // =====================================================
+    bool multiAsync = true;
+    if (multiAsync) {
+        std::cout << "\n=== Multi-threaded CFR + Async Storage ===\n";
+        std::cout << "Starting multi-threaded CFR training with " << numCFRThreads << " threads...\n";
+
+        auto start = std::chrono::high_resolution_clock::now();
+
+        // Create RegretMinimizer objects with separate storage paths for each thread
+        std::vector<std::unique_ptr<CFR::RegretMinimizer<Preflop::Game>>> minimizers;
+        std::vector<std::thread> threads;
+
+        for (size_t i = 0; i < numCFRThreads; ++i) {
+            minimizers.emplace_back(std::make_unique<CFR::RegretMinimizer<Preflop::Game>>(
+                std::random_device()(),     // unique seed per thread
+                cacheSize / numCFRThreads,  // divide cache capacity among threads
+                "./cfr_async_db_" + std::to_string(i),  // separate DB path per thread
+                true,                       // async storage
+                backgroundThreads                           // background I/O threads per minimizer
+            ));
+
+            threads.emplace_back([&minimizers, i]() {
+                minimizers[i]->Train(iterations);
+            });
+        }
+
+        // Wait for all threads to complete
+        for (auto& thread : threads) {
+            thread.join();
+        }
+
+
+
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+        std::cout << "Multi-threaded completed in " << duration.count() << " ms\n";
+    }
+
     
     return 0;
 }

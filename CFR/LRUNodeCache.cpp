@@ -92,14 +92,18 @@ void LRUNodeCache::evictLRU() {
         return;
     }
     
-    auto& lastEntry = cacheList_.back();
+    // Make copies to avoid race conditions with shared_ptr reference counting
+    std::string keyToEvict = cacheList_.back().key;
+    std::shared_ptr<Node> nodeToEvict = cacheList_.back().node;
     
-    if (evictionCallback_) {
-        evictionCallback_(lastEntry.key, lastEntry.node);
-    }
-    
-    cacheMap_.erase(lastEntry.key);
+    // Remove from cache first
+    cacheMap_.erase(keyToEvict);
     cacheList_.pop_back();
+    
+    // Call eviction callback after removal to avoid race conditions
+    if (evictionCallback_) {
+        evictionCallback_(keyToEvict, nodeToEvict);
+    }
 }
 
 void LRUNodeCache::moveToFront(typename CacheList::iterator it) {

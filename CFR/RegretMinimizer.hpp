@@ -99,7 +99,7 @@ class RegretMinimizer {
 
   GameType Game;
 
-  uint64_t nodesTouched{};
+  std::atomic<uint64_t> nodesTouched{0};
   
   std::atomic<bool> cancelled_{false};
 
@@ -131,7 +131,7 @@ void RegretMinimizer<GameType>::Train(uint32_t iterations) {
 }
 template<typename GameType>
 auto RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) -> float {
-  ++nodesTouched;
+  nodesTouched.fetch_add(1, std::memory_order_relaxed);
 
   std::string type = game.getType();
 
@@ -194,7 +194,7 @@ auto RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlayer
 
 template<typename GameType>
 auto RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) -> float {
-  ++nodesTouched;
+  nodesTouched.fetch_add(1, std::memory_order_relaxed);
 
   std::string type = game.getType();
 
