@@ -40,7 +40,7 @@ private:
     std::unique_ptr<rocksdb::DB> m_db;
     std::string m_dbPath;
 
-    [[nodiscard]] rocksdb::Options getDefaultOptions() const;
+    [[nodiscard]] static rocksdb::Options getDefaultOptions() ;
 };
 
 } // namespace CFR

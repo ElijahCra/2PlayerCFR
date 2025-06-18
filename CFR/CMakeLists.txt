@@ -1,7 +1,9 @@
 add_library(CFR STATIC Node.cpp RegretMinimizer.hpp
         NodeStorage.hpp
         RocksDBStorage.cpp
-        RocksDBStorage.hpp)
+        RocksDBStorage.hpp
+        NodeSerializer.cpp
+        NodeSerializer.hpp)
 
 target_link_libraries(CFR PUBLIC Utility)
 

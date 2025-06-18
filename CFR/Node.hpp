@@ -24,6 +24,14 @@ namespace CFR {
 
         [[nodiscard]] auto getRegretSum() const -> const std::vector<float> &;
 
+        [[nodiscard]] auto getStrategySum() const -> const std::vector<float> &;
+
+        void setRegretSum(const std::vector<float>& regretSum);
+
+        void setStrategySum(const std::vector<float>& strategySum);
+
+        void setAverageStrategy(const std::vector<float>& averageStrategy);
+
         void updateRegretSum(int i, float actionRegret, float probCounterFactual);
 
         void updateStrategySum(const std::vector<float> &currentStrategy, float probUpdatePlayer);
