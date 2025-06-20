@@ -3,7 +3,13 @@ add_library(CFR STATIC Node.cpp RegretMinimizer.hpp
         RocksDBStorage.cpp
         RocksDBStorage.hpp
         NodeSerializer.cpp
-        NodeSerializer.hpp)
+        NodeSerializer.hpp
+        HybridNodeStorage.cpp
+        HybridNodeStorage.hpp
+        LRUNodeCache.cpp
+        LRUNodeCache.hpp
+        ShardedLRUCache.hpp
+)
 
 target_link_libraries(CFR PUBLIC Utility)
 
