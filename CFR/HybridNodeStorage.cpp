@@ -8,7 +8,7 @@ namespace CFR {
 
 HybridNodeStorage::HybridNodeStorage(size_t cacheCapacity, const std::string& dbPath) {
     // Create RocksDB storage first
-    storage_ = std::make_unique<RocksDBStorage>(dbPath);
+    m_storage = std::make_unique<RocksDBStorage>(dbPath);
     
     // Create LRU cache with eviction callback
     auto evictionCallback = [this](const std::string& key, std::shared_ptr<Node> node) {
@@ -26,7 +26,7 @@ std::shared_ptr<Node> HybridNodeStorage::getNode(const std::string& infoSet) {
     }
     
     // If not in cache, check persistent storage
-    node = storage_->getNode(infoSet);
+    node = m_storage->getNode(infoSet);
     if (node) {
         // Promote to cache
         m_cache->putNode(infoSet, node);
@@ -41,21 +41,21 @@ void HybridNodeStorage::putNode(const std::string& infoSet, std::shared_ptr<Node
 }
 
 bool HybridNodeStorage::hasNode(const std::string& infoSet) {
-    return m_cache->hasNode(infoSet) || storage_->hasNode(infoSet);
+    return m_cache->hasNode(infoSet) || m_storage->hasNode(infoSet);
 }
 
 void HybridNodeStorage::removeNode(const std::string& infoSet) {
     m_cache->removeNode(infoSet);
-    storage_->removeNode(infoSet);
+    m_storage->removeNode(infoSet);
 }
 
 size_t HybridNodeStorage::size() const {
-    return m_cache->size() + storage_->size();
+    return m_cache->size() + m_storage->size();
 }
 
 void HybridNodeStorage::clear() {
     m_cache->clear();
-    storage_->clear();
+    m_storage->clear();
 }
 
 double HybridNodeStorage::getCacheHitRate() const {
@@ -65,7 +65,7 @@ double HybridNodeStorage::getCacheHitRate() const {
 void HybridNodeStorage::printStats() const {
     std::cout << "Cache Hit Rate: " << (getCacheHitRate() * 100.0) << "%\n";
     std::cout << "Cache Size: " << m_cache->size() << " nodes\n";
-    std::cout << "Storage Size: " << storage_->size() << " nodes\n";
+    std::cout << "Storage Size: " << m_storage->size() << " nodes\n";
 }
 
 void HybridNodeStorage::flushCache() {
@@ -75,7 +75,7 @@ void HybridNodeStorage::flushCache() {
 
 void HybridNodeStorage::onCacheEviction(const std::string& key, std::shared_ptr<Node> node) {
     // Save evicted node to persistent storage
-    storage_->putNode(key, node);
+    m_storage->putNode(key, node);
 }
 
 } // namespace CFR
