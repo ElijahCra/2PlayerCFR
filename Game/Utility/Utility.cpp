@@ -31,22 +31,11 @@ bool Utility::initLookup() {
     // Load the HandRanks.DAT file and map it into the HR array
     printf("Loading HandRanks.DAT file...\n");
     memset(HR, 0, sizeof(HR));
-    FILE * fin = fopen("../HandRanks.dat", "rb");
+    FILE * fin = fopen((std::string(PROJECT_SOURCE_DIR)+"/Game/Utility/Handranks.dat").c_str(), "rb");
     if (fin == nullptr) {
-        fin = fopen("../../HandRanks.dat", "rb");
-        if (fin == nullptr) {
-            fin = fopen("HandRanks.dat", "rb");
-            if (fin == nullptr) {
-                fin = fopen("../../../HandRanks.dat", "rb");
-                if (fin == nullptr) {
-                    fin = fopen("/Users/elijahcrain/CLionProjects/2PlayerCFR/Game/Utility/HandRanks.dat","rb");
-                    if (fin == nullptr) {
-                        fin = fopen("C:\\Users\\Elijah\\CLionProjects\\CFRApplication\\2PlayerCFR\\Game\\Utility\\HandRanks.dat","rb");
-                        if (fin == nullptr) {throw(std::runtime_error("did not open properly \n"));}
-                    }
-                }
-            }
-        }
+         {
+             throw(std::runtime_error("did not open properly \n"));
+         }
     }
 
     bool succ = fread(HR, sizeof(HR), 1, fin);	// get the HandRank Array
