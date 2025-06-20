@@ -11,20 +11,27 @@
 #include "../Game/GameImpl/Preflop/Game.hpp"
 #include "../Game/GameImpl/Texas/Game.hpp"
 #include <unordered_map>
+#include <memory>
 #include "Node.hpp"
+#include "NodeStorage.hpp"
+#include "MapNodeStorage.hpp"
 #include "../Game/Utility/Utility.hpp"
 #include "CustomExceptions.h"
 
 namespace CFR {
 
-template<typename GameType>
+template<typename GameType, typename StorageType = MapNodeStorage>
 class RegretMinimizer {
  public:
   /// @brief constructor takes a seed or one is generated
   explicit RegretMinimizer(uint32_t seed = std::random_device()());
+  
+  /// @brief constructor with custom storage
+  RegretMinimizer(uint32_t seed, std::unique_ptr<StorageType> storage);
+  
   RegretMinimizer(RegretMinimizer& other) = delete;
   auto operator=(RegretMinimizer& other) -> RegretMinimizer& = delete;
-  ~RegretMinimizer();
+  ~RegretMinimizer() = default;
 
   /// @brief calls cfr algorithm for full game tree (or sampled based on version) traversal the specified number of times
   void Train(uint32_t iterations);
@@ -50,7 +57,7 @@ class RegretMinimizer {
 
   [[no_unique_address]] Utility util;
 
-  std::unordered_map<std::string, Node *> nodeMap;
+  std::unique_ptr<StorageType> m_storage;
 
   GameType Game;
 
@@ -60,18 +67,16 @@ class RegretMinimizer {
 
 
 ///Implementation of templates above
-template<typename GameType>
-RegretMinimizer<GameType>::RegretMinimizer(const uint32_t seed) : rng(seed), Game(rng) {}
+template<typename GameType, typename StorageType>
+RegretMinimizer<GameType, StorageType>::RegretMinimizer(const uint32_t seed) 
+    : rng(seed), m_storage(std::make_unique<StorageType>()), Game(rng) {}
 
-template<typename GameType>
-RegretMinimizer<GameType>::~RegretMinimizer() {
-  for (auto &itr: nodeMap) {
-    delete itr.second;
-  }
-}
+template<typename GameType, typename StorageType>
+RegretMinimizer<GameType, StorageType>::RegretMinimizer(uint32_t seed, std::unique_ptr<StorageType> storage)
+    : rng(seed), m_storage(std::move(storage)), Game(rng) {}
 
-template<typename GameType>
-void RegretMinimizer<GameType>::Train(uint32_t iterations) {
+template<typename GameType, typename StorageType>
+void RegretMinimizer<GameType, StorageType>::Train(uint32_t iterations) {
   std::array<float,GameType::PlayerNum> value;
   for (int i = 0; i < iterations; ++i) {
     for (int p = 0; p < GameType::PlayerNum; ++p) {
@@ -80,8 +85,8 @@ void RegretMinimizer<GameType>::Train(uint32_t iterations) {
     Game.reInitialize();
   }
 }
-template<typename GameType>
-auto RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) -> float {
+template<typename GameType, typename StorageType>
+auto RegretMinimizer<GameType, StorageType>::ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) -> float {
   ++nodesTouched;
 
   std::string type = game.getType();
@@ -106,10 +111,11 @@ auto RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlayer
     const auto actionNum = static_cast<int>(actions.size());
     float nodeValue = 0.f;
 
-    Node *node = nodeMap[game.getInfoSet(game.getCurrentPlayer())];
+    std::string infoSet = game.getInfoSet(game.getCurrentPlayer());
+    auto node = m_storage->getNode(infoSet);
     if (node == nullptr) {
-      node = new Node(actionNum);
-      nodeMap[game.getInfoSet(game.getCurrentPlayer())] = node;
+      node = std::make_shared<Node>(actionNum);
+      m_storage->putNode(infoSet, node);
     }
 
     const std::vector<float> currentStrategy = node->getStrategy();
@@ -142,8 +148,8 @@ auto RegretMinimizer<GameType>::ChanceCFR(const GameType &game, int updatePlayer
   throw GameStageViolation("did not match a game type in ChanceSamplingCFR");
 }
 
-template<typename GameType>
-auto RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) -> float {
+template<typename GameType, typename StorageType>
+auto RegretMinimizer<GameType, StorageType>::ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) -> float {
   ++nodesTouched;
 
   std::string type = game.getType();
@@ -168,10 +174,11 @@ auto RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int up
   if ("action" == type) { //Decision Node
     float nodeValue = 0.f;
 
-    Node *node = nodeMap[game.getInfoSet(game.getCurrentPlayer())];
+    std::string infoSet = game.getInfoSet(game.getCurrentPlayer());
+    auto node = m_storage->getNode(infoSet);
     if (node == nullptr) {
-      node = new Node(actionNum);
-      nodeMap[game.getInfoSet(game.getCurrentPlayer())] = node;
+      node = std::make_shared<Node>(actionNum);
+      m_storage->putNode(infoSet, node);
     }
 
     const std::vector<float> currentStrategy = node->getStrategy();
@@ -204,13 +211,16 @@ auto RegretMinimizer<GameType>::ExternalSamplingCFR(const GameType &game, int up
   }
   throw GameStageViolation("did not match a game type in ExternalSamplingCFR");
 }
-template <typename GameType>
-auto RegretMinimizer<GameType>::getNodeInformation(const std::string& index) noexcept -> std::vector<std::vector<float>>{
+template <typename GameType, typename StorageType>
+auto RegretMinimizer<GameType, StorageType>::getNodeInformation(const std::string& index) noexcept -> std::vector<std::vector<float>>{
   std::vector<std::vector<float>> res;
-  res.push_back(nodeMap[index]->getRegretSum());
-  res.push_back(nodeMap[index]->getStrategy());
-  nodeMap[index]->calcAverageStrategy();
-  res.push_back(nodeMap[index]->getAverageStrategy());
+  auto node = m_storage->getNode(index);
+  if (node != nullptr) {
+    res.push_back(node->getRegretSum());
+    res.push_back(node->getStrategy());
+    node->calcAverageStrategy();
+    res.push_back(node->getAverageStrategy());
+  }
   return res;
 }
 }

@@ -1,5 +1,7 @@
 add_library(CFR STATIC Node.cpp RegretMinimizer.hpp
         NodeStorage.hpp
+        MapNodeStorage.cpp
+        MapNodeStorage.hpp
         RocksDBStorage.cpp
         RocksDBStorage.hpp
         NodeSerializer.cpp
