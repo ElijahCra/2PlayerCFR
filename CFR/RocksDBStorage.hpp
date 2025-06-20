@@ -21,6 +21,7 @@ public:
 
     // NodeStorage interface
     std::shared_ptr<Node> getNode(const std::string& infoSet) override;
+    std::vector<std::shared_ptr<Node>> multiGetNode(const std::vector<const std::string&>& infoSets);
     void putNode(const std::string& infoSet, std::shared_ptr<Node> node) override;
     bool hasNode(const std::string& infoSet) override;
     void removeNode(const std::string& infoSet) override;
@@ -40,7 +41,8 @@ private:
     std::unique_ptr<rocksdb::DB> m_db;
     std::string m_dbPath;
 
-    [[nodiscard]] static rocksdb::Options getDefaultOptions() ;
+    [[nodiscard]] static rocksdb::Options getDefaultOptions();
+    [[nodiscard]] static rocksdb::ReadOptions getDefaultReadOptions();
 };
 
 } // namespace CFR

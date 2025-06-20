@@ -41,6 +41,25 @@ std::shared_ptr<Node> RocksDBStorage::getNode(const std::string& infoSet) {
 
     return NodeSerializer::deserialize(value);
 }
+std::vector<std::shared_ptr<Node>> RocksDBStorage::multiGetNode(const std::vector<const std::string &>& infoSets)
+{
+    if (!m_db) {
+        return {nullptr};
+    }
+    std::vector<rocksdb::Slice> keys;
+    for (const auto& infoSet : infoSets) {
+        keys.emplace_back(infoSet);
+    }
+    std::vector<std::string> values;
+    std::vector<rocksdb::Status> status = m_db->MultiGet(rocksdb::ReadOptions(),keys,&values);
+
+    std::vector<std::shared_ptr<Node>> nodes;
+    for (const auto& value : values) {
+        nodes.emplace_back(NodeSerializer::deserialize(value));
+    }
+    return nodes;
+
+}
 
 void RocksDBStorage::putNode(const std::string& infoSet, std::shared_ptr<Node> node) {
 
@@ -170,6 +189,14 @@ rocksdb::Options RocksDBStorage::getDefaultOptions() {
     // Set block cache
     options.table_factory.reset(rocksdb::NewBlockBasedTableFactory());
 
+    return options;
+}
+
+rocksdb::ReadOptions RocksDBStorage::getDefaultReadOptions()
+{
+    rocksdb::ReadOptions options;
+    options.async_io = true;
+    options.optimize_multiget_for_io = true;
     return options;
 }
 } // namespace CFR
