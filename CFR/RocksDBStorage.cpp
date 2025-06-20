@@ -5,6 +5,7 @@
 #include "RocksDBStorage.hpp"
 #include <utility>
 #include <rocksdb/table.h>
+#include <rocksdb/filter_policy.h>
 #include "NodeSerializer.hpp"
 
 namespace CFR {
@@ -186,8 +187,13 @@ rocksdb::Options RocksDBStorage::getDefaultOptions() {
     options.max_bytes_for_level_base = 256 * 1024 * 1024;
     options.max_bytes_for_level_multiplier = 8;
 
+    //Bloom filter
+    rocksdb::BlockBasedTableOptions table_options;
+    table_options.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
+
+
     // Set block cache
-    options.table_factory.reset(rocksdb::NewBlockBasedTableFactory());
+    options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
 
     return options;
 }
