@@ -42,7 +42,7 @@ std::shared_ptr<Node> RocksDBStorage::getNode(const std::string& infoSet) {
 
     return NodeSerializer::deserialize(value);
 }
-std::vector<std::shared_ptr<Node>> RocksDBStorage::multiGetNode(const std::vector<const std::string &>& infoSets)
+std::vector<std::shared_ptr<Node>> RocksDBStorage::multiGetNode(const std::vector<const std::string>& infoSets)
 {
     if (!m_db) {
         return {nullptr};

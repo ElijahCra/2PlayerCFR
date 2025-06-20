@@ -16,7 +16,7 @@ public:
     /// @brief Constructor
     /// @param cacheCapacity Maximum number of nodes to keep in LRU cache
     /// @param dbPath Path to RocksDB database directory
-    explicit HybridNodeStorage(size_t cacheCapacity, const std::string& dbPath);
+    explicit HybridNodeStorage(size_t cacheCapacity = 100000, const std::string& dbPath = );
 
     ~HybridNodeStorage() override = default;
 

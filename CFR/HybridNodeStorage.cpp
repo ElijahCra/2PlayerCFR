@@ -4,6 +4,8 @@
 
 #include "HybridNodeStorage.hpp"
 
+#include <iostream>
+
 namespace CFR {
 
 HybridNodeStorage::HybridNodeStorage(size_t cacheCapacity, const std::string& dbPath) {
