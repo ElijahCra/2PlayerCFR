@@ -3,7 +3,10 @@
 //
 
 #include "RocksDBStorage.hpp"
+
+#include <iostream>
 #include <utility>
+#include <format>
 #include <rocksdb/table.h>
 #include <rocksdb/filter_policy.h>
 #include "NodeSerializer.hpp"
@@ -19,6 +22,7 @@ RocksDBStorage::RocksDBStorage(std::string  dbPath) : m_dbPath(std::move(dbPath)
     }
 
     m_db.reset(db);
+    std::cout << std::format("DB Size: {}", this->size()) << std::endl;
 }
 
 RocksDBStorage::~RocksDBStorage() {

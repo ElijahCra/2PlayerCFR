@@ -19,7 +19,7 @@ namespace CFR {
 class ShardedLRUCache : public NodeStorage {
 public:
     /// @brief Number of shards (power of 2 for efficient modulo)
-    static constexpr size_t NUM_SHARDS = 64;
+    static constexpr size_t NUM_SHARDS = 256;
     
     /// @brief Callback function for evicted nodes
     using EvictionCallback = std::function<void(const std::string&, std::shared_ptr<Node>)>;
@@ -45,7 +45,7 @@ public:
     void resetStats();
     
     /// @brief Get total capacity across all shards
-    size_t getTotalCapacity() const { return m_capacityPerShard * NUM_SHARDS; }
+    size_t getTotalCapacity() const { return capacityPerShard_ * NUM_SHARDS; }
     
     /// @brief Get number of shards
     size_t getNumShards() const { return NUM_SHARDS; }
@@ -66,12 +66,12 @@ private:
     Shard& getShard(const std::string& key);
     const Shard& getShard(const std::string& key) const;
     
-    size_t m_capacityPerShard;
-    std::array<std::unique_ptr<Shard>, NUM_SHARDS> m_shards;
+    size_t capacityPerShard_;
+    std::array<std::unique_ptr<Shard>, NUM_SHARDS> shards_;
     
     // Global statistics
-    mutable std::atomic<uint64_t> m_totalHits{0};
-    mutable std::atomic<uint64_t> m_totalMisses{0};
+    mutable std::atomic<uint64_t> totalHits_{0};
+    mutable std::atomic<uint64_t> totalMisses_{0};
 };
 
 } // namespace CFR
