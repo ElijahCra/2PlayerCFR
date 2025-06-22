@@ -8,6 +8,7 @@ add_library(CFR STATIC
         HybridNodeStorage.hpp
         LRUNodeCache.cpp
         ShardedLRUCache.cpp
+        MultiThreadedTrainer.hpp
 )
 
 target_link_libraries(CFR PUBLIC Utility)

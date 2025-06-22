@@ -27,10 +27,12 @@ class RegretMinimizer {
   explicit RegretMinimizer(uint32_t seed = std::random_device()());
   
   /// @brief constructor with custom storage
-  RegretMinimizer(uint32_t seed, std::unique_ptr<StorageType> storage);
+  RegretMinimizer(uint32_t seed, std::shared_ptr<StorageType> storage);
   
-  RegretMinimizer(RegretMinimizer& other) = delete;
-  auto operator=(RegretMinimizer& other) -> RegretMinimizer& = delete;
+  RegretMinimizer(const RegretMinimizer& other) = delete;
+  auto operator=(const RegretMinimizer& other) -> RegretMinimizer& = delete;
+  RegretMinimizer(RegretMinimizer&& other) = default;
+  auto operator=(RegretMinimizer&& other) -> RegretMinimizer& = default;
   ~RegretMinimizer() = default;
 
   /// @brief calls cfr algorithm for full game tree (or sampled based on version) traversal the specified number of times
@@ -57,7 +59,7 @@ class RegretMinimizer {
 
   [[no_unique_address]] Utility util;
 
-  std::unique_ptr<StorageType> m_storage;
+  std::shared_ptr<StorageType> m_storage;
 
   GameType Game;
 
@@ -72,7 +74,7 @@ RegretMinimizer<GameType, StorageType>::RegretMinimizer(const uint32_t seed)
     : rng(seed), m_storage(std::make_unique<StorageType>()), Game(rng) {}
 
 template<typename GameType, typename StorageType>
-RegretMinimizer<GameType, StorageType>::RegretMinimizer(uint32_t seed, std::unique_ptr<StorageType> storage)
+RegretMinimizer<GameType, StorageType>::RegretMinimizer(uint32_t seed, std::shared_ptr<StorageType> storage)
     : rng(seed), m_storage(std::move(storage)), Game(rng) {}
 
 template<typename GameType, typename StorageType>
