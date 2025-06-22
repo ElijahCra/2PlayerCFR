@@ -45,7 +45,7 @@ public:
     void resetStats();
     
     /// @brief Get total capacity across all shards
-    size_t getTotalCapacity() const { return capacityPerShard_ * NUM_SHARDS; }
+    size_t getTotalCapacity() const { return m_capacityPerShard * NUM_SHARDS; }
     
     /// @brief Get number of shards
     size_t getNumShards() const { return NUM_SHARDS; }
@@ -66,12 +66,12 @@ private:
     Shard& getShard(const std::string& key);
     const Shard& getShard(const std::string& key) const;
     
-    size_t capacityPerShard_;
-    std::array<std::unique_ptr<Shard>, NUM_SHARDS> shards_;
+    size_t m_capacityPerShard;
+    std::array<std::unique_ptr<Shard>, NUM_SHARDS> m_shards;
     
     // Global statistics
-    mutable std::atomic<uint64_t> totalHits_{0};
-    mutable std::atomic<uint64_t> totalMisses_{0};
+    mutable std::atomic<uint64_t> m_totalHits{0};
+    mutable std::atomic<uint64_t> m_totalMisses{0};
 };
 
 } // namespace CFR

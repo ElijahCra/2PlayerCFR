@@ -7,7 +7,7 @@ add_library(CFR STATIC
         NodeSerializer.cpp
         HybridNodeStorage.cpp
         LRUNodeCache.cpp
-        ShardedLRUCache.hpp
+        ShardedLRUCache.cpp
 )
 
 target_link_libraries(CFR PUBLIC Utility)
