@@ -29,7 +29,7 @@ public:
     /// @brief Check if a node exists for the given information set
     /// @param infoSet The information set string key
     /// @return True if the node exists, false otherwise
-    virtual bool hasNode(const std::string& infoSet) = 0;
+    virtual bool hasNode(const std::string& infoSet) const = 0;
 
     /// @brief Remove a node from storage
     /// @param infoSet The information set string key

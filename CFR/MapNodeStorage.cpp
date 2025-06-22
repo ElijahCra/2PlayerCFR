@@ -15,7 +15,7 @@ void MapNodeStorage::putNode(const std::string& infoSet, std::shared_ptr<Node> n
     m_nodeMap[infoSet] = node;
 }
 
-bool MapNodeStorage::hasNode(const std::string& infoSet) {
+bool MapNodeStorage::hasNode(const std::string& infoSet) const {
     return m_nodeMap.find(infoSet) != m_nodeMap.end();
 }
 

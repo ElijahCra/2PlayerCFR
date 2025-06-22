@@ -48,7 +48,7 @@ void LRUNodeCache::putNode(const std::string& infoSet, std::shared_ptr<Node> nod
     m_cacheMap[infoSet] = m_cacheList.begin();
 }
 
-bool LRUNodeCache::hasNode(const std::string& infoSet) {
+bool LRUNodeCache::hasNode(const std::string& infoSet) const {
     return m_cacheMap.find(infoSet) != m_cacheMap.end();
 }
 

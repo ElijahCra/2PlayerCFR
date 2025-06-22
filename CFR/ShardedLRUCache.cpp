@@ -53,7 +53,7 @@ void ShardedLRUCache::putNode(const std::string& infoSet, std::shared_ptr<Node> 
     shard.cache.putNode(infoSet, std::move(node));
 }
 
-bool ShardedLRUCache::hasNode(const std::string& infoSet) {
+bool ShardedLRUCache::hasNode(const std::string& infoSet) const {
     const auto& shard = getShard(infoSet);
     std::shared_lock<std::shared_mutex> lock(shard.mutex);
     return shard.cache.hasNode(infoSet);

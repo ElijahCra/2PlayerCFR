@@ -79,7 +79,7 @@ void RocksDBStorage::putNode(const std::string& infoSet, std::shared_ptr<Node> n
         throw std::runtime_error("Failed to put node: " + status.ToString());
     }
 }
-bool RocksDBStorage::hasNode(const std::string& infoSet) {
+bool RocksDBStorage::hasNode(const std::string& infoSet) const {
 
     if (!m_db) {
         return false;

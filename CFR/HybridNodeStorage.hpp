@@ -27,7 +27,7 @@ public:
     // NodeStorage interface
     std::shared_ptr<Node> getNode(const std::string& infoSet) override;
     void putNode(const std::string& infoSet, std::shared_ptr<Node> node) override;
-    bool hasNode(const std::string& infoSet) override;
+    bool hasNode(const std::string& infoSet) const override;
     void removeNode(const std::string& infoSet) override;
     size_t size() const override;
     void clear() override;
@@ -87,7 +87,7 @@ void HybridNodeStorage<CacheType>::putNode(const std::string& infoSet, std::shar
 }
 
 template<typename CacheType>
-bool HybridNodeStorage<CacheType>::hasNode(const std::string& infoSet) {
+bool HybridNodeStorage<CacheType>::hasNode(const std::string& infoSet) const {
     return m_cache->hasNode(infoSet) || m_storage->hasNode(infoSet);
 }
 

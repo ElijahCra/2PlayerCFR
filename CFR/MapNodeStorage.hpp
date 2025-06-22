@@ -19,7 +19,7 @@ public:
     // NodeStorage interface
     std::shared_ptr<Node> getNode(const std::string& infoSet) override;
     void putNode(const std::string& infoSet, std::shared_ptr<Node> node) override;
-    bool hasNode(const std::string& infoSet) override;
+    bool hasNode(const std::string& infoSet) const override;
     void removeNode(const std::string& infoSet) override;
     size_t size() const override;
     void clear() override;
