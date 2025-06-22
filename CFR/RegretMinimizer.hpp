@@ -78,8 +78,8 @@ RegretMinimizer<GameType, StorageType>::RegretMinimizer(uint32_t seed, std::uniq
 template<typename GameType, typename StorageType>
 void RegretMinimizer<GameType, StorageType>::Train(uint32_t iterations) {
   std::array<float,GameType::PlayerNum> value;
-  for (int i = 0; i < iterations; ++i) {
-    for (int p = 0; p < GameType::PlayerNum; ++p) {
+  for (uint32_t i = 0; i < iterations; ++i) {
+    for (uint32_t p = 0; p < GameType::PlayerNum; ++p) {
       value[p] = ExternalSamplingCFR(Game, p, 1.0, 1.0);
     }
     Game.reInitialize();

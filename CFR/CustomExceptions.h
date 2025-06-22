@@ -6,14 +6,15 @@
 #define CUSTOMEXCEPTIONS_H
 
 #include <string>
+#include <utility>
 class GameStageViolation : public std::exception {
 private:
     std::string message;
 
 public:
-    GameStageViolation(std::string msg) : message(msg) {}
-    std::string what () {
-        return message;
+    explicit GameStageViolation(std::string msg) : message(std::move(msg)) {}
+    [[nodiscard]] const char* what () const noexcept override{
+        return message.c_str();
     }
 };
 

@@ -132,10 +132,6 @@ void HybridNodeStorage<CacheType>::onCacheEviction(const std::string& key, std::
     m_storage->putNode(key, node);
 }
 
-// Type aliases for convenience
-using HybridLRUStorage = HybridNodeStorage<LRUNodeCache>;
-using HybridShardedStorage = HybridNodeStorage<ShardedLRUCache>;
-
 } // namespace CFR
 
 #endif //HYBRIDNODESTORAGE_HPP

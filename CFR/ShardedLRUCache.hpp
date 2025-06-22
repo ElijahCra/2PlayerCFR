@@ -25,9 +25,9 @@ public:
     using EvictionCallback = std::function<void(const std::string&, std::shared_ptr<Node>)>;
     
     /// @brief Constructor
-    /// @param capacityPerShard Maximum number of nodes per shard
+    /// @param cacheCapacity Maximum number of nodes in entire cache
     /// @param evictionCallback Optional callback when nodes are evicted
-    explicit ShardedLRUCache(size_t capacityPerShard, const EvictionCallback& evictionCallback = nullptr);
+    explicit ShardedLRUCache(size_t cacheCapacity, const EvictionCallback& evictionCallback = nullptr);
     
     ~ShardedLRUCache() override = default;
     
