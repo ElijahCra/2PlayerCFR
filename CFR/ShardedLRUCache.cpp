@@ -7,14 +7,14 @@
 namespace CFR {
 
 ShardedLRUCache::ShardedLRUCache(size_t capacityPerShard, const EvictionCallback& evictionCallback)
-    : capacityPerShard_(capacityPerShard) {
-    if (capacityPerShard_ == 0) {
+    : m_capacityPerShard(capacityPerShard) {
+    if (m_capacityPerShard == 0) {
         throw std::invalid_argument("Cache capacity per shard must be greater than 0");
     }
     
     // Initialize all shards
     for (size_t i = 0; i < NUM_SHARDS; ++i) {
-        shards_[i] = std::make_unique<Shard>(capacityPerShard_, evictionCallback);
+        m_shards[i] = std::make_unique<Shard>(m_capacityPerShard, evictionCallback);
     }
 }
 
@@ -23,11 +23,11 @@ size_t ShardedLRUCache::getShardIndex(const std::string& key) const {
 }
 
 ShardedLRUCache::Shard& ShardedLRUCache::getShard(const std::string& key) {
-    return *shards_[getShardIndex(key)];
+    return *m_shards[getShardIndex(key)];
 }
 
 const ShardedLRUCache::Shard& ShardedLRUCache::getShard(const std::string& key) const {
-    return *shards_[getShardIndex(key)];
+    return *m_shards[getShardIndex(key)];
 }
 
 std::shared_ptr<Node> ShardedLRUCache::getNode(const std::string& infoSet) {
@@ -38,7 +38,7 @@ std::shared_ptr<Node> ShardedLRUCache::getNode(const std::string& infoSet) {
     
     // Update global statistics
     if (result) {
-        totalHits_.fetch_add(1, std::memory_order_relaxed);
+        m_totalHits.fetch_add(1, std::memory_order_relaxed);
     } else {
         m_totalMisses.fetch_add(1, std::memory_order_relaxed);
     }
@@ -53,7 +53,7 @@ void ShardedLRUCache::putNode(const std::string& infoSet, std::shared_ptr<Node> 
     shard.cache.putNode(infoSet, std::move(node));
 }
 
-bool ShardedLRUCache::hasNode(const std::string& infoSet) const {
+bool ShardedLRUCache::hasNode(const std::string& infoSet) {
     const auto& shard = getShard(infoSet);
     std::shared_lock<std::shared_mutex> lock(shard.mutex);
     return shard.cache.hasNode(infoSet);
@@ -69,7 +69,7 @@ void ShardedLRUCache::removeNode(const std::string& infoSet) {
 size_t ShardedLRUCache::size() const {
     size_t totalSize = 0;
     
-    for (const auto& shardPtr : shards_) {
+    for (const auto& shardPtr : m_shards) {
         std::shared_lock<std::shared_mutex> lock(shardPtr->mutex);
         totalSize += shardPtr->cache.size();
     }
@@ -78,14 +78,14 @@ size_t ShardedLRUCache::size() const {
 }
 
 void ShardedLRUCache::clear() {
-    for (auto& shardPtr : shards_) {
+    for (auto& shardPtr : m_shards) {
         std::unique_lock<std::shared_mutex> lock(shardPtr->mutex);
         shardPtr->cache.clear();
     }
 }
 
 double ShardedLRUCache::getHitRate() const {
-    uint64_t hits = totalHits_.load(std::memory_order_relaxed);
+    uint64_t hits = m_totalHits.load(std::memory_order_relaxed);
     uint64_t misses = m_totalMisses.load(std::memory_order_relaxed);
     uint64_t total = hits + misses;
     
@@ -93,11 +93,11 @@ double ShardedLRUCache::getHitRate() const {
 }
 
 void ShardedLRUCache::resetStats() {
-    totalHits_.store(0, std::memory_order_relaxed);
+    m_totalHits.store(0, std::memory_order_relaxed);
     m_totalMisses.store(0, std::memory_order_relaxed);
     
     // Reset individual shard statistics
-    for (auto& shardPtr : shards_) {
+    for (auto& shardPtr : m_shards) {
         std::unique_lock<std::shared_mutex> lock(shardPtr->mutex);
         shardPtr->cache.resetStats();
     }

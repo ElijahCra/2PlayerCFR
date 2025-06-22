@@ -5,7 +5,7 @@ add_library(CFR STATIC
         MapNodeStorage.cpp
         RocksDBStorage.cpp
         NodeSerializer.cpp
-        HybridNodeStorage.cpp
+        HybridNodeStorage.hpp
         LRUNodeCache.cpp
         ShardedLRUCache.cpp
 )

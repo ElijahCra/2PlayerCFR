@@ -1,12 +1,12 @@
 #include <iostream>
 
-#include "HybridNodeStorage.hpp"
+#include "CFR/HybridNodeStorage.hpp"
 #include "CFR/RegretMinimizer.hpp"
 
 
 
 int main() {
-    CFR::RegretMinimizer<Preflop::Game,CFR::HybridNodeStorage> Minimize{(std::random_device()())};
+    CFR::RegretMinimizer<Preflop::Game,CFR::HybridLRUStorage> Minimize{(std::random_device()())};
     auto start = std::chrono::high_resolution_clock::now();
     Minimize.Train(1010000);
     auto end = std::chrono::high_resolution_clock::now();
