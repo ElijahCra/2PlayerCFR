@@ -103,4 +103,11 @@ void ShardedLRUCache::resetStats() {
     }
 }
 
+void ShardedLRUCache::flush() {
+    for (auto& shardPtr : m_shards) {
+        std::shared_lock<std::shared_mutex> lock(shardPtr->mutex);
+        shardPtr->cache.flush();
+    }
+}
+
 } // namespace CFR

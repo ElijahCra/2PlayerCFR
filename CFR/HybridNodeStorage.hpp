@@ -22,7 +22,10 @@ public:
     /// @param dbPath Path to RocksDB database directory
     explicit HybridNodeStorage(size_t cacheCapacity = 100000, const std::string& dbPath = DEFAULT_DB_PATH);
 
-    ~HybridNodeStorage() override = default;
+    ~HybridNodeStorage() override;
+    
+    /// @brief Flush all cached data to disk
+    void flush();
 
     // NodeStorage interface
     std::shared_ptr<Node> getNode(const std::string& infoSet) override;
@@ -121,9 +124,18 @@ void HybridNodeStorage<CacheType>::printStats() const {
 }
 
 template<typename CacheType>
+HybridNodeStorage<CacheType>::~HybridNodeStorage() {
+    flush();
+}
+
+template<typename CacheType>
+void HybridNodeStorage<CacheType>::flush() {
+    m_cache->flush();
+}
+
+template<typename CacheType>
 void HybridNodeStorage<CacheType>::flushCache() {
-    // eviction callback will save to storage
-    m_cache->clear();
+    flush();
 }
 
 template<typename CacheType>

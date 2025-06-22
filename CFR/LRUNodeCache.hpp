@@ -33,6 +33,9 @@ public:
     
     /// @brief Reset hit/miss statistics
     void resetStats();
+    
+    /// @brief Flush all cached nodes to disk using eviction callback
+    void flush();
 
 private:
     struct CacheEntry {

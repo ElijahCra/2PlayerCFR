@@ -90,6 +90,14 @@ void LRUNodeCache::resetStats() {
     m_misses=0;
 }
 
+void LRUNodeCache::flush() {
+    if (m_evictionCallback) {
+        for (const auto& entry : m_cacheList) {
+            m_evictionCallback(entry.key, entry.node);
+        }
+    }
+}
+
 void LRUNodeCache::evictLRU() {
     if (m_cacheList.empty()) {
         return;

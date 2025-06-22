@@ -44,6 +44,9 @@ public:
     /// @brief Reset hit/miss statistics across all shards
     void resetStats();
     
+    /// @brief Flush all cached nodes to disk using eviction callback
+    void flush();
+    
     /// @brief Get total capacity across all shards
     size_t getTotalCapacity() const { return m_capacityPerShard * NUM_SHARDS; }
     
