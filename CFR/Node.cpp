@@ -14,6 +14,7 @@ namespace CFR {
     }
 
     void Node::calcUpdatedStrategy() {
+        std::lock_guard<std::mutex> lock(mutex);
         float normalizingSum = 0;
         for (int a = 0; a < actionNum; a++) {
             strategy[a] = regretSum[a] > 0 ? regretSum[a] : 0;
@@ -42,7 +43,8 @@ namespace CFR {
         }
     }
 
-    auto Node::getStrategy() const -> const std::vector<float> & {
+    auto Node::getStrategy() const -> std::vector<float> {
+        std::lock_guard<std::mutex> lock(mutex);
         return strategy;
     }
 
@@ -72,6 +74,7 @@ namespace CFR {
 
 
     void Node::updateRegretSum(int i, float actionRegret, float probCounterFactual) {
+        std::lock_guard<std::mutex> lock(mutex);
         regretSum[i] += probCounterFactual * actionRegret;
     }
 

@@ -18,13 +18,13 @@ namespace CFR {
 
         void calcAverageStrategy();
 
-        [[nodiscard]] auto getAverageStrategy() const -> const std::vector<float> &;
+        [[nodiscard]] const std::vector<float> & getAverageStrategy() const;
 
-        [[nodiscard]] auto getStrategy() const -> const std::vector<float> &;
+        [[nodiscard]] std::vector<float> getStrategy() const;
 
-        [[nodiscard]] auto getRegretSum() const -> const std::vector<float> &;
+        [[nodiscard]] const std::vector<float> & getRegretSum() const;
 
-        [[nodiscard]] auto getStrategySum() const -> const std::vector<float> &;
+        [[nodiscard]] const std::vector<float> & getStrategySum() const;
 
         void setRegretSum(const std::vector<float>& regretSum);
 
@@ -42,6 +42,7 @@ namespace CFR {
         std::vector<float> strategySum;
         std::vector<float> averageStrategy;
         uint8_t actionNum;
+        mutable std::mutex mutex;
     };
 }
 #endif //INC_2PLAYERCFR_NODE_HPP
