@@ -5,6 +5,7 @@
 
 #include <vector>
 #include <cstdint>
+#include <mutex>
 
 namespace CFR {
 /// @class Node

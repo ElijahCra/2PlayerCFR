@@ -4,6 +4,10 @@ project(2PlayerCFR LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# Find RocksDB
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(ROCKSDB REQUIRED rocksdb)
+
 add_subdirectory(CFR)
 add_subdirectory(Game)
 add_subdirectory(Test)

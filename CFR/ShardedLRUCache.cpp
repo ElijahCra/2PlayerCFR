@@ -2,6 +2,8 @@
 // Created by Elijah Crain on 6/19/25.
 //
 #include "ShardedLRUCache.hpp"
+
+#include <cmath>
 #include <stdexcept>
 
 namespace CFR {

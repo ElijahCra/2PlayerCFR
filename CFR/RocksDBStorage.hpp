@@ -21,7 +21,7 @@ public:
 
     // NodeStorage interface
     std::shared_ptr<Node> getNode(const std::string& infoSet) override;
-    std::vector<std::shared_ptr<Node>> multiGetNode(const std::vector<const std::string>& infoSets);
+    std::vector<std::shared_ptr<Node>> multiGetNode(const std::vector<std::string>& infoSets);
     void putNode(const std::string& infoSet, std::shared_ptr<Node> node) override;
     bool hasNode(const std::string& infoSet) const override;
     void removeNode(const std::string& infoSet) override;

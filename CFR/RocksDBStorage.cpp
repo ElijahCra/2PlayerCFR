@@ -7,6 +7,7 @@
 #include <iostream>
 #include <utility>
 #include <format>
+#include <vector>
 #include <rocksdb/table.h>
 #include <rocksdb/filter_policy.h>
 #include "NodeSerializer.hpp"
@@ -46,7 +47,7 @@ std::shared_ptr<Node> RocksDBStorage::getNode(const std::string& infoSet) {
 
     return NodeSerializer::deserialize(value);
 }
-std::vector<std::shared_ptr<Node>> RocksDBStorage::multiGetNode(const std::vector<const std::string>& infoSets)
+std::vector<std::shared_ptr<Node>> RocksDBStorage::multiGetNode(const std::vector<std::string>& infoSets)
 {
     if (!m_db) {
         return {nullptr};
