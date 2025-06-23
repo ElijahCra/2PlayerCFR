@@ -5,31 +5,31 @@
 
 namespace CFR {
 
-RocksDBNodeStorage::RocksDBNodeStorage(const std::string& dbPath) : dbPath_(dbPath) {
+RocksDBNodeStorage::RocksDBNodeStorage(const std::string& dbPath) : m_dbPath(dbPath) {
     rocksdb::Options options = getDefaultOptions();
     rocksdb::DB* db;
-    rocksdb::Status status = rocksdb::DB::Open(options, dbPath_, &db);
+    rocksdb::Status status = rocksdb::DB::Open(options, m_dbPath, &db);
     
     if (!status.ok()) {
         throw std::runtime_error("Failed to open RocksDB: " + status.ToString());
     }
     
-    db_.reset(db);
+    m_db.reset(db);
 }
 
 RocksDBNodeStorage::~RocksDBNodeStorage() {
-    if (db_) {
-        db_->Close();
+    if (m_db) {
+        m_db->Close();
     }
 }
 
 std::shared_ptr<Node> RocksDBNodeStorage::getNode(const std::string& infoSet) {
-    if (!db_) {
+    if (!m_db) {
         return nullptr;
     }
     
     std::string value;
-    rocksdb::Status status = db_->Get(rocksdb::ReadOptions(), infoSet, &value);
+    rocksdb::Status status = m_db->Get(rocksdb::ReadOptions(), infoSet, &value);
     
     if (!status.ok()) {
         return nullptr;
@@ -39,12 +39,12 @@ std::shared_ptr<Node> RocksDBNodeStorage::getNode(const std::string& infoSet) {
 }
 
 void RocksDBNodeStorage::putNode(const std::string& infoSet, std::shared_ptr<Node> node) {
-    if (!db_ || !node) {
+    if (!m_db || !node) {
         return;
     }
     
     std::string serialized = NodeSerializer::serialize(*node);
-    rocksdb::Status status = db_->Put(rocksdb::WriteOptions(), infoSet, serialized);
+    rocksdb::Status status = m_db->Put(rocksdb::WriteOptions(), infoSet, serialized);
     
     if (!status.ok()) {
         throw std::runtime_error("Failed to put node: " + status.ToString());
@@ -52,22 +52,22 @@ void RocksDBNodeStorage::putNode(const std::string& infoSet, std::shared_ptr<Nod
 }
 
 bool RocksDBNodeStorage::hasNode(const std::string& infoSet) const {
-    if (!db_) {
+    if (!m_db) {
         return false;
     }
     
     std::string value;
-    rocksdb::Status status = db_->Get(rocksdb::ReadOptions(), infoSet, &value);
+    rocksdb::Status status = m_db->Get(rocksdb::ReadOptions(), infoSet, &value);
     
     return status.ok();
 }
 
 void RocksDBNodeStorage::removeNode(const std::string& infoSet) {
-    if (!db_) {
+    if (!m_db) {
         return;
     }
     
-    rocksdb::Status status = db_->Delete(rocksdb::WriteOptions(), infoSet);
+    rocksdb::Status status = m_db->Delete(rocksdb::WriteOptions(), infoSet);
     
     if (!status.ok()) {
         throw std::runtime_error("Failed to remove node: " + status.ToString());
@@ -75,27 +75,22 @@ void RocksDBNodeStorage::removeNode(const std::string& infoSet) {
 }
 
 size_t RocksDBNodeStorage::size() const {
-    if (!db_) {
+    if (!m_db) {
         return 0;
     }
     
-    size_t count = 0;
-    rocksdb::Iterator* it = db_->NewIterator(rocksdb::ReadOptions());
-    
-    for (it->SeekToFirst(); it->Valid(); it->Next()) {
-        ++count;
+    std::string value;
+    m_db->GetProperty("rocksdb.estimate-num-keys", &value);
+    return std::stoi(value);
     }
-    
-    delete it;
-    return count;
-}
+
 
 void RocksDBNodeStorage::clear() {
-    if (!db_) {
+    if (!m_db) {
         return;
     }
     
-    rocksdb::Iterator* it = db_->NewIterator(rocksdb::ReadOptions());
+    rocksdb::Iterator* it = m_db->NewIterator(rocksdb::ReadOptions());
     rocksdb::WriteBatch batch;
     
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
@@ -104,7 +99,7 @@ void RocksDBNodeStorage::clear() {
     
     delete it;
     
-    rocksdb::Status status = db_->Write(rocksdb::WriteOptions(), &batch);
+    rocksdb::Status status = m_db->Write(rocksdb::WriteOptions(), &batch);
     
     if (!status.ok()) {
         throw std::runtime_error("Failed to clear database: " + status.ToString());
@@ -112,26 +107,26 @@ void RocksDBNodeStorage::clear() {
 }
 
 bool RocksDBNodeStorage::isOpen() const {
-    return db_ != nullptr;
+    return m_db != nullptr;
 }
 
 std::string RocksDBNodeStorage::getStats() const {
-    if (!db_) {
+    if (!m_db) {
         return "Database not open";
     }
     
     std::string stats;
-    db_->GetProperty("rocksdb.stats", &stats);
+    m_db->GetProperty("rocksdb.stats", &stats);
     return stats;
 }
 
 void RocksDBNodeStorage::compact() {
-    if (!db_) {
+    if (!m_db) {
         return;
     }
     
     rocksdb::CompactRangeOptions options;
-    db_->CompactRange(options, nullptr, nullptr);
+    m_db->CompactRange(options, nullptr, nullptr);
 }
 
 rocksdb::Options RocksDBNodeStorage::getDefaultOptions() const {

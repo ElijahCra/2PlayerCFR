@@ -4,14 +4,14 @@
 namespace CFR {
 
 ShardedLRUCache::ShardedLRUCache(const size_t capacityPerShard, const EvictionCallback& evictionCallback)
-    : capacityPerShard_(capacityPerShard) {
-    if (capacityPerShard_ == 0) {
+    : m_capacityPerShard(capacityPerShard) {
+    if (m_capacityPerShard == 0) {
         throw std::invalid_argument("Cache capacity per shard must be greater than 0");
     }
     
     // Initialize all shards
     for (size_t i = 0; i < NUM_SHARDS; ++i) {
-        shards_[i] = std::make_unique<Shard>(capacityPerShard_, evictionCallback);
+        m_shards[i] = std::make_unique<Shard>(m_capacityPerShard, evictionCallback);
     }
 }
 
@@ -20,11 +20,11 @@ size_t ShardedLRUCache::getShardIndex(const std::string& key) const {
 }
 
 ShardedLRUCache::Shard& ShardedLRUCache::getShard(const std::string& key) {
-    return *shards_[getShardIndex(key)];
+    return *m_shards[getShardIndex(key)];
 }
 
 const ShardedLRUCache::Shard& ShardedLRUCache::getShard(const std::string& key) const {
-    return *shards_[getShardIndex(key)];
+    return *m_shards[getShardIndex(key)];
 }
 
 std::shared_ptr<Node> ShardedLRUCache::getNode(const std::string& infoSet) {
@@ -66,7 +66,7 @@ void ShardedLRUCache::removeNode(const std::string& infoSet) {
 size_t ShardedLRUCache::size() const {
     size_t totalSize = 0;
     
-    for (const auto& shardPtr : shards_) {
+    for (const auto& shardPtr : m_shards) {
         std::shared_lock<std::shared_mutex> lock(shardPtr->mutex);
         totalSize += shardPtr->cache.size();
     }
@@ -75,7 +75,7 @@ size_t ShardedLRUCache::size() const {
 }
 
 void ShardedLRUCache::clear() {
-    for (auto& shardPtr : shards_) {
+    for (auto& shardPtr : m_shards) {
         std::unique_lock<std::shared_mutex> lock(shardPtr->mutex);
         shardPtr->cache.clear();
     }
@@ -94,7 +94,7 @@ void ShardedLRUCache::resetStats() {
     totalMisses_.store(0, std::memory_order_relaxed);
     
     // Reset individual shard statistics
-    for (auto& shardPtr : shards_) {
+    for (auto& shardPtr : m_shards) {
         std::unique_lock<std::shared_mutex> lock(shardPtr->mutex);
         shardPtr->cache.resetStats();
     }

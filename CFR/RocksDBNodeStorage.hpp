@@ -37,8 +37,8 @@ public:
     void compact();
 
 private:
-    std::unique_ptr<rocksdb::DB> db_;
-    std::string dbPath_;
+    std::unique_ptr<rocksdb::DB> m_db;
+    std::string m_dbPath;
     
     rocksdb::Options getDefaultOptions() const;
 };
