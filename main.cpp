@@ -4,17 +4,18 @@
 #include "CFR/RegretMinimizer.hpp"
 
 int main() {
-    const uint32_t iterations = 80000;
+    const uint32_t iterations = 10000000;
     const uint32_t cacheSize = 100000;
-    const uint32_t numCFRThreads = std::thread::hardware_concurrency();
     const uint32_t backgroundThreads = 2;
+    const uint32_t numCFRThreads = std::thread::hardware_concurrency()-backgroundThreads;
+    const uint32_t perThreadIterations = iterations / numCFRThreads;
     
     std::cout << "Hardware threads available: " << numCFRThreads << "\n\n";
     
     // =====================================================
     // Single-threaded setup with synchronous storage
     // =====================================================
-    bool singleSync = true;
+    bool singleSync = false;
     if (singleSync) {
         std::cout << "=== Single-threaded CFR + Sync Storage ===\n";
         CFR::RegretMinimizer<Preflop::Game> singleThreaded{
@@ -40,7 +41,7 @@ int main() {
     // =====================================================
     // Single-threaded setup with Asynchronous storage
     // =====================================================
-    bool singleASync = true;
+    bool singleASync = false;
     if (singleASync) {
         std::cout << "=== Single-threaded CFR + async Storage ===\n";
         CFR::RegretMinimizer<Preflop::Game> singleThreaded{
@@ -87,8 +88,8 @@ int main() {
                 backgroundThreads                           // background I/O threads per minimizer
             ));
 
-            threads.emplace_back([&minimizers, i]() {
-                minimizers[i]->Train(iterations);
+            threads.emplace_back([&minimizers, i,perThreadIterations]() {
+                minimizers[i]->Train(perThreadIterations);
             });
         }
 
