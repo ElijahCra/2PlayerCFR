@@ -11,13 +11,13 @@
 namespace CFR {
 
 /// @brief RocksDB-based persistent storage for cold nodes
-class RocksDBStorage final : public NodeStorage {
+class RocksDBNodeStorage final : public NodeStorage {
 public:
     /// @brief Constructor
     /// @param dbPath Path to the RocksDB database directory
-    explicit RocksDBStorage(std::string  dbPath);
+    explicit RocksDBNodeStorage(std::string  dbPath);
 
-    ~RocksDBStorage() override;
+    ~RocksDBNodeStorage() override;
 
     // NodeStorage interface
     std::shared_ptr<Node> getNode(const std::string& infoSet) override;

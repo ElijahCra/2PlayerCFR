@@ -2,7 +2,7 @@
 // Created by elijah on 6/17/25.
 //
 
-#include "RocksDBStorage.hpp"
+#include "RocksDBNodeStorage.hpp"
 
 #include <iostream>
 #include <utility>
@@ -14,7 +14,7 @@
 
 namespace CFR {
 
-RocksDBStorage::RocksDBStorage(std::string  dbPath) : m_dbPath(std::move(dbPath)) {
+RocksDBNodeStorage::RocksDBNodeStorage(std::string  dbPath) : m_dbPath(std::move(dbPath)) {
     const rocksdb::Options options = getDefaultOptions();
     rocksdb::DB* db;
 
@@ -26,13 +26,13 @@ RocksDBStorage::RocksDBStorage(std::string  dbPath) : m_dbPath(std::move(dbPath)
     std::cout << std::format("DB Size: {}", this->size()) << std::endl;
 }
 
-RocksDBStorage::~RocksDBStorage() {
+RocksDBNodeStorage::~RocksDBNodeStorage() {
     if (m_db) {
         m_db->Close();
     }
 }
 
-std::shared_ptr<Node> RocksDBStorage::getNode(const std::string& infoSet) {
+std::shared_ptr<Node> RocksDBNodeStorage::getNode(const std::string& infoSet) {
 
     if (!m_db) {
         return nullptr;
@@ -47,7 +47,7 @@ std::shared_ptr<Node> RocksDBStorage::getNode(const std::string& infoSet) {
 
     return NodeSerializer::deserialize(value);
 }
-std::vector<std::shared_ptr<Node>> RocksDBStorage::multiGetNode(const std::vector<std::string>& infoSets)
+std::vector<std::shared_ptr<Node>> RocksDBNodeStorage::multiGetNode(const std::vector<std::string>& infoSets)
 {
     if (!m_db) {
         return {nullptr};
@@ -67,7 +67,7 @@ std::vector<std::shared_ptr<Node>> RocksDBStorage::multiGetNode(const std::vecto
 
 }
 
-void RocksDBStorage::putNode(const std::string& infoSet, std::shared_ptr<Node> node) {
+void RocksDBNodeStorage::putNode(const std::string& infoSet, std::shared_ptr<Node> node) {
 
     if (!m_db || !node) {
         return;
@@ -80,7 +80,7 @@ void RocksDBStorage::putNode(const std::string& infoSet, std::shared_ptr<Node> n
         throw std::runtime_error("Failed to put node: " + status.ToString());
     }
 }
-bool RocksDBStorage::hasNode(const std::string& infoSet) const {
+bool RocksDBNodeStorage::hasNode(const std::string& infoSet) const {
 
     if (!m_db) {
         return false;
@@ -92,7 +92,7 @@ bool RocksDBStorage::hasNode(const std::string& infoSet) const {
     return status.ok();
 }
 
-void RocksDBStorage::removeNode(const std::string& infoSet) {
+void RocksDBNodeStorage::removeNode(const std::string& infoSet) {
     if (!m_db) {
         return;
     }
@@ -104,7 +104,7 @@ void RocksDBStorage::removeNode(const std::string& infoSet) {
     }
 }
 
-size_t RocksDBStorage::size() const {
+size_t RocksDBNodeStorage::size() const {
     if (!m_db) {
         return 0;
     }
@@ -115,7 +115,7 @@ size_t RocksDBStorage::size() const {
 }
 
 
-void RocksDBStorage::clear() {
+void RocksDBNodeStorage::clear() {
     if (!m_db) {
         return;
     }
@@ -136,12 +136,12 @@ void RocksDBStorage::clear() {
     }
 }
 
-bool RocksDBStorage::isOpen() const {
+bool RocksDBNodeStorage::isOpen() const {
     return m_db != nullptr;
 }
 
 
-std::string RocksDBStorage::getStats() const {
+std::string RocksDBNodeStorage::getStats() const {
     if (!m_db) {
         return "Database not open";
     }
@@ -151,7 +151,7 @@ std::string RocksDBStorage::getStats() const {
     return stats;
 }
 
-void RocksDBStorage::compact() {
+void RocksDBNodeStorage::compact() {
     if (!m_db) {
         return;
     }
@@ -161,7 +161,7 @@ void RocksDBStorage::compact() {
 }
 
 
-rocksdb::Options RocksDBStorage::getDefaultOptions() {
+rocksdb::Options RocksDBNodeStorage::getDefaultOptions() {
     rocksdb::Options options;
 
     // Create the DB if it doesn't exist
@@ -203,7 +203,7 @@ rocksdb::Options RocksDBStorage::getDefaultOptions() {
     return options;
 }
 
-rocksdb::ReadOptions RocksDBStorage::getDefaultReadOptions()
+rocksdb::ReadOptions RocksDBNodeStorage::getDefaultReadOptions()
 {
     rocksdb::ReadOptions options;
     options.async_io = true;

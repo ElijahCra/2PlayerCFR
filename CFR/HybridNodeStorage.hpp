@@ -9,7 +9,7 @@
 #include "NodeStorage.hpp"
 #include "LRUNodeCache.hpp"
 #include "ShardedLRUCache.hpp"
-#include "RocksDBStorage.hpp"
+#include "RocksDBNodeStorage.hpp"
 
 namespace CFR {
 /// @brief Hybrid storage combining in-memory cache and RocksDB on disk
@@ -48,14 +48,14 @@ private:
     void onCacheEviction(const std::string& key, std::shared_ptr<Node> node);
 
     std::unique_ptr<CacheType> m_cache;
-    std::unique_ptr<RocksDBStorage> m_storage;
+    std::unique_ptr<RocksDBNodeStorage> m_storage;
 };
 
 // Template implementation
 template<typename CacheType>
 HybridNodeStorage<CacheType>::HybridNodeStorage(size_t cacheCapacity, const std::string& dbPath) {
     // Create RocksDB storage first
-    m_storage = std::make_unique<RocksDBStorage>(dbPath);
+    m_storage = std::make_unique<RocksDBNodeStorage>(dbPath);
     
     // Create cache with eviction callback
     auto evictionCallback = [this](const std::string& key, std::shared_ptr<Node> node) {
