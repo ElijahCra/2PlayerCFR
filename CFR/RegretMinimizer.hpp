@@ -116,8 +116,14 @@ auto RegretMinimizer<GameType, StorageType>::ChanceCFR(const GameType &game, int
     std::string infoSet = game.getInfoSet(game.getCurrentPlayer());
     auto node = m_storage->getNode(infoSet);
     if (node == nullptr) {
-      node = std::make_shared<Node>(actionNum);
-      m_storage->putNode(infoSet, node);
+      auto newNode = std::make_shared<Node>(actionNum);
+      m_storage->putNode(infoSet, newNode);
+      // Re-fetch to handle potential race condition where another thread inserted the same node
+      node = m_storage->getNode(infoSet);
+      if (node == nullptr) {
+        // Fallback: use our newly created node if storage still returns null
+        node = newNode;
+      }
     }
 
     const std::vector<float> currentStrategy = node->getStrategy();
@@ -179,8 +185,14 @@ auto RegretMinimizer<GameType, StorageType>::ExternalSamplingCFR(const GameType 
     std::string infoSet = game.getInfoSet(game.getCurrentPlayer());
     auto node = m_storage->getNode(infoSet);
     if (node == nullptr) {
-      node = std::make_shared<Node>(actionNum);
-      m_storage->putNode(infoSet, node);
+      auto newNode = std::make_shared<Node>(actionNum);
+      m_storage->putNode(infoSet, newNode);
+      // Re-fetch to handle potential race condition where another thread inserted the same node
+      node = m_storage->getNode(infoSet);
+      if (node == nullptr) {
+        // Fallback: use our newly created node if storage still returns null
+        node = newNode;
+      }
     }
 
     const std::vector<float> currentStrategy = node->getStrategy();

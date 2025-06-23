@@ -71,10 +71,6 @@ private:
     
     size_t m_capacityPerShard;
     std::array<std::unique_ptr<Shard>, NUM_SHARDS> m_shards;
-    
-    // Global statistics
-    mutable std::atomic<uint64_t> m_totalHits{0};
-    mutable std::atomic<uint64_t> m_totalMisses{0};
 };
 
 } // namespace CFR

@@ -30,6 +30,7 @@ namespace CFR {
     }
 
     void Node::calcAverageStrategy() {
+        std::lock_guard<std::mutex> lock(mutex);
         float normalizingSum = 0;
         for (int a = 0; a < actionNum; a++) {
             normalizingSum += strategySum[a];
@@ -38,7 +39,7 @@ namespace CFR {
             if (normalizingSum > 0) {
                 averageStrategy[a] = strategySum[a] / normalizingSum;
             } else {
-                averageStrategy[a] = 1.f / (float)actionNum;
+                averageStrategy[a] = 1.f / static_cast<float>(actionNum);
             }
         }
     }
@@ -49,26 +50,32 @@ namespace CFR {
     }
 
     auto Node::getRegretSum() const -> const std::vector<float> & {
+        std::lock_guard<std::mutex> lock(mutex);
         return regretSum;
     }
 
     auto Node::getAverageStrategy() const -> const std::vector<float> & {
+        std::lock_guard<std::mutex> lock(mutex);
         return averageStrategy;
     }
 
     auto Node::getStrategySum() const -> const std::vector<float> & {
+        std::lock_guard<std::mutex> lock(mutex);
         return strategySum;
     }
 
     void Node::setRegretSum(const std::vector<float>& regretSum) {
+        std::lock_guard<std::mutex> lock(mutex);
         this->regretSum = regretSum;
     }
 
     void Node::setStrategySum(const std::vector<float>& strategySum) {
+        std::lock_guard<std::mutex> lock(mutex);
         this->strategySum = strategySum;
     }
 
     void Node::setAverageStrategy(const std::vector<float>& averageStrategy) {
+        std::lock_guard<std::mutex> lock(mutex);
         this->averageStrategy = averageStrategy;
     }
 
@@ -79,6 +86,7 @@ namespace CFR {
     }
 
     void Node::updateStrategySum(const std::vector<float> &currentStrategy, float probUpdatePlayer) {
+        std::lock_guard<std::mutex> lock(mutex);
         for (int i=0; i<actionNum; ++i) {
             strategySum[i] += probUpdatePlayer * currentStrategy[i];
         }

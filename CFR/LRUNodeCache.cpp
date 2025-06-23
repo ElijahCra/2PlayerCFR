@@ -30,7 +30,6 @@ std::shared_ptr<Node> LRUNodeCache::getNode(const std::string& infoSet) {
 }
 
 void LRUNodeCache::putNode(const std::string& infoSet, std::shared_ptr<Node> node) {
-
     auto it = m_cacheMap.find(infoSet);
     if (it != m_cacheMap.end()) {
         // Update existing entry
