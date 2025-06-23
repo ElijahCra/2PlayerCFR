@@ -38,6 +38,9 @@ public:
     /// @brief Reset hit/miss statistics
     void resetStats();
 
+    /// @brief Flush all cached nodes to disk using eviction callback
+    void flush();
+
 private:
     struct CacheEntry {
         std::string key;
@@ -53,13 +56,13 @@ private:
     void evictLRU();
     void moveToFront(typename CacheList::iterator it);
     
-    size_t capacity_;
-    CacheList cacheList_;
-    CacheMap cacheMap_;
-    EvictionCallback evictionCallback_;
+    size_t m_capacity;
+    CacheList m_cacheList;
+    CacheMap m_cacheMap;
+    EvictionCallback m_evictionCallback;
     
-    uint64_t hits_{0};
-    uint64_t misses_{0};
+    uint64_t m_hits{0};
+    uint64_t m_misses{0};
 };
 
 } // namespace CFR

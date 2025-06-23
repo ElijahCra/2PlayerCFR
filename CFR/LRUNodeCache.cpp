@@ -4,21 +4,21 @@
 namespace CFR {
 
 LRUNodeCache::LRUNodeCache(size_t capacity, EvictionCallback evictionCallback)
-    : capacity_(capacity), evictionCallback_(std::move(evictionCallback)) {
-    if (capacity_ == 0) {
+    : m_capacity(capacity), m_evictionCallback(std::move(evictionCallback)) {
+    if (m_capacity == 0) {
         throw std::invalid_argument("Cache capacity must be greater than 0");
     }
 }
 
 std::shared_ptr<Node> LRUNodeCache::getNode(const std::string& infoSet) {
 
-    auto it = cacheMap_.find(infoSet);
-    if (it == cacheMap_.end()) {
-        misses_+=1;
+    auto it = m_cacheMap.find(infoSet);
+    if (it == m_cacheMap.end()) {
+        m_misses+=1;
         return nullptr;
     }
     
-    hits_+=1;
+    m_hits+=1;
     
     // Move accessed item to front
     moveToFront(it->second);
@@ -28,8 +28,8 @@ std::shared_ptr<Node> LRUNodeCache::getNode(const std::string& infoSet) {
 
 void LRUNodeCache::putNode(const std::string& infoSet, std::shared_ptr<Node> node) {
 
-    auto it = cacheMap_.find(infoSet);
-    if (it != cacheMap_.end()) {
+    auto it = m_cacheMap.find(infoSet);
+    if (it != m_cacheMap.end()) {
         // Update existing entry
         it->second->node = std::move(node);
         moveToFront(it->second);
@@ -37,82 +37,90 @@ void LRUNodeCache::putNode(const std::string& infoSet, std::shared_ptr<Node> nod
     }
     
     // Add new entry
-    if (cacheList_.size() >= capacity_) {
+    if (m_cacheList.size() >= m_capacity) {
         evictLRU();
     }
     
-    cacheList_.emplace_front(infoSet, std::move(node));
-    cacheMap_[infoSet] = cacheList_.begin();
+    m_cacheList.emplace_front(infoSet, std::move(node));
+    m_cacheMap[infoSet] = m_cacheList.begin();
 }
 
 bool LRUNodeCache::hasNode(const std::string& infoSet) const {
-    return cacheMap_.find(infoSet) != cacheMap_.end();
+    return m_cacheMap.find(infoSet) != m_cacheMap.end();
 }
 
 void LRUNodeCache::removeNode(const std::string& infoSet) {
-    auto it = cacheMap_.find(infoSet);
-    if (it == cacheMap_.end()) {
+    auto it = m_cacheMap.find(infoSet);
+    if (it == m_cacheMap.end()) {
         return;
     }
     
-    cacheList_.erase(it->second);
-    cacheMap_.erase(it);
+    m_cacheList.erase(it->second);
+    m_cacheMap.erase(it);
 }
 
 size_t LRUNodeCache::size() const {
-    return cacheList_.size();
+    return m_cacheList.size();
 }
 
 void LRUNodeCache::clear() {
-    if (evictionCallback_) {
-        for (const auto& entry : cacheList_) {
-            evictionCallback_(entry.key, entry.node);
+    if (m_evictionCallback) {
+        for (const auto& entry : m_cacheList) {
+            m_evictionCallback(entry.key, entry.node);
         }
     }
     
-    cacheList_.clear();
-    cacheMap_.clear();
+    m_cacheList.clear();
+    m_cacheMap.clear();
 }
 
 double LRUNodeCache::getHitRate() const {
-    uint64_t h = hits_;
-    uint64_t m = misses_;
+    uint64_t h = m_hits;
+    uint64_t m = m_misses;
     uint64_t total = h + m;
     
     return total > 0 ? static_cast<double>(h) / static_cast<double>(total) : 0.0;
 }
 
 void LRUNodeCache::resetStats() {
-    hits_=0;
-    misses_=0;
+    m_hits=0;
+    m_misses=0;
+}
+
+void LRUNodeCache::flush() {
+    if (m_evictionCallback) {
+        for (const auto& entry : m_cacheList) {
+            m_evictionCallback(entry.key, entry.node);
+        }
+    }
 }
 
 void LRUNodeCache::evictLRU() {
-    if (cacheList_.empty()) {
+    if (m_cacheList.empty()) {
         return;
     }
     
     // Make copies to avoid race conditions with shared_ptr reference counting
-    std::string keyToEvict = cacheList_.back().key;
-    std::shared_ptr<Node> nodeToEvict = cacheList_.back().node;
+    std::string keyToEvict = m_cacheList.back().key;
+    std::shared_ptr<Node> nodeToEvict = m_cacheList.back().node;
     
     // Remove from cache first
-    cacheMap_.erase(keyToEvict);
-    cacheList_.pop_back();
+    m_cacheMap.erase(keyToEvict);
+    m_cacheList.pop_back();
     
     // Call eviction callback after removal to avoid race conditions
-    if (evictionCallback_) {
-        evictionCallback_(keyToEvict, nodeToEvict);
+    if (m_evictionCallback) {
+        m_evictionCallback(keyToEvict, nodeToEvict);
     }
 }
 
 void LRUNodeCache::moveToFront(typename CacheList::iterator it) {
-    if (it == cacheList_.begin()) {
+    if (it == m_cacheList.begin()) {
         return;
     }
     
 
-    cacheList_.splice(cacheList_.begin(), cacheList_, it);
+    m_cacheList.splice(m_cacheList.begin(), m_cacheList, it);
 }
 
 } // namespace CFR

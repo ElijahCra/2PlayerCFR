@@ -15,15 +15,15 @@ namespace CFR {
 class ShardedLRUCache : public NodeStorage {
 public:
     /// @brief Number of shards (power of 2 for efficient modulo)
-    static constexpr size_t NUM_SHARDS = 64;
+    static constexpr size_t NUM_SHARDS = 256;
     
     /// @brief Callback function for evicted nodes
     using EvictionCallback = std::function<void(const std::string&, std::shared_ptr<Node>)>;
     
     /// @brief Constructor
-    /// @param capacityPerShard Maximum number of nodes per shard
+    /// @param cacheCapacity Maximum number of nodes in entire cache
     /// @param evictionCallback Optional callback when nodes are evicted
-    explicit ShardedLRUCache(size_t capacityPerShard, const EvictionCallback& evictionCallback = nullptr);
+    explicit ShardedLRUCache(size_t cacheCapacity, const EvictionCallback& evictionCallback = nullptr);
     
     ~ShardedLRUCache() override = default;
     
@@ -39,6 +39,9 @@ public:
     
     /// @brief Reset hit/miss statistics across all shards
     void resetStats();
+    
+    /// @brief Flush all cached nodes to disk using eviction callback
+    void flush();
     
     /// @brief Get total capacity across all shards
     size_t getTotalCapacity() const { return m_capacityPerShard * NUM_SHARDS; }

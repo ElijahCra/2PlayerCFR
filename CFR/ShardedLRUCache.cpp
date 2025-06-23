@@ -1,10 +1,12 @@
 #include "ShardedLRUCache.hpp"
+
+#include <cmath>
 #include <stdexcept>
 
 namespace CFR {
 
-ShardedLRUCache::ShardedLRUCache(const size_t capacityPerShard, const EvictionCallback& evictionCallback)
-    : m_capacityPerShard(capacityPerShard) {
+ShardedLRUCache::ShardedLRUCache(size_t cacheCapacity, const EvictionCallback& evictionCallback)
+    : m_capacityPerShard(std::ceil(cacheCapacity/NUM_SHARDS)) {
     if (m_capacityPerShard == 0) {
         throw std::invalid_argument("Cache capacity per shard must be greater than 0");
     }
@@ -97,6 +99,13 @@ void ShardedLRUCache::resetStats() {
     for (auto& shardPtr : m_shards) {
         std::unique_lock<std::shared_mutex> lock(shardPtr->mutex);
         shardPtr->cache.resetStats();
+    }
+}
+
+void ShardedLRUCache::flush() {
+    for (auto& shardPtr : m_shards) {
+        std::shared_lock<std::shared_mutex> lock(shardPtr->mutex);
+        shardPtr->cache.flush();
     }
 }
 

@@ -4,7 +4,7 @@
 #include "CFR/RegretMinimizer.hpp"
 
 int main() {
-    const uint32_t iterations = 10000000;
+    const uint32_t iterations = 1000000;
     const uint32_t cacheSize = 100000;
     const uint32_t backgroundThreads = 2;
     const uint32_t numCFRThreads = std::thread::hardware_concurrency()-backgroundThreads;
@@ -82,7 +82,7 @@ int main() {
         for (size_t i = 0; i < numCFRThreads; ++i) {
             minimizers.emplace_back(std::make_unique<CFR::RegretMinimizer<Preflop::Game>>(
                 std::random_device()(),     // unique seed per thread
-                cacheSize / numCFRThreads,  // divide cache capacity among threads
+                cacheSize,  // divide cache capacity among threads
                 "./cfr_async_db_" + std::to_string(i),  // separate DB path per thread
                 true,                       // async storage
                 backgroundThreads                           // background I/O threads per minimizer

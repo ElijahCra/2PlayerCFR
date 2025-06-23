@@ -11,27 +11,28 @@
 namespace CFR {
 
 /// @brief RocksDB-based persistent storage for cold nodes
-class RocksDBNodeStorage : public NodeStorage {
+class RocksDBNodeStorage final : public NodeStorage {
 public:
     /// @brief Constructor
     /// @param dbPath Path to the RocksDB database directory
-    explicit RocksDBNodeStorage(const std::string& dbPath);
+    explicit RocksDBNodeStorage(std::string  dbPath);
     
     ~RocksDBNodeStorage() override;
     
     // NodeStorage interface
     std::shared_ptr<Node> getNode(const std::string& infoSet) override;
+    std::vector<std::shared_ptr<Node>> multiGetNode(const std::vector<std::string>& infoSets);
     void putNode(const std::string& infoSet, std::shared_ptr<Node> node) override;
     bool hasNode(const std::string& infoSet) const override;
     void removeNode(const std::string& infoSet) override;
-    size_t size() const override;
+    [[nodiscard]] size_t size() const override;
     void clear() override;
     
     /// @brief Check if the database is open
-    bool isOpen() const;
+    [[nodiscard]] bool isOpen() const;
     
     /// @brief Get RocksDB statistics
-    std::string getStats() const;
+    [[nodiscard]] std::string getStats() const;
     
     /// @brief Manually compact the database
     void compact();
@@ -40,7 +41,8 @@ private:
     std::unique_ptr<rocksdb::DB> m_db;
     std::string m_dbPath;
     
-    rocksdb::Options getDefaultOptions() const;
+    [[nodiscard]] static rocksdb::Options getDefaultOptions();
+    [[nodiscard]] static rocksdb::ReadOptions getDefaultReadOptions();
 };
 
 } // namespace CFR

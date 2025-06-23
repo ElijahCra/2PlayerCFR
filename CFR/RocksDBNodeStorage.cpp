@@ -1,16 +1,24 @@
+//
+// Created by elijah on 6/17/25.
+//
+
 #include "RocksDBNodeStorage.hpp"
-#include <stdexcept>
-#include <rocksdb/statistics.h>
+
+#include <iostream>
+#include <utility>
+#include <format>
+#include <vector>
 #include <rocksdb/table.h>
+#include <rocksdb/filter_policy.h>
+#include "NodeSerializer.hpp"
 
 namespace CFR {
 
-RocksDBNodeStorage::RocksDBNodeStorage(const std::string& dbPath) : m_dbPath(dbPath) {
-    rocksdb::Options options = getDefaultOptions();
+RocksDBNodeStorage::RocksDBNodeStorage(std::string  dbPath) : m_dbPath(std::move(dbPath)) {
+    const rocksdb::Options options = getDefaultOptions();
     rocksdb::DB* db;
-    rocksdb::Status status = rocksdb::DB::Open(options, m_dbPath, &db);
     
-    if (!status.ok()) {
+    if (rocksdb::Status status = rocksdb::DB::Open(options, m_dbPath, &db); !status.ok()) {
         throw std::runtime_error("Failed to open RocksDB: " + status.ToString());
     }
     
@@ -36,6 +44,25 @@ std::shared_ptr<Node> RocksDBNodeStorage::getNode(const std::string& infoSet) {
     }
     
     return NodeSerializer::deserialize(value);
+}
+std::vector<std::shared_ptr<Node>> RocksDBNodeStorage::multiGetNode(const std::vector<std::string>& infoSets)
+{
+    if (!m_db) {
+        return {nullptr};
+    }
+    std::vector<rocksdb::Slice> keys;
+    for (const auto& infoSet : infoSets) {
+        keys.emplace_back(infoSet);
+    }
+    std::vector<std::string> values;
+    std::vector<rocksdb::Status> status = m_db->MultiGet(rocksdb::ReadOptions(),keys,&values);
+
+    std::vector<std::shared_ptr<Node>> nodes;
+    for (const auto& value : values) {
+        nodes.emplace_back(NodeSerializer::deserialize(value));
+    }
+    return nodes;
+
 }
 
 void RocksDBNodeStorage::putNode(const std::string& infoSet, std::shared_ptr<Node> node) {
@@ -129,12 +156,20 @@ void RocksDBNodeStorage::compact() {
     m_db->CompactRange(options, nullptr, nullptr);
 }
 
-rocksdb::Options RocksDBNodeStorage::getDefaultOptions() const {
+
+rocksdb::Options RocksDBNodeStorage::getDefaultOptions() {
     rocksdb::Options options;
     
     // Create the DB if it doesn't exist
     options.create_if_missing = true;
     
+    //Multithread options
+    options.allow_concurrent_memtable_write = true;
+    options.unordered_write = true;
+
+    //Bloom filter or maybe ribbon?
+    options.memtable_whole_key_filtering = true;
+
     // Optimize for point lookups
     options.OptimizeForPointLookup(64);
     
@@ -143,17 +178,32 @@ rocksdb::Options RocksDBNodeStorage::getDefaultOptions() const {
     
     // Set memory budget
     options.write_buffer_size = 64 * 1024 * 1024; // 64MB
-    options.max_write_buffer_number = 2;
+    options.max_write_buffer_number = 4;
+    options.min_write_buffer_number_to_merge = 2;
     
     // Set level compaction
-    options.level0_file_num_compaction_trigger = 2;
+    options.level0_file_num_compaction_trigger = 4;
     options.level0_slowdown_writes_trigger = 20;
     options.level0_stop_writes_trigger = 36;
-    
+    options.max_bytes_for_level_base = 256 * 1024 * 1024;
+    options.max_bytes_for_level_multiplier = 8;
+
+    //Bloom filter
+    rocksdb::BlockBasedTableOptions table_options;
+    table_options.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
+
+
     // Set block cache
-    options.table_factory.reset(rocksdb::NewBlockBasedTableFactory());
+    options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
     
     return options;
 }
 
+rocksdb::ReadOptions RocksDBNodeStorage::getDefaultReadOptions()
+{
+    rocksdb::ReadOptions options;
+    options.async_io = true;
+    options.optimize_multiget_for_io = true;
+    return options;
+}
 } // namespace CFR
