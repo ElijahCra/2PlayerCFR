@@ -102,15 +102,20 @@ void LRUNodeCache::evictLRU() {
     if (m_cacheList.empty()) {
         return;
     }
-    
-    auto& lastEntry = m_cacheList.back();
-    
-    if (m_evictionCallback) {
-        m_evictionCallback(lastEntry.key, lastEntry.node);
-    }
-    
-    m_cacheMap.erase(lastEntry.key);
+
+    // Make copies BEFORE any modifications to avoid reentrancy issues
+    const auto& backEntry = m_cacheList.back();
+    std::string keyToEvict = backEntry.key;
+    std::shared_ptr<Node> nodeToEvict = backEntry.node;
+
+    // Remove from cache first
+    m_cacheMap.erase(keyToEvict);
     m_cacheList.pop_back();
+
+    // Call eviction callback after removal
+    if (m_evictionCallback) {
+        m_evictionCallback(keyToEvict, nodeToEvict);
+    }
 }
 
 void LRUNodeCache::moveToFront(typename CacheList::iterator it) {

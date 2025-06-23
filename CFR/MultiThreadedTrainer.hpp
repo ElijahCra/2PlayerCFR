@@ -32,9 +32,9 @@ public:
 
         for (uint32_t i = 0; i < m_numThreads; ++i) {
             m_regretMinimizers.emplace_back(std::random_device()(), m_storage);
-            m_threads.emplace_back([this, i, iterationsPerThread]() {
-                m_regretMinimizers[i].Train(iterationsPerThread);
-            });
+            m_threads.emplace_back(
+                &RegretMinimizer<Preflop::Game,HybridNodeStorage<ShardedLRUCache>>::Train, &m_regretMinimizers[i],iterationsPerThread
+            );
         }
 
         for (uint32_t i = 0; i < m_numThreads; ++i) {
