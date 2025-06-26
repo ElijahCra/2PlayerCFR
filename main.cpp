@@ -3,7 +3,6 @@
 #include "MultiThreadedTrainer.hpp"
 #include "Storage/HybridNodeStorage.hpp"
 #include "CFR/RegretMinimizer.hpp"
-#define GLOG_EXPORT
 int main() {
     int iterations = 10000000;
     //CFR::RegretMinimizer<Preflop::Game,CFR::HybridNodeStorage<CFR::ShardedLRUCache>> Minimize{(std::random_device()())};

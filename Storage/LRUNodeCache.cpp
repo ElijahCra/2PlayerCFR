@@ -43,8 +43,12 @@ void LRUNodeCache::putNode(const std::string& infoSet, std::shared_ptr<Node> nod
         evictLRU();
     }
 
-    m_cacheList.emplace_front(infoSet, std::move(node));
-    m_cacheMap[infoSet] = m_cacheList.begin();
+    auto list_it = m_cacheList.emplace_front(infoSet, std::move(node));
+    // Debug: Check if iterator node pointer is null before assignment
+    if (list_it.get_node() == nullptr) {
+        throw std::runtime_error("emplace_front returned null iterator");
+    }
+    m_cacheMap[infoSet] = list_it;
 }
 
 bool LRUNodeCache::hasNode(const std::string& infoSet) const {
@@ -109,7 +113,12 @@ void LRUNodeCache::evictLRU() {
 
     // Remove from cache first
     m_cacheMap.erase(keyToEvict);
-    m_cacheList.pop_back();
+    
+    // For LockFreeLRUList, pop_back returns the node
+    auto* poppedNode = m_cacheList.pop_back();
+    if (poppedNode) {
+        poppedNode->retire(); // Clean up with hazptr
+    }
 
     // Call eviction callback after removal
     if (m_evictionCallback) {
@@ -122,7 +131,10 @@ void LRUNodeCache::moveToFront(typename CacheList::iterator it) {
         return;
     }
     
-    m_cacheList.splice(m_cacheList.begin(), m_cacheList, it);
+    // For LockFreeLRUList, we need to use move_to_front on the node
+    if (it != m_cacheList.end()) {
+        m_cacheList.move_to_front(it.get_node());
+    }
 }
 
 } // namespace CFR

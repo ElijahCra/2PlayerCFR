@@ -47,7 +47,7 @@ private:
             : key(std::move(k)), node(std::move(n)) {}
 };
     
-    using CacheList = std::list<CacheEntry>;
+    using CacheList = LockFreeLRUList<CacheEntry>;
     using CacheMap = std::unordered_map<std::string, typename CacheList::iterator>;
     
     void evictLRU();
