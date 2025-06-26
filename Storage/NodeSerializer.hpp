@@ -7,7 +7,7 @@
 #include <cstdint>
 #include <memory>
 
-#include "Node.hpp"
+#include "../CFR/Node.hpp"
 
 namespace CFR {
 

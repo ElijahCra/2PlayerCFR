@@ -1,17 +1,10 @@
 add_library(CFR STATIC
         Node.cpp
         RegretMinimizer.hpp
-        NodeStorage.hpp
-        MapNodeStorage.cpp
-        RocksDBNodeStorage.cpp
-        NodeSerializer.cpp
-        HybridNodeStorage.hpp
-        LRUNodeCache.cpp
-        ShardedLRUCache.cpp
         MultiThreadedTrainer.hpp
 )
 
-target_link_libraries(CFR PUBLIC Utility ${ROCKSDB_LIBRARIES})
+target_link_libraries(CFR PUBLIC Utility ${ROCKSDB_LIBRARIES} Storage)
 target_include_directories(CFR PRIVATE ${ROCKSDB_INCLUDE_DIRS})
 
 target_include_directories(CFR PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

@@ -11,6 +11,7 @@ pkg_check_modules(ROCKSDB REQUIRED rocksdb)
 add_subdirectory(CFR)
 add_subdirectory(Game)
 add_subdirectory(Test)
+add_subdirectory(Storage)
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 add_executable(2PlayerCFR main.cpp)
@@ -45,4 +46,3 @@ if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Game/Utility/HandRanks.dat")
     )
 
 endif ()
-

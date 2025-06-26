@@ -13,8 +13,8 @@
 #include <unordered_map>
 #include <memory>
 #include "Node.hpp"
-#include "NodeStorage.hpp"
-#include "MapNodeStorage.hpp"
+#include "../Storage/NodeStorage.hpp"
+#include "../Storage/MapNodeStorage.hpp"
 #include "../Game/Utility/Utility.hpp"
 #include "CustomExceptions.h"
 

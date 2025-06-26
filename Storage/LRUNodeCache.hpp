@@ -7,6 +7,7 @@
 #include <functional>
 #include <list>
 
+#include "LockFreeLRUList.hpp"
 #include "NodeStorage.hpp"
 
 namespace CFR {
@@ -53,7 +54,7 @@ private:
     void moveToFront(typename CacheList::iterator it);
     
     size_t m_capacity;
-    CacheList m_cacheList;
+    LockFreeLRUList<CacheEntry> m_cacheList;
     CacheMap m_cacheMap;
     EvictionCallback m_evictionCallback;
     

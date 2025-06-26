@@ -7,7 +7,7 @@
 
 #include <memory>
 #include <string>
-#include "Node.hpp"
+#include "../CFR/Node.hpp"
 
 namespace CFR {
 
