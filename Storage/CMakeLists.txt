@@ -9,6 +9,7 @@ add_library(Storage STATIC
         LockFreeLRUList.hpp
 )
 
-find_package(folly)
+find_package(glog REQUIRED)
+find_package(folly REQUIRED)
 
-target_link_libraries(Storage PUBLIC folly)
+target_link_libraries(Storage PUBLIC folly glog::glog)
