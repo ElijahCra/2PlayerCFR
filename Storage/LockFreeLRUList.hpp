@@ -36,6 +36,9 @@ public:
 
         reference operator*() { return node_->value; }
         pointer operator->() { return &node_->value; }
+        
+        const T& operator*() const { return node_->value; }
+        const T* operator->() const { return &node_->value; }
 
         Node* get_node() const { return node_; }
 

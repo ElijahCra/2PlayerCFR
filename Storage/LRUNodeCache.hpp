@@ -43,6 +43,7 @@ private:
         std::string key;
         std::shared_ptr<Node> node;
         
+        CacheEntry() = default;
         CacheEntry(std::string k, std::shared_ptr<Node> n) 
             : key(std::move(k)), node(std::move(n)) {}
 };
