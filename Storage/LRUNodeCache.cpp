@@ -1,4 +1,6 @@
 #include "LRUNodeCache.hpp"
+
+#include <atomic>
 #include <stdexcept>
 
 namespace CFR {
@@ -115,8 +117,4 @@ void LRUNodeCache::evictLRU() {
         }
     }
 }
-
-// This function is no longer needed as move_to_front is implemented in the list.
-// void LRUNodeCache::moveToFront(typename CacheList::iterator it) { ... }
-
 } // namespace CFR

@@ -54,8 +54,8 @@ private:
     void moveToFront(typename CacheList::iterator it);
     
     size_t m_capacity;
-    LockFreeLRUList<CacheEntry> m_cacheList;
-    CacheMap m_cacheMap;
+    LockFreeLRUList<CacheEntry> m_cacheList{};
+    CacheMap m_cacheMap{};
     EvictionCallback m_evictionCallback;
     
     std::atomic<uint64_t> m_hits{0};
