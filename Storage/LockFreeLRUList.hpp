@@ -1,5 +1,5 @@
 //
-// Created by Elijah on 6/27/25.
+// Created by Assistant on 6/27/25.
 //
 
 #ifndef LOCKFREELRULIST_HPP
@@ -14,6 +14,7 @@ namespace CFR {
 template<typename T>
 class LockFreeLRUList {
 public:
+    // A node must inherit from folly::hazptr_obj_base to be managed by hazard pointers. [cite: 16]
     struct Node : folly::hazptr_obj_base<Node> {
         T value;
         std::atomic<Node*> next{nullptr};
@@ -23,7 +24,7 @@ public:
         explicit Node(Args&&... args) : value(std::forward<Args>(args)...) {}
     };
 
-    // Iterator type that wraps a hazptr_holder
+    // Iterator type that wraps a raw pointer
     class iterator {
     public:
         using value_type = T;
@@ -68,21 +69,19 @@ public:
     template<typename... Args>
     iterator emplace_front(Args&&... args) {
         Node* new_node = new Node(std::forward<Args>(args)...);
+        folly::hazptr_holder<> h = folly::make_hazard_pointer(); // Re-use holder in the loop [cite: 32]
 
         while (true) {
-            folly::hazptr_holder<> h_head;
-            folly::hazptr_holder<> h_first;
-
-            Node* head = h_head.get_protected(head_);
-            Node* first = h_first.get_protected(head->next);
+            // Protect the current first node before modification.
+            Node* first = h.protect(head_->next);
 
             // Set up new node's pointers
             new_node->next.store(first, std::memory_order_relaxed);
-            new_node->prev.store(head, std::memory_order_relaxed);
+            new_node->prev.store(head_, std::memory_order_relaxed);
 
             // Try to update head->next
             Node* expected = first;
-            if (head->next.compare_exchange_weak(expected, new_node,
+            if (head_->next.compare_exchange_weak(expected, new_node,
                                                   std::memory_order_release,
                                                   std::memory_order_relaxed)) {
                 // Success - now update first->prev
@@ -97,71 +96,36 @@ public:
     void move_to_front(Node* node) {
         if (!node || node == head_ || node == tail_) return;
 
-        // First, unlink the node from its current position
-        while (true) {
-            folly::hazptr_holder<> h_prev;
-            folly::hazptr_holder<> h_next;
-
-            Node* prev = h_prev.get_protected(node->prev);
-            Node* next = h_next.get_protected(node->next);
-
-            // Check if node is already at front
-            if (prev == head_) return;
-
-            // Try to unlink
-            Node* expected = node;
-            if (prev->next.compare_exchange_weak(expected, next,
-                                                  std::memory_order_release,
-                                                  std::memory_order_relaxed)) {
-                next->prev.store(prev, std::memory_order_release);
-                break;
-            }
-        }
-
-        // Now insert at front
-        while (true) {
-            folly::hazptr_holder<> h_head;
-            folly::hazptr_holder<> h_first;
-
-            Node* head = h_head.get_protected(head_);
-            Node* first = h_first.get_protected(head->next);
-
-            node->next.store(first, std::memory_order_relaxed);
-            node->prev.store(head, std::memory_order_relaxed);
-
-            Node* expected = first;
-            if (head->next.compare_exchange_weak(expected, node,
-                                                  std::memory_order_release,
-                                                  std::memory_order_relaxed)) {
-                first->prev.store(node, std::memory_order_release);
-                break;
-            }
+        // Unlink the node from its current position
+        if (unlink(node)) {
+            // Now insert at front
+            insert_front(node);
         }
     }
 
     // Remove and return the last element
     Node* pop_back() {
-        while (true) {
-            folly::hazptr_holder<> h_tail;
-            folly::hazptr_holder<> h_last;
-            folly::hazptr_holder<> h_prev;
+        folly::hazptr_holder<> h_last = folly::make_hazard_pointer(); // Create holder outside the loop [cite: 32]
 
-            Node* tail = h_tail.get_protected(tail_);
-            Node* last = h_last.get_protected(tail->prev);
+        while (true) {
+            // Protect the 'last' node which we intend to remove.
+            Node* last = h_last.protect(tail_->prev);
 
             // Check if list is empty
             if (last == head_) return nullptr;
 
-            Node* prev = h_prev.get_protected(last->prev);
+            folly::hazptr_holder<> h_prev = folly::make_hazard_pointer();
+            Node* prev = h_prev.protect(last->prev);
 
-            // Try to unlink last node
-            Node* expected = last;
-            if (tail->prev.compare_exchange_weak(expected, prev,
+            if (!prev) continue; // Retry if previous node was removed
+
+            // Try to unlink last node by updating its predecessor's 'next' pointer
+            if (prev->next.compare_exchange_weak(last, tail_,
                                                   std::memory_order_release,
                                                   std::memory_order_relaxed)) {
-                prev->next.store(tail, std::memory_order_release);
+                tail_->prev.store(prev, std::memory_order_release);
 
-                // Clear the node's pointers
+                // Clear the node's pointers as it's now unlinked
                 last->next.store(nullptr, std::memory_order_relaxed);
                 last->prev.store(nullptr, std::memory_order_relaxed);
 
@@ -175,49 +139,82 @@ public:
         Node* node = it.get_node();
         if (!node || node == head_ || node == tail_) return;
 
-        while (true) {
-            folly::hazptr_holder<> h_prev;
-            folly::hazptr_holder<> h_next;
-
-            Node* prev = h_prev.get_protected(node->prev);
-            Node* next = h_next.get_protected(node->next);
-
-            // Try to unlink
-            Node* expected = node;
-            if (prev->next.compare_exchange_weak(expected, next,
-                                                  std::memory_order_release,
-                                                  std::memory_order_relaxed)) {
-                next->prev.store(prev, std::memory_order_release);
-
-                // Clear the node's pointers and retire it
-                node->next.store(nullptr, std::memory_order_relaxed);
-                node->prev.store(nullptr, std::memory_order_relaxed);
-                node->retire();
-                break;
-            }
+        if (unlink(node)) {
+            // For safe memory reclamation, retired objects are only deleted when no
+            // thread holds a hazard pointer to them. [cite: 5, 38]
+            node->retire();
         }
     }
 
     // Clear all elements
     void clear() {
-        // Remove all nodes between head and tail
         while (true) {
             Node* node = pop_back();
             if (!node) break;
+            // The `retire()` function ensures deferred deletion. [cite: 20]
             node->retire();
         }
     }
 
     // Check if empty
     bool empty() const {
-        folly::hazptr_holder<> h;
-        Node* head = h.get_protected(head_);
-        return head->next.load(std::memory_order_acquire) == tail_;
+        return head_->next.load(std::memory_order_acquire) == tail_;
     }
 
 private:
     Node* head_;  // Sentinel head node
     Node* tail_;  // Sentinel tail node
+
+    // Helper to unlink a node, returns true on success
+    bool unlink(Node* node) {
+        folly::hazptr_holder<> h_node = folly::make_hazard_pointer();
+        folly::hazptr_array<2> h_neighbors = folly::make_hazard_pointer_array<2>(); // For protecting prev and next
+
+        while (true) {
+            Node* protected_node = h_node.protect(node);
+            if (!protected_node) return false; // Node already collected
+
+            Node* prev = h_neighbors[0].protect(node->prev);
+            Node* next = h_neighbors[1].protect(node->next);
+
+            if (!prev || !next) {
+                // Node's links are changing, retry
+                continue;
+            }
+
+            // Attempt to swing the 'next' pointer of the previous node to skip the current node.
+            if (prev->next.compare_exchange_weak(node, next,
+                                                  std::memory_order_release,
+                                                  std::memory_order_relaxed)) {
+                // If successful, update the back-pointer of the next node.
+                next->prev.store(prev, std::memory_order_release);
+                return true;
+            }
+
+            // If the CAS failed, the state has changed, and the loop will retry.
+        }
+    }
+
+    // Helper to insert a node at the front
+    void insert_front(Node* node) {
+        folly::hazptr_holder<> h = folly::make_hazard_pointer(); // Reuse holder [cite: 32]
+
+        while (true) {
+            // Protect the current head->next
+            Node* first = h.protect(head_->next);
+
+            node->next.store(first, std::memory_order_relaxed);
+            node->prev.store(head_, std::memory_order_relaxed);
+
+            // Attempt to swing head's next pointer to our new node
+            if (head_->next.compare_exchange_weak(first, node,
+                                                  std::memory_order_release,
+                                                  std::memory_order_relaxed)) {
+                first->prev.store(node, std::memory_order_release);
+                break;
+            }
+        }
+    }
 };
 
 } // namespace CFR
