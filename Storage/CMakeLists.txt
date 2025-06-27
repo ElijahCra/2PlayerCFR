@@ -6,6 +6,7 @@ add_library(Storage STATIC
         HybridNodeStorage.hpp
         LRUNodeCache.cpp
         ShardedLRUCache.cpp
+        LockFreeLRUList.hpp
 )
 
 find_package(glog REQUIRED)
