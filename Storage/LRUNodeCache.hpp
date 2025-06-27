@@ -58,8 +58,8 @@ private:
     CacheMap m_cacheMap;
     EvictionCallback m_evictionCallback;
     
-    uint64_t m_hits{0};
-    uint64_t m_misses{0};
+    std::atomic<uint64_t> m_hits{0};
+    std::atomic<uint64_t> m_misses{0};
 };
 
 } // namespace CFR

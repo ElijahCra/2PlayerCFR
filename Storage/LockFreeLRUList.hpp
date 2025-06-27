@@ -10,7 +10,6 @@
 #include <stdexcept>
 #include <thread>
 #include <vector>
-
 #include <folly/synchronization/Hazptr.h>
 #include <iterator>
 
@@ -24,307 +23,224 @@ private:
     // Low-order bit used as a mark for logical deletion.
     static constexpr uintptr_t MARK_BIT = 1;
 
-    // Sentinel node structure without value (for head/tail)
-    struct SentinelNode {
-        std::atomic<uintptr_t> next;
-        std::atomic<uintptr_t> prev;
-        
-        SentinelNode() : next(0), prev(0) {}
+    struct alignas(folly::hardware_destructive_interference_size) SentinelNode {
+        std::atomic<Node*> next;
+        std::atomic<Node*> prev;
     };
-    
-    // Aligned sentinel nodes to simplify boundary conditions.
+
     alignas(folly::hardware_destructive_interference_size) SentinelNode head_;
     alignas(folly::hardware_destructive_interference_size) SentinelNode tail_;
-    
-    // Size tracking
+
     std::atomic<size_t> size_{0};
 
-    // Helper functions for marked pointer manipulation
-    static inline Node* get_ptr(uintptr_t p) {
-        return reinterpret_cast<Node*>(p & ~MARK_BIT);
-    }
-    
-    static inline SentinelNode* get_sentinel_ptr(uintptr_t p) {
-        return reinterpret_cast<SentinelNode*>(p & ~MARK_BIT);
+    static inline Node* get_ptr(Node* p) {
+        return reinterpret_cast<Node*>(reinterpret_cast<uintptr_t>(p) & ~MARK_BIT);
     }
 
-    static inline bool is_marked(uintptr_t p) {
-        return (p & MARK_BIT)!= 0;
+    static inline bool is_marked(Node* p) {
+        return (reinterpret_cast<uintptr_t>(p) & MARK_BIT) != 0;
     }
 
-    static inline uintptr_t mark(Node* p) {
-        return reinterpret_cast<uintptr_t>(p) | MARK_BIT;
+    static inline Node* mark(Node* p) {
+        return reinterpret_cast<Node*>(reinterpret_cast<uintptr_t>(p) | MARK_BIT);
     }
 
     // Physically unlinks a logically deleted (marked) node.
-    // This is the "helping" function.
-    void finish_unlink(Node* node) {
-        // Simplified implementation without hazptr for now
-        // In production, proper hazptr protection would be needed
-        
-        // Find the first non-marked predecessor.
-        Node* prev = get_ptr(node->prev.load());
-        while (prev && is_marked(prev->next.load())) {
-            prev = get_ptr(prev->prev.load());
-        }
-        
-        if (!prev) return;
+    void help_unlink(folly::hazptr_holder<>& h, Node* prev, Node* node) {
+        Node* next_unmarked = get_ptr(node->next.load(std::memory_order_acquire));
+        Node* protected_next = h.protect(next_unmarked);
 
-        // Swing predecessor's next pointer to bypass the node.
-        Node* next_node = get_ptr(node->next.load());
-        uintptr_t expected_node_ptr = reinterpret_cast<uintptr_t>(node);
-        uintptr_t next_node_ptr = reinterpret_cast<uintptr_t>(next_node);
+        if (next_unmarked != protected_next) return; // Next node was reclaimed
 
-        // This CAS is the primary step of physical unlinking from the forward chain.
-        prev->next.compare_exchange_strong(expected_node_ptr, next_node_ptr, std::memory_order_release);
-
-        // Swing successor's prev pointer to bypass the node.
-        if (next_node && get_ptr(next_node->prev.load()) == node) {
-            next_node->prev.compare_exchange_strong(
-                expected_node_ptr,
-                reinterpret_cast<uintptr_t>(prev),
-                std::memory_order_release);
+        prev->next.compare_exchange_strong(node, protected_next, std::memory_order_release);
+        if (protected_next) {
+            protected_next->prev.compare_exchange_strong(node, prev, std::memory_order_release);
         }
     }
 
 
 public:
-    // Node structure inherits from hazptr_obj_base for safe reclamation.
     struct Node : public folly::hazptr_obj_base<Node> {
         T value;
-        std::atomic<uintptr_t> next;
-        std::atomic<uintptr_t> prev;
+        std::atomic<Node*> next;
+        std::atomic<Node*> prev;
 
-        // Only provide constructor that takes a value - no default constructor
-        explicit Node(T val) : value(std::move(val)), next(0), prev(0) {}
-        
         template<typename... Args>
-        explicit Node(Args&&... args) : value(std::forward<Args>(args)...), next(0), prev(0) {}
+        explicit Node(Args&&... args) : value(std::forward<Args>(args)...), next(nullptr), prev(nullptr) {}
     };
 
-    LockFreeLRUList() : head_(), tail_() {
-        head_.next.store(reinterpret_cast<uintptr_t>(&tail_), std::memory_order_relaxed);
-        tail_.prev.store(reinterpret_cast<uintptr_t>(&head_), std::memory_order_relaxed);
+    LockFreeLRUList() {
+        head_.next.store(reinterpret_cast<Node*>(&tail_), std::memory_order_relaxed);
+        tail_.prev.store(reinterpret_cast<Node*>(&head_), std::memory_order_relaxed);
     }
 
     ~LockFreeLRUList() {
-        // In a real application, one would need to drain the list.
-        // For this example, we assume the list is empty upon destruction.
+        clear();
     }
 
     // Disallow copy and move semantics.
     LockFreeLRUList(const LockFreeLRUList&) = delete;
     LockFreeLRUList& operator=(const LockFreeLRUList&) = delete;
 
-    // Moves an existing node to the front of the list.
-    // This is the core operation for an LRU cache hit.
-    void move_to_front(Node* node) {
-        if (get_ptr(head_.next.load()) == node) {
-            // Already at the front, no action needed.
-            return;
-        }
-        if (unlink(node)) {
-            push_front(node);
-        }
-    }
-
-    // Logically and physically unlinks a node from the list.
+    // Logically and then physically unlinks a node from the list.
     bool unlink(Node* node) {
-        uintptr_t next_ptr = node->next.load(std::memory_order_relaxed);
-
-        // Loop to mark the node's next pointer, indicating logical deletion.
-        while (!is_marked(next_ptr)) {
-            if (node->next.compare_exchange_weak(next_ptr, mark(get_ptr(next_ptr)),
-                                                 std::memory_order_acq_rel,
-                                                 std::memory_order_acquire)) {
-                // Mark succeeded. Now perform physical cleanup.
-                finish_unlink(node);
+        folly::hazptr_holder h;
+        while (true) {
+            Node* next_node = h.protect(node->next);
+            if (is_marked(next_node)) {
+                return false; // Already unlinked by another thread
+            }
+            // Mark the node's next pointer to logically delete it.
+            if (node->next.compare_exchange_weak(next_node, mark(next_node), std::memory_order_acq_rel)) {
+                // Mark succeeded, now physically unlink.
+                Node* prev = get_ptr(h.protect(node->prev));
+                if(prev) {
+                    help_unlink(h, prev, node);
+                }
                 return true;
             }
-            // CAS failed, next_ptr was updated with the current value.
         }
-        // Node was already marked by another thread.
-        return false;
     }
 
-    // Pushes a node to the front of the list (after the head sentinel).
+    // Pushes a node to the front of the list.
     void push_front(Node* node) {
+        folly::hazptr_holder h;
         while (true) {
-            uintptr_t head_next_val = head_.next.load(std::memory_order_acquire);
-            Node* old_first = get_ptr(head_next_val);
-
-            node->next.store(head_next_val, std::memory_order_relaxed);
-            node->prev.store(reinterpret_cast<uintptr_t>(&head_), std::memory_order_relaxed);
-
-            uintptr_t new_node_ptr = reinterpret_cast<uintptr_t>(node);
+            Node* old_first = h.protect(head_.next);
+            node->next.store(old_first, std::memory_order_relaxed);
+            node->prev.store(reinterpret_cast<Node*>(&head_), std::memory_order_relaxed);
 
             // Atomically swing the head's next pointer to our new node.
-            if (head_.next.compare_exchange_weak(head_next_val, new_node_ptr,
-                                                 std::memory_order_release,
-                                                 std::memory_order_relaxed)) {
-                // Successfully inserted. Now, fix the back-pointer of the old first node.
-                if (old_first) {
-                    old_first->prev.store(new_node_ptr, std::memory_order_release);
+            if (head_.next.compare_exchange_weak(old_first, node, std::memory_order_release)) {
+                if (get_ptr(old_first) != reinterpret_cast<Node*>(&tail_)) {
+                    old_first->prev.store(node, std::memory_order_release);
                 }
+                size_.fetch_add(1, std::memory_order_relaxed);
                 return;
             }
         }
     }
 
-    // Removes the last element (before the tail sentinel) from the list.
-    // Used for LRU eviction. Returns the node for potential reuse.
-    Node* pop_back() {
-        while (true) {
-            Node* last = get_ptr(tail_.prev.load(std::memory_order_acquire));
-
-            if (reinterpret_cast<SentinelNode*>(last) == &head_) {
-                return nullptr; // List is empty
-            }
-
-            if (unlink(last)) {
-                size_.fetch_sub(1, std::memory_order_relaxed);
-                return last;
-            }
-            // Unlink failed, which means another thread is already unlinking 'last'.
-            // The loop will retry with the new last node.
+    // Moves an existing node to the front of the list.
+    void move_to_front(Node* node) {
+        if (get_ptr(head_.next.load(std::memory_order_acquire)) == node) {
+            return; // Already at the front
+        }
+        if (unlink(node)) {
+            // After unlinking, the size was decremented. We add it back here.
+            size_.fetch_sub(1, std::memory_order_relaxed);
+            push_front(node);
         }
     }
 
-    // Iterator class for range-based for loops
+    Node* pop_back() {
+       folly::hazptr_holder h;
+       while (true) {
+           Node* last = get_ptr(h.protect(tail_.prev));
+           if (last == reinterpret_cast<Node*>(&head_)) {
+               return nullptr; // List is empty
+           }
+           if (unlink(last)) {
+               size_.fetch_sub(1, std::memory_order_relaxed);
+               return last;
+           }
+       }
+    }
+
     class iterator {
-    private:
-        Node* node_;
-        
     public:
         using iterator_category = std::forward_iterator_tag;
         using value_type = T;
         using difference_type = ptrdiff_t;
         using pointer = T*;
         using reference = T&;
-        
-        // Default constructor for STL compatibility
+
         iterator() : node_(nullptr) {}
-        
+
         explicit iterator(Node* node) : node_(node) {}
-        
-        reference operator*() const { 
-            if (!node_) throw std::runtime_error("Dereferencing null iterator");
-            return node_->value; 
-        }
-        pointer operator->() const { 
-            if (!node_) throw std::runtime_error("Dereferencing null iterator");
-            return &node_->value; 
-        }
-        
+
+        reference operator*() const { return node_->value; }
+        pointer operator->() const { return &node_->value; }
+
         iterator& operator++() {
             if (node_) {
-                node_ = get_ptr(node_->next.load(std::memory_order_acquire));
-                // Skip marked nodes
-                while (node_ && is_marked(reinterpret_cast<uintptr_t>(node_))) {
-                    node_ = get_ptr(node_->next.load(std::memory_order_acquire));
+                folly::hazptr_holder h;
+                Node* current = node_;
+                do {
+                    current = get_ptr(h.protect(current->next));
+                } while (current && current != reinterpret_cast<Node*>(&(((LockFreeLRUList*)0)->tail_)) && is_marked(current->next.load()));
+
+                if (current == reinterpret_cast<Node*>(&(((LockFreeLRUList*)0)->tail_))) {
+                    node_ = nullptr;
+                } else {
+                    node_ = current;
                 }
             }
             return *this;
         }
-        
-        iterator operator++(int) {
-            iterator tmp = *this;
-            ++(*this);
-            return tmp;
-        }
-        
+
         bool operator==(const iterator& other) const { return node_ == other.node_; }
         bool operator!=(const iterator& other) const { return node_ != other.node_; }
-        
+
         Node* get_node() const { return node_; }
-        
-        bool is_valid() const { return node_ != nullptr; }
+
+    private:
+        Node* node_;
     };
-    
-    // STL-compatible interface methods
+
     size_t size() const {
         return size_.load(std::memory_order_relaxed);
     }
-    
+
     bool empty() const {
-        return size() == 0;
+        return get_ptr(head_.next.load()) == reinterpret_cast<Node*>(&tail_);
     }
-    
+
     iterator begin() {
-        Node* first = get_ptr(head_.next.load(std::memory_order_acquire));
-        // Skip to the first non-sentinel, non-marked node
-        while (reinterpret_cast<SentinelNode*>(first) != &tail_ && is_marked(reinterpret_cast<uintptr_t>(first))) {
-            first = get_ptr(first->next.load(std::memory_order_acquire));
+        folly::hazptr_holder h;
+        Node* first = get_ptr(h.protect(head_.next));
+        if (first == reinterpret_cast<Node*>(&tail_)) {
+            return iterator(nullptr);
         }
-        return iterator(reinterpret_cast<SentinelNode*>(first) == &tail_ ? nullptr : first);
+        return iterator(first);
     }
-    
+
     iterator end() {
         return iterator(nullptr);
     }
-    
-    // Emplace front method
-    iterator emplace_front(T&& value) {
-        Node* node = new Node(std::forward<T>(value));
-        push_front(node);
-        size_.fetch_add(1, std::memory_order_relaxed);
-        return iterator(node);
-    }
-    
+
     template<typename... Args>
     iterator emplace_front(Args&&... args) {
         Node* node = new Node(std::forward<Args>(args)...);
         push_front(node);
-        size_.fetch_add(1, std::memory_order_relaxed);
         return iterator(node);
     }
-    
-    // Erase method that takes an iterator
+
     iterator erase(iterator it) {
-        if (it == end()) {
-            return end();
-        }
-        
-        Node* node = it.get_node();
-        // Get next node before unlinking
-        Node* next_node = get_ptr(node->next.load(std::memory_order_acquire));
-        while (reinterpret_cast<SentinelNode*>(next_node) != &tail_ && is_marked(reinterpret_cast<uintptr_t>(next_node))) {
-            next_node = get_ptr(next_node->next.load(std::memory_order_acquire));
-        }
-        
-        if (unlink(node)) {
+        if (it.get_node() == nullptr) return end();
+        Node* node_to_erase = it.get_node();
+        iterator next_it = it;
+        ++next_it;
+
+        if (unlink(node_to_erase)) {
             size_.fetch_sub(1, std::memory_order_relaxed);
-            // Schedule for deletion via hazptr
-            node->retire();
+            node_to_erase->retire();
         }
-        
-        return iterator(reinterpret_cast<SentinelNode*>(next_node) == &tail_ ? nullptr : next_node);
+        return next_it;
     }
-    
-    // Get reference to back element
+
     T& back() {
-        Node* last = get_ptr(tail_.prev.load(std::memory_order_acquire));
-        if (reinterpret_cast<SentinelNode*>(last) == &head_) {
+        folly::hazptr_holder h;
+        Node* last = get_ptr(h.protect(tail_.prev));
+        if (last == reinterpret_cast<Node*>(&head_)) {
             throw std::runtime_error("back() called on empty list");
         }
         return last->value;
     }
-    
-    const T& back() const {
-        Node* last = get_ptr(tail_.prev.load(std::memory_order_acquire));
-        if (reinterpret_cast<SentinelNode*>(last) == &head_) {
-            throw std::runtime_error("back() called on empty list");
-        }
-        return last->value;
-    }
-    
-    // Clear all elements
+
     void clear() {
-        while (!empty()) {
-            Node* node = pop_back();
-            if (node) {
-                node->retire();
-            }
+        while (pop_back() != nullptr) {
+            // pop_back handles retirement
         }
     }
 };
