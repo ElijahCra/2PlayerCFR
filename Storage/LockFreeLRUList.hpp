@@ -170,13 +170,9 @@ private:
 
     // Helper to unlink a node, returns true on success
     bool unlink(Node* node) {
-        folly::hazptr_holder<> h_node = folly::make_hazard_pointer();
         folly::hazptr_array<2> h_neighbors = folly::make_hazard_pointer_array<2>(); // For protecting prev and next
 
         while (true) {
-            Node* protected_node = h_node.protect(node);
-            if (!protected_node) return false; // Node already collected
-
             Node* prev = h_neighbors[0].protect(node->prev);
             Node* next = h_neighbors[1].protect(node->next);
 
