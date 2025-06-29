@@ -97,7 +97,7 @@ public:
 
     // Move node to front of list
     void move_to_front(Node* node) {
-        if (!node || node == head_ || node == tail_) return;
+        if (!node || node == head_) return;
 
         // Unlink the node from its current position
         if (unlink(node)) {

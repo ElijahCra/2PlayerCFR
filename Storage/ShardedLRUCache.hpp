@@ -19,7 +19,7 @@ namespace CFR {
 class ShardedLRUCache : public NodeStorage {
 public:
     /// @brief Number of shards (power of 2 for efficient modulo)
-    static constexpr size_t NUM_SHARDS = 128;
+    static constexpr size_t NUM_SHARDS = 32;
     
     /// @brief Callback function for evicted nodes
     using EvictionCallback = std::function<void(const std::string&, std::shared_ptr<Node>)>;

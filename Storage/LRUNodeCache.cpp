@@ -6,7 +6,7 @@
 namespace CFR {
 
 LRUNodeCache::LRUNodeCache(size_t capacity, EvictionCallback evictionCallback)
-    : m_capacity(capacity), m_evictionCallback(std::move(evictionCallback)), m_cacheList() {
+    : m_capacity(capacity), m_evictionCallback(std::move(evictionCallback)) {
     if (m_capacity == 0) {
         throw std::invalid_argument("Cache capacity must be greater than 0");
     }

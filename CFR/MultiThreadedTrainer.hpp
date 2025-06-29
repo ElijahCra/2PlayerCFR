@@ -16,7 +16,7 @@ namespace CFR {
 template<typename GameType, typename StorageType>
 class MultiThreadedTrainer {
 public:
-    explicit MultiThreadedTrainer(const uint32_t numThreads = std::thread::hardware_concurrency())
+    explicit MultiThreadedTrainer(const uint32_t numThreads = 2)//std::thread::hardware_concurrency())
     : m_storage(std::make_shared<StorageType>()), m_numThreads(numThreads)
     {
         m_threads.reserve(numThreads);

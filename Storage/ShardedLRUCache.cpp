@@ -34,7 +34,7 @@ const ShardedLRUCache::Shard& ShardedLRUCache::getShard(const std::string& key) 
 
 std::shared_ptr<Node> ShardedLRUCache::getNode(const std::string& infoSet) {
     auto& shard = getShard(infoSet);
-    std::unique_lock<std::shared_mutex> lock(shard.mutex);
+    std::shared_lock lock(shard.mutex);
     
     auto result = shard.cache.getNode(infoSet);
     
