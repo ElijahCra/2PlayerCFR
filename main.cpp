@@ -2,10 +2,12 @@
 #include "CFR/RegretMinimizer.hpp"
 #include "Storage/HybridNodeStorage.hpp"
 
-
 int main() {
-    //CFR::RegretMinimizer<Preflop::Game> Minimize{(std::random_device()())};
-    CFR::RegretMinimizer<Preflop::Game, CFR::HybridNodeStorage<CFR::LRUNodeCache<std::unordered_map<std::string, typename CacheList::iterator>,std::list<CacheEntry>>>> Minimize;
+    // Option 1: Use the convenience alias
+    CFR::RegretMinimizer<Preflop::Game, CFR::HybridNodeStorage<CFR::DefaultLRUCache>> Minimize;
+    
+    // Option 2: Or specify different containers
+    // CFR::RegretMinimizer<Preflop::Game, CFR::HybridNodeStorage<CFR::LRUCache<std::map>>> Minimize;
     auto start = std::chrono::high_resolution_clock::now();
     Minimize.Train(1010000);
     auto end = std::chrono::high_resolution_clock::now();

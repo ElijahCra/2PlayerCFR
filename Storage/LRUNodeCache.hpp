@@ -6,6 +6,8 @@
 #define LRUNODECACHE_HPP
 #include <atomic>
 #include <functional>
+#include <unordered_map>
+#include <list>
 
 #include "NodeStorage.hpp"
 
@@ -51,11 +53,11 @@ private:
 };
 
     void evictLRU();
-    void moveToFront(typename CacheList<>::iterator it);
+    void moveToFront(typename CacheList<CacheEntry>::iterator it);
 
     size_t m_capacity;
     CacheList<CacheEntry> m_cacheList{};
-    CacheMap<std::string, typename CacheList::iterator> m_cacheMap{};
+    CacheMap<std::string, typename CacheList<CacheEntry>::iterator> m_cacheMap{};
     EvictionCallback m_evictionCallback;
 
     std::atomic<uint64_t> m_hits{0};
@@ -64,7 +66,7 @@ private:
 
 
 
-template<typename CacheMap, typename CacheList>
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 LRUNodeCache<CacheMap,CacheList>::LRUNodeCache(size_t capacity, EvictionCallback evictionCallback)
     : m_capacity(capacity), m_evictionCallback(std::move(evictionCallback)) {
     if (m_capacity == 0) {
@@ -72,7 +74,7 @@ LRUNodeCache<CacheMap,CacheList>::LRUNodeCache(size_t capacity, EvictionCallback
     }
 }
 
-template<typename CacheMap, typename CacheList>
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 std::shared_ptr<Node> LRUNodeCache<CacheMap,CacheList>::getNode(const std::string& infoSet) {
     auto it = m_cacheMap.find(infoSet);
     if (it == m_cacheMap.end()) {
@@ -88,7 +90,7 @@ std::shared_ptr<Node> LRUNodeCache<CacheMap,CacheList>::getNode(const std::strin
     return it->second->node;
 }
 
-template<typename CacheMap, typename CacheList>
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 void LRUNodeCache<CacheMap,CacheList>::putNode(const std::string& infoSet, std::shared_ptr<Node> node) {
     auto it = m_cacheMap.find(infoSet);
     if (it != m_cacheMap.end()) {
@@ -108,12 +110,12 @@ void LRUNodeCache<CacheMap,CacheList>::putNode(const std::string& infoSet, std::
     m_cacheMap[infoSet] = list_it;
 }
 
-template<typename CacheMap, typename CacheList>
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 bool LRUNodeCache<CacheMap,CacheList>::hasNode(const std::string& infoSet) const {
     return m_cacheMap.find(infoSet) != m_cacheMap.end();
 }
 
-template<typename CacheMap, typename CacheList>
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 void LRUNodeCache<CacheMap,CacheList>::removeNode(const std::string& infoSet) {
     auto it = m_cacheMap.find(infoSet);
     if (it == m_cacheMap.end()) {
@@ -125,12 +127,12 @@ void LRUNodeCache<CacheMap,CacheList>::removeNode(const std::string& infoSet) {
     m_cacheMap.erase(it);
 }
 
-template<typename CacheMap, typename CacheList>
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 size_t LRUNodeCache<CacheMap,CacheList>::size() const {
     return m_cacheMap.size();
 }
 
-template<typename CacheMap, typename CacheList>
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 void LRUNodeCache<CacheMap,CacheList>::clear() {
     if (m_evictionCallback) {
         for (const auto& pair : m_cacheMap) {
@@ -141,7 +143,7 @@ void LRUNodeCache<CacheMap,CacheList>::clear() {
     m_cacheMap.clear();
 }
 
-template<typename CacheMap, typename CacheList>
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 double LRUNodeCache<CacheMap,CacheList>::getHitRate() const {
     uint64_t h = m_hits.load(std::memory_order_relaxed);
     uint64_t m = m_misses.load(std::memory_order_relaxed);
@@ -150,13 +152,13 @@ double LRUNodeCache<CacheMap,CacheList>::getHitRate() const {
     return total > 0 ? static_cast<double>(h) / static_cast<double>(total) : 0.0;
 }
 
-template<typename CacheMap, typename CacheList>
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 void LRUNodeCache<CacheMap,CacheList>::resetStats() {
     m_hits.store(0, std::memory_order_relaxed);
     m_misses.store(0, std::memory_order_relaxed);
 }
 
-template<typename CacheMap, typename CacheList>
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 void LRUNodeCache<CacheMap,CacheList>::flush() {
     if (!m_evictionCallback) return;
 
@@ -165,7 +167,7 @@ void LRUNodeCache<CacheMap,CacheList>::flush() {
     }
 }
 
-template<typename CacheMap, typename CacheList>
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 void LRUNodeCache<CacheMap,CacheList>::evictLRU() {
     // pop_back is now a safe, atomic operation on the list.
     auto* evicted_node = m_cacheList.pop_back();
@@ -187,6 +189,14 @@ void LRUNodeCache<CacheMap,CacheList>::evictLRU() {
         }
     }
 }
+// Common convenience aliases
+template<template<typename, typename> typename MapType = std::unordered_map,
+         template<typename> typename ListType = std::list>
+using LRUCache = LRUNodeCache<MapType, ListType>;
+
+// Most common instantiation
+using DefaultLRUCache = LRUCache<>;
+
 } // namespace CFR
 
 #endif //LRUNODECACHE_HPP

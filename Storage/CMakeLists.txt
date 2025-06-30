@@ -5,6 +5,7 @@ add_library(Storage STATIC
         NodeSerializer.cpp
         LRUNodeCache.hpp
         HybridNodeStorage.hpp
+        LRUList.hpp
 )
 
 find_package(PkgConfig REQUIRED)
