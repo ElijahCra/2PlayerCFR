@@ -1,10 +1,13 @@
 #include <iostream>
 #include "CFR/RegretMinimizer.hpp"
 #include "Storage/HybridNodeStorage.hpp"
+#include "Storage/LRUList.hpp"
+// Common convenience aliases
+template<typename K, typename V> using MyMap = std::unordered_map<K, V>;
 
 int main() {
     // Option 1: Use the convenience alias
-    CFR::RegretMinimizer<Preflop::Game, CFR::HybridNodeStorage<CFR::DefaultLRUCache>> Minimize;
+    CFR::RegretMinimizer<Preflop::Game, CFR::HybridNodeStorage<CFR::LRUNodeCache<MyMap,LRUList>>> Minimize;
     
     // Option 2: Or specify different containers
     // CFR::RegretMinimizer<Preflop::Game, CFR::HybridNodeStorage<CFR::LRUCache<std::map>>> Minimize;

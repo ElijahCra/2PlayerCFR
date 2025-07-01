@@ -53,7 +53,6 @@ private:
 };
 
     void evictLRU();
-    void moveToFront(typename CacheList<CacheEntry>::iterator it);
 
     size_t m_capacity;
     CacheList<CacheEntry> m_cacheList{};
@@ -85,7 +84,7 @@ std::shared_ptr<Node> LRUNodeCache<CacheMap,CacheList>::getNode(const std::strin
     m_hits.fetch_add(1, std::memory_order_relaxed);
 
     // Move the accessed node to the front of the list
-    m_cacheList.move_to_front(it->second.get_node());
+    m_cacheList.move_to_front(it->second);
 
     return it->second->node;
 }
@@ -96,7 +95,7 @@ void LRUNodeCache<CacheMap,CacheList>::putNode(const std::string& infoSet, std::
     if (it != m_cacheMap.end()) {
         // Update existing entry and move to front
         it->second->node = std::move(node);
-        m_cacheList.move_to_front(it->second.get_node());
+        m_cacheList.move_to_front(it->second);
         return;
     }
 
@@ -189,13 +188,7 @@ void LRUNodeCache<CacheMap,CacheList>::evictLRU() {
         }
     }
 }
-// Common convenience aliases
-template<template<typename, typename> typename MapType = std::unordered_map,
-         template<typename> typename ListType = std::list>
-using LRUCache = LRUNodeCache<MapType, ListType>;
 
-// Most common instantiation
-using DefaultLRUCache = LRUCache<>;
 
 } // namespace CFR
 
