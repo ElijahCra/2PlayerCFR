@@ -54,6 +54,21 @@ namespace CFR {
         return averageStrategy;
     }
 
+    auto Node::getStrategySum() const -> const std::vector<float> & {
+        return strategySum;
+    }
+
+    void Node::setRegretSum(const std::vector<float>& regretSum) {
+        this->regretSum = regretSum;
+    }
+
+    void Node::setStrategySum(const std::vector<float>& strategySum) {
+        this->strategySum = strategySum;
+    }
+
+    void Node::setAverageStrategy(const std::vector<float>& averageStrategy) {
+        this->averageStrategy = averageStrategy;
+    }
 
     void Node::updateRegretSum(int i, float actionRegret, float probCounterFactual) {
         regretSum[i] += probCounterFactual * actionRegret;

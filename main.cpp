@@ -4,13 +4,12 @@
 #include "Storage/LRUList.hpp"
 // Common convenience aliases
 template<typename K, typename V> using MyMap = std::unordered_map<K, V>;
+template<typename T> using MyList = std::list<T>;
 
 int main() {
-    // Option 1: Use the convenience alias
-    CFR::RegretMinimizer<Preflop::Game, CFR::HybridNodeStorage<CFR::LRUNodeCache<MyMap,LRUList>>> Minimize;
+    //CFR::RegretMinimizer<Preflop::Game, CFR::HybridNodeStorage<CFR::LRUNodeCache<MyMap,LRUList>>> Minimize; //Rocksdb and lru cache
     
-    // Option 2: Or specify different containers
-    // CFR::RegretMinimizer<Preflop::Game, CFR::HybridNodeStorage<CFR::LRUCache<std::map>>> Minimize;
+    CFR::RegretMinimizer<Preflop::Game> Minimize; //Raw mem cache
     auto start = std::chrono::high_resolution_clock::now();
     Minimize.Train(1010000);
     auto end = std::chrono::high_resolution_clock::now();

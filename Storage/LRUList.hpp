@@ -25,7 +25,8 @@ public:
 
     iterator emplace_front(std::string infoset, std::shared_ptr<CFR::Node>&& node)
     {
-        return m_list.emplace_front(infoset, std::move(node));
+        m_list.emplace_front(infoset, std::move(node));
+        return m_list.begin();
     }
 
     void pop_back()

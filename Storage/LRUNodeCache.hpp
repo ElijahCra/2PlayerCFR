@@ -11,8 +11,6 @@
 
 #include "NodeStorage.hpp"
 
-
-
 namespace CFR {
     struct CacheEntry {
         std::string key;
@@ -55,7 +53,7 @@ private:
 
 
     void evictLRU();
-
+    void moveToFront(typename CacheList<CacheEntry>::iterator it);
     size_t m_capacity;
     CacheList<CacheEntry> m_cacheList{};
     CacheMap<std::string, typename CacheList<CacheEntry>::iterator> m_cacheMap{};
@@ -185,6 +183,15 @@ void LRUNodeCache<CacheMap,CacheList>::evictLRU() {
 }
 
 
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
+void LRUNodeCache<CacheMap,CacheList>::moveToFront(typename CacheList<CacheEntry>::iterator it) {
+    if (it == m_cacheList.begin()) {
+        return;
+    }
+
+
+    m_cacheList.splice(m_cacheList.begin(), m_cacheList, it);
+}
 
 } // namespace CFR
 
