@@ -5,6 +5,9 @@
 #ifndef LRULIST_HPP
 #define LRULIST_HPP
 #include <list>
+
+#include "LRUNodeCache.hpp"
+
 template<typename T>
 class LRUList
 {
@@ -24,11 +27,33 @@ public:
     {
         return m_list.emplace_front(infoset, std::move(node));
     }
+
+    void pop_back()
+    {
+        m_list.pop_back();
+    }
     
     iterator begin() { return m_list.begin(); }
     iterator end() { return m_list.end(); }
     
     std::list<T> m_list;
+
+    void erase(iterator it)
+    {
+        m_list.erase(it);
+    }
+    void clear(){
+        m_list.clear();
+    }
+    bool empty()
+    {
+        return m_list.empty();
+    }
+
+    const CFR::CacheEntry& back()
+    {
+        return m_list.back();
+    }
 
 };
 

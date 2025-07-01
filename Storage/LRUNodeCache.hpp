@@ -14,6 +14,14 @@
 
 
 namespace CFR {
+    struct CacheEntry {
+        std::string key;
+        std::shared_ptr<Node> node;
+
+        CacheEntry() = default;
+        CacheEntry(std::string k, std::shared_ptr<Node> n)
+            : key(std::move(k)), node(std::move(n)) {}
+};
 template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 class LRUNodeCache : public NodeStorage {
 public:
@@ -43,14 +51,8 @@ public:
     void flush();
 
 private:
-    struct CacheEntry {
-        std::string key;
-        std::shared_ptr<Node> node;
 
-        CacheEntry() = default;
-        CacheEntry(std::string k, std::shared_ptr<Node> n)
-            : key(std::move(k)), node(std::move(n)) {}
-};
+
 
     void evictLRU();
 
@@ -168,26 +170,20 @@ void LRUNodeCache<CacheMap,CacheList>::flush() {
 
 template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 void LRUNodeCache<CacheMap,CacheList>::evictLRU() {
-    // pop_back is now a safe, atomic operation on the list.
-    auto* evicted_node = m_cacheList.pop_back();
-
-    if (evicted_node) {
-        // Copy data before retiring the node
-        std::string keyToEvict = evicted_node->value.key;
-        std::shared_ptr<Node> nodeToEvict = evicted_node->value.node;
-
-        // Erase from map
-        m_cacheMap.erase(keyToEvict);
-
-        // Retire the list node for safe memory reclamation
-        evicted_node->retire();
-
-        // Call the eviction callback if it exists
-        if (m_evictionCallback) {
-            m_evictionCallback(keyToEvict, nodeToEvict);
-        }
+    if (m_cacheList.empty()) {
+        return;
     }
+
+    auto& lastEntry = m_cacheList.back();
+
+    if (m_evictionCallback) {
+        m_evictionCallback(lastEntry.key, lastEntry.node);
+    }
+
+    m_cacheMap.erase(lastEntry.key);
+    m_cacheList.pop_back();
 }
+
 
 
 } // namespace CFR
