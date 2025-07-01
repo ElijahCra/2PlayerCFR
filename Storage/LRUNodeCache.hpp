@@ -103,8 +103,7 @@ void LRUNodeCache<CacheMap,CacheList>::putNode(const std::string& infoSet, std::
     if (m_cacheMap.size() >= m_capacity) {
         evictLRU();
     }
-
-    // Emplace creates a new list node and returns an iterator to it
+    //put node in front of list and its iterator into map
     auto list_it = m_cacheList.emplace_front(infoSet, std::move(node));
     m_cacheMap[infoSet] = list_it;
 }
@@ -121,7 +120,6 @@ void LRUNodeCache<CacheMap,CacheList>::removeNode(const std::string& infoSet) {
         return;
     }
 
-    // Erase from the list, which handles unlinking and retirement
     m_cacheList.erase(it->second);
     m_cacheMap.erase(it);
 }
@@ -134,10 +132,11 @@ size_t LRUNodeCache<CacheMap,CacheList>::size() const {
 template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 void LRUNodeCache<CacheMap,CacheList>::clear() {
     if (m_evictionCallback) {
-        for (const auto& pair : m_cacheMap) {
-            m_evictionCallback(pair.first, pair.second->node);
+        for (const auto& entry : m_cacheList) {
+            m_evictionCallback(entry.key, entry.node);
         }
     }
+
     m_cacheList.clear();
     m_cacheMap.clear();
 }
@@ -158,15 +157,6 @@ void LRUNodeCache<CacheMap,CacheList>::resetStats() {
 }
 
 template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
-void LRUNodeCache<CacheMap,CacheList>::flush() {
-    if (!m_evictionCallback) return;
-
-    for (const auto& pair : m_cacheMap) {
-        m_evictionCallback(pair.first, pair.second->node);
-    }
-}
-
-template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 void LRUNodeCache<CacheMap,CacheList>::evictLRU() {
     if (m_cacheList.empty()) {
         return;
@@ -182,17 +172,23 @@ void LRUNodeCache<CacheMap,CacheList>::evictLRU() {
     m_cacheList.pop_back();
 }
 
-
 template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 void LRUNodeCache<CacheMap,CacheList>::moveToFront(typename CacheList<CacheEntry>::iterator it) {
     if (it == m_cacheList.begin()) {
         return;
     }
 
-
     m_cacheList.splice(m_cacheList.begin(), m_cacheList, it);
 }
 
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
+void LRUNodeCache<CacheMap,CacheList>::flush() {
+    if (!m_evictionCallback) return;
+
+    for (const auto& pair : m_cacheMap) {
+        m_evictionCallback(pair.first, pair.second->node);
+    }
+}
 } // namespace CFR
 
 #endif //LRUNODECACHE_HPP
