@@ -6,6 +6,7 @@ add_library(Storage STATIC
         LRUNodeCache.hpp
         HybridNodeStorage.hpp
         LRUList.hpp
+        ShardedLRUCache.hpp
 )
 
 find_package(PkgConfig REQUIRED)

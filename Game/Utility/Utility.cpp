@@ -63,9 +63,9 @@ bool Utility::initLookup() {
 int Utility::LookupHandValue(int* pCards)
 {
 
-    int p = Utility::HR[53 + *pCards++];
-    p = Utility::HR[p + *pCards++];
-    p = Utility::HR[p + *pCards++];
+    int p = HR[53 + *pCards++];
+    p = HR[p + *pCards++];
+    p = HR[p + *pCards++];
     p = Utility::HR[p + *pCards++];
     p = Utility::HR[p + *pCards++];
     p = Utility::HR[p + *pCards++];

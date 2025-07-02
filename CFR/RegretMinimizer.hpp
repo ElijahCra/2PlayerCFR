@@ -27,19 +27,26 @@ class RegretMinimizer {
   
   /// @brief constructor with custom storage
   RegretMinimizer(uint32_t seed, std::shared_ptr<StorageType> storage);
+  ~RegretMinimizer();
   
   RegretMinimizer(const RegretMinimizer& other) = delete;
   auto operator=(const RegretMinimizer& other) -> RegretMinimizer& = delete;
   RegretMinimizer(RegretMinimizer&& other) = default;
   auto operator=(RegretMinimizer&& other) -> RegretMinimizer& = default;
-  ~RegretMinimizer() = default;
 
   /// @brief calls cfr algorithm for full game tree (or sampled based on version) traversal the specified number of times
   void Train(uint32_t iterations);
 
+  /// @brief Set cancellation flag to interrupt training
+  void setCancelled(bool cancelled) { m_cancelledTraining = cancelled; }
+  
+  /// @brief Check if training should be cancelled
+  bool isCancelled() const { return m_cancelledTraining; }
+
   [[nodiscard]]
   auto getNodeInformation(const std::string& index) noexcept -> std::vector<std::vector<float>>;
 
+  void flushStorageCache();
 
   /// @brief recursively traverse game tree (depth-first) sampling only one chance outcome at each chance node and all actions
   /// @param updatePlayer player whose getStrategy is updated and utilities are retrieved in terms of
@@ -64,23 +71,41 @@ class RegretMinimizer {
 
   uint64_t nodesTouched{};
 
+  std::atomic<bool> m_cancelledTraining{false};
+
 };
 
 
 ///Implementation of templates above
 template<typename GameType, typename StorageType>
 RegretMinimizer<GameType, StorageType>::RegretMinimizer(const uint32_t seed) 
-    : rng(seed), m_storage(std::make_unique<StorageType>()), Game(rng) {}
+    : rng(seed), m_storage(std::make_shared<StorageType>()), Game(rng) {}
 
 template<typename GameType, typename StorageType>
 RegretMinimizer<GameType, StorageType>::RegretMinimizer(uint32_t seed, std::shared_ptr<StorageType> storage)
     : rng(seed), m_storage(std::move(storage)), Game(rng) {}
+
+
+template<typename GameType, typename StorageType>
+  RegretMinimizer<GameType,StorageType>::~RegretMinimizer() {
+    if (m_storage) {
+      m_storage->flushCache();
+    }
+  }
+
+  template<typename GameType, typename StorageType>
+  void RegretMinimizer<GameType,StorageType>::flushStorageCache() {
+    if (m_storage) {
+      m_storage->flushCache();
+    }
+  }
 
 template<typename GameType, typename StorageType>
 void RegretMinimizer<GameType, StorageType>::Train(uint32_t iterations) {
   std::array<float,GameType::PlayerNum> value;
   for (uint32_t i = 0; i < iterations; ++i) {
     for (uint32_t p = 0; p < GameType::PlayerNum; ++p) {
+      if (m_cancelledTraining) break;
       value[p] = ExternalSamplingCFR(Game, p, 1.0, 1.0);
     }
     Game.reInitialize();
@@ -216,7 +241,7 @@ template <typename GameType, typename StorageType>
 auto RegretMinimizer<GameType, StorageType>::getNodeInformation(const std::string& index) noexcept -> std::vector<std::vector<float>>{
   std::vector<std::vector<float>> res;
   auto node = m_storage->getNode(index);
-  if (node != nullptr) {
+  if (node) {
     res.push_back(node->getRegretSum());
     res.push_back(node->getStrategy());
     node->calcAverageStrategy();
@@ -226,5 +251,6 @@ auto RegretMinimizer<GameType, StorageType>::getNodeInformation(const std::strin
   }
   return res;
 }
+
 }
 #endif //INC_2PLAYERCFR_REGRETMINIMIZER_HPP
