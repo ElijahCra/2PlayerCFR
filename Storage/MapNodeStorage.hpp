@@ -23,6 +23,7 @@ public:
     void removeNode(const std::string& infoSet) override;
     size_t size() const override;
     void clear() override;
+    void flushCache(){}
 
 private:
     std::unordered_map<std::string, std::shared_ptr<Node>> m_nodeMap;
@@ -54,6 +55,9 @@ size_t MapNodeStorage::size() const {
 void MapNodeStorage::clear() {
     m_nodeMap.clear();
 }
+
+
+
 } // namespace CFR
 
 #endif //MAPNODESTORAGE_HPP
