@@ -1,6 +1,7 @@
 add_library(Storage STATIC
         NodeStorage.hpp
         MapNodeStorage.hpp
+        MapNodeStorage.cpp
         RocksDBNodeStorage.cpp
         NodeSerializer.cpp
         LRUNodeCache.hpp
