@@ -88,9 +88,7 @@ RegretMinimizer<GameType, StorageType>::RegretMinimizer(uint32_t seed, std::shar
 
 template<typename GameType, typename StorageType>
   RegretMinimizer<GameType,StorageType>::~RegretMinimizer() {
-    if (m_storage) {
-      m_storage->flushCache();
-    }
+    flushStorageCache();
   }
 
   template<typename GameType, typename StorageType>
