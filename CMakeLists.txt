@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 add_subdirectory(CFR)
 add_subdirectory(Game)
 add_subdirectory(Test)
+add_subdirectory(Storage)
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 add_executable(2PlayerCFR main.cpp)
