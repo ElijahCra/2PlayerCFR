@@ -192,8 +192,7 @@ auto RegretMinimizer<GameType, StorageType>::ExternalSamplingCFR(const GameType 
     //sample one chance outcome at each chance node
     GameType copiedGame(game);
     copiedGame.transition(GameType::Action::None);
-    float nodeValue;
-    nodeValue = ExternalSamplingCFR(copiedGame, updatePlayer, probCounterFactual , probUpdatePlayer);
+    float nodeValue = ExternalSamplingCFR(copiedGame, updatePlayer, probCounterFactual, probUpdatePlayer);
     return nodeValue;
   }
 

@@ -1,0 +1,1 @@
+add_library(Evaluator STATIC Evaluator.hpp)
