@@ -31,8 +31,8 @@ class RegretMinimizer {
   
   RegretMinimizer(const RegretMinimizer& other) = delete;
   auto operator=(const RegretMinimizer& other) -> RegretMinimizer& = delete;
-  RegretMinimizer(RegretMinimizer&& other) = default;
-  auto operator=(RegretMinimizer&& other) -> RegretMinimizer& = default;
+  RegretMinimizer(RegretMinimizer&& other) = delete;
+  auto operator=(RegretMinimizer&& other) -> RegretMinimizer& = delete;
 
   /// @brief calls cfr algorithm for full game tree (or sampled based on version) traversal the specified number of times
   void Train(uint32_t iterations);
@@ -88,9 +88,7 @@ RegretMinimizer<GameType, StorageType>::RegretMinimizer(uint32_t seed, std::shar
 
 template<typename GameType, typename StorageType>
   RegretMinimizer<GameType,StorageType>::~RegretMinimizer() {
-    if (m_storage) {
-      m_storage->flushCache();
-    }
+    flushStorageCache();
   }
 
   template<typename GameType, typename StorageType>
@@ -227,7 +225,7 @@ auto RegretMinimizer<GameType, StorageType>::ExternalSamplingCFR(const GameType 
 
     } else { //sample single player action for non update player
       GameType gamePlusOneAction(game);
-      std::discrete_distribution<int> actionSpread(currentStrategy.begin(),currentStrategy.end());
+      std::discrete_distribution actionSpread(currentStrategy.begin(),currentStrategy.end());
       auto sampledAction = actionSpread(rng);
       gamePlusOneAction.transition(actions[sampledAction]);
       nodeValue = ExternalSamplingCFR(gamePlusOneAction, updatePlayer, probCounterFactual, probUpdatePlayer);

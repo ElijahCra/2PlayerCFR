@@ -31,22 +31,19 @@ bool Utility::initLookup() {
     // Load the HandRanks.DAT file and map it into the HR array
     printf("Loading HandRanks.DAT file...\n");
     memset(HR, 0, sizeof(HR));
-    FILE * fin = fopen("../HandRanks.dat", "rb");
+    std::string handRanksPathUtility = std::string(PROJECT_SOURCE_DIR)+"/Game/Utility/HandRanks.dat";
+    std::string handRanksPathBase = std::string(PROJECT_SOURCE_DIR)+"/HandRanks.dat";
+    std::cout<< "Searching in: \n"<< handRanksPathUtility <<std::endl;
+    std::cout<< handRanksPathBase <<std::endl;
+    FILE * fin = fopen(handRanksPathUtility.c_str(), "rb");
     if (fin == nullptr) {
-        fin = fopen("../../HandRanks.dat", "rb");
-        if (fin == nullptr) {
-            fin = fopen("HandRanks.dat", "rb");
-            if (fin == nullptr) {
-                fin = fopen("../../../HandRanks.dat", "rb");
-                if (fin == nullptr) {
-                    fin = fopen("/Users/elijahcrain/CLionProjects/2PlayerCFR/Game/Utility/HandRanks.dat","rb");
-                    if (fin == nullptr) {
-                        fin = fopen("C:\\Users\\Elijah\\CLionProjects\\CFRApplication\\2PlayerCFR\\Game\\Utility\\HandRanks.dat","rb");
-                        if (fin == nullptr) {throw(std::runtime_error("did not open properly \n"));}
-                    }
-                }
-            }
-        }
+         {
+             fin = fopen(handRanksPathBase.c_str(), "rb");
+             if (fin ==nullptr)
+             {
+                throw(std::runtime_error("did not open properly \n"));
+             }
+         }
     }
 
     bool succ = fread(HR, sizeof(HR), 1, fin);	// get the HandRank Array
@@ -63,9 +60,9 @@ bool Utility::initLookup() {
 int Utility::LookupHandValue(int* pCards)
 {
 
-    int p = HR[53 + *pCards++];
-    p = HR[p + *pCards++];
-    p = HR[p + *pCards++];
+    int p = Utility::HR[53 + *pCards++];
+    p = Utility::HR[p + *pCards++];
+    p = Utility::HR[p + *pCards++];
     p = Utility::HR[p + *pCards++];
     p = Utility::HR[p + *pCards++];
     p = Utility::HR[p + *pCards++];

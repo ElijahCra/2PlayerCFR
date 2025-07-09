@@ -8,6 +8,8 @@
 #include <functional>
 #include <unordered_map>
 #include <list>
+#include <shared_mutex>
+#include <mutex>
 
 #include "NodeStorage.hpp"
 
@@ -36,6 +38,15 @@ public:
     void putNode(const std::string& infoSet, std::shared_ptr<Node> node) override;
     bool hasNode(const std::string& infoSet) const override;
     void removeNode(const std::string& infoSet) override;
+
+    std::shared_ptr<Node> getNodeSafe(const std::string& infoSet);
+    void putNodeSafe(const std::string& infoSet, std::shared_ptr<Node> node);
+    bool hasNodeSafe(const std::string& infoSet) const;
+    void removeNodeSafe(const std::string& infoSet);
+    void clearSafe();
+    void flushSafe();
+
+
     size_t size() const override;
     void clear() override;
 
@@ -50,10 +61,7 @@ public:
 
 private:
 
-
-
     void evictLRU();
-    void moveToFront(typename CacheList<CacheEntry>::iterator it);
     size_t m_capacity;
     CacheList<CacheEntry> m_cacheList{};
     CacheMap<std::string, typename CacheList<CacheEntry>::iterator> m_cacheMap{};
@@ -61,6 +69,8 @@ private:
 
     std::atomic<uint64_t> m_hits{0};
     std::atomic<uint64_t> m_misses{0};
+    mutable std::shared_mutex m_mapMutex;
+    mutable std::shared_mutex m_listMutex;
 };
 
 
@@ -124,6 +134,67 @@ void LRUNodeCache<CacheMap,CacheList>::removeNode(const std::string& infoSet) {
     m_cacheMap.erase(it);
 }
 
+
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
+std::shared_ptr<Node> LRUNodeCache<CacheMap,CacheList>::getNodeSafe(const std::string& infoSet) {
+    std::unique_lock sharedMapLock(m_mapMutex);
+    auto it = m_cacheMap.find(infoSet);
+    if (it == m_cacheMap.end()) {
+        m_misses.fetch_add(1, std::memory_order_relaxed);
+        return nullptr;
+    }
+
+    m_hits.fetch_add(1, std::memory_order_relaxed);
+
+    // Move the accessed node to the front of the list
+    std::unique_lock listLock(m_listMutex);
+    m_cacheList.move_to_front(it->second);
+
+    return it->second->node;
+}
+
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
+void LRUNodeCache<CacheMap,CacheList>::putNodeSafe(const std::string& infoSet, std::shared_ptr<Node> node) {
+    std::unique_lock uniqueMapLock(m_mapMutex);
+    auto it = m_cacheMap.find(infoSet);
+    if (it != m_cacheMap.end()) {
+        // Update existing entry and move to front
+        it->second->node = std::move(node);
+        std::unique_lock listMutex(m_listMutex);
+        m_cacheList.move_to_front(it->second);
+        return;
+    }
+    std::unique_lock listMutex(m_listMutex);
+    // Add new entry
+    if (m_cacheMap.size() >= m_capacity) {
+        evictLRU();
+    }
+    //put node in front of list and its iterator into map
+
+    auto list_it = m_cacheList.emplace_front(infoSet, std::move(node));
+
+    m_cacheMap[infoSet] = list_it;
+}
+
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
+bool LRUNodeCache<CacheMap,CacheList>::hasNodeSafe(const std::string& infoSet) const {
+    std::shared_lock lock(m_mapMutex);
+    return m_cacheMap.find(infoSet) != m_cacheMap.end();
+}
+
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
+void LRUNodeCache<CacheMap,CacheList>::removeNodeSafe(const std::string& infoSet) {
+    std::unique_lock mapLock(m_mapMutex);
+    auto it = m_cacheMap.find(infoSet);
+    if (it == m_cacheMap.end()) {
+        return;
+    }
+
+    std::unique_lock listLock(m_listMutex);
+    m_cacheList.erase(it->second);
+    m_cacheMap.erase(it);
+}
+
 template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 size_t LRUNodeCache<CacheMap,CacheList>::size() const {
     return m_cacheMap.size();
@@ -141,6 +212,21 @@ void LRUNodeCache<CacheMap,CacheList>::clear() {
     m_cacheMap.clear();
 }
 
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
+void LRUNodeCache<CacheMap,CacheList>::clearSafe() {
+    if (m_evictionCallback) {
+        std::shared_lock lock(m_listMutex);
+        for (const auto& entry : m_cacheList) {
+            m_evictionCallback(entry.key, entry.node);
+        }
+        lock.unlock();
+    }
+
+    std::unique_lock listMutex(m_listMutex);
+    std::unique_lock uniqueLock(m_mapMutex);
+    m_cacheList.clear();
+    m_cacheMap.clear();
+}
 template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 double LRUNodeCache<CacheMap,CacheList>::getHitRate() const {
     uint64_t h = m_hits.load(std::memory_order_relaxed);
@@ -173,18 +259,19 @@ void LRUNodeCache<CacheMap,CacheList>::evictLRU() {
 }
 
 template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
-void LRUNodeCache<CacheMap,CacheList>::moveToFront(typename CacheList<CacheEntry>::iterator it) {
-    if (it == m_cacheList.begin()) {
-        return;
-    }
-
-    m_cacheList.splice(m_cacheList.begin(), m_cacheList, it);
-}
-
-template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
 void LRUNodeCache<CacheMap,CacheList>::flush() {
     if (!m_evictionCallback) return;
 
+    for (const auto& pair : m_cacheMap) {
+        m_evictionCallback(pair.first, pair.second->node);
+    }
+}
+
+template< template<typename mapKey, typename mapValue> typename CacheMap, template<typename CacheListObject> typename CacheList>
+void LRUNodeCache<CacheMap,CacheList>::flushSafe() {
+    if (!m_evictionCallback) return;
+
+    std::shared_lock mapLock(m_mapMutex);
     for (const auto& pair : m_cacheMap) {
         m_evictionCallback(pair.first, pair.second->node);
     }
