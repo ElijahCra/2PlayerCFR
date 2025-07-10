@@ -10,8 +10,9 @@ add_library(Storage STATIC
         ShardedLRUCache.hpp
 )
 
-find_package(rocksdb REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(ROCKSDB REQUIRED rocksdb)
+target_link_libraries(Storage PUBLIC  ${ROCKSDB_LIBRARIES})
 
-target_link_libraries(Storage PUBLIC RocksDB::rocksdb)
 
 target_compile_definitions(Storage PUBLIC DEFAULT_DB_PATH="${CMAKE_SOURCE_DIR}/cfr_nodes_db")
