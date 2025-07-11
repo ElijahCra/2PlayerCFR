@@ -1,6 +1,7 @@
 #include <iostream>
 #include "CFR/RegretMinimizer.hpp"
 #include "Evaluator/Evaluator.hpp"
+#include "Evaluator/RandomStrategy.hpp"
 #include "Storage/HybridNodeStorage.hpp"
 #include "Storage/LRUList.hpp"
 // Common convenience aliases
@@ -18,6 +19,9 @@ int main() {
     // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     //
     // std::cout << "\nTraining completed in " << duration.count() << " ms\n";
+    RandomStrategy<Preflop::Game> randomStrategy{};
+    CFR::HybridNodeStorage<CFR::LRUNodeCache<MyMap,LRUList>> trainedStrategy{};
+
     Evaluator<Preflop::Game> evaluator;
-    evaluator.Evaluate()
+    evaluator.Evaluate(randomStrategy,trainedStrategy,1000);
 }

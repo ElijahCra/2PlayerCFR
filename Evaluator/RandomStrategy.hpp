@@ -5,21 +5,28 @@
 #ifndef RANDOMSTRATEGY_HPP
 #define RANDOMSTRATEGY_HPP
 #include "../Storage/NodeStorage.hpp"
+#include "../CFR/Node.hpp"
+#include <regex>
+#include <unordered_map>
 
 template <typename GameType>
 class RandomStrategy : CFR::NodeStorage
 {
-    std::shared_ptr<CFR::Node> getNode(const std::string& infoSet)
+public:
+    std::shared_ptr<CFR::Node> getNode(const std::string& infoSet) override
     {
-        
+       return nullptr;
     }
-    void putNode(const std::string& infoSet, std::shared_ptr<CFR::Node> node) {}
+    
+    void putNode(const std::string& infoSet, std::shared_ptr<CFR::Node> node) override {}
 
-    bool hasNode(const std::string& infoSet) const {return true;}
+    bool hasNode(const std::string& infoSet) const override {return true;}
 
-    void removeNode(const std::string& infoSet) {}
+    void removeNode(const std::string& infoSet) override {}
 
-    [[nodiscard]]  size_t size() const {}
+    [[nodiscard]] size_t size() const override {return 0;}
+    void clear() {};
+
 };
 
 #endif //RANDOMSTRATEGY_HPP

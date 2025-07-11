@@ -40,20 +40,44 @@ void Evaluator<GameType>::playGame(GameType& game,const CFR::NodeStorage& strat1
     if ("chance" == game.getType())
     {
         playGame(game.transition());
+        return;
     }
     if ("terminal" == game.getType())
     {
         utilitySums[0] += game.getUtility(0);
         utilitySums[1] += game.getUtility(1);
+        return;
     }
     if (game.getCurrentPlayer() == 0)
     {
-        auto currentStrategy = strat1.getNode(game.getInfoSet(0))->getAverageStrategy();
+        auto node = strat1.getNode(game.getInfoSet(0));
+        if (node == nullptr)
+        {
+            node = std::make_shared<CFR::Node>(game.getActions());
+        }
+        auto currentStrategy = node->getAverageStrategy();
 
         std::discrete_distribution<int> actionSpread(currentStrategy.begin(),currentStrategy.end());
         int actionChoice = actionSpread(generator);
-        game.transition(game.getAvailActions()[actionChoice]);
+        playGame(game.transition(game.getAvailActions()[actionChoice]));
+        return;
     }
+
+    if (game.getCurrentPlayer() == 1)
+    {
+        auto node = strat2.getNode(game.getInfoSet(1));
+        if (node == nullptr)
+        {
+            node = std::make_shared<CFR::Node>(game.getActions());
+        }
+        auto currentStrategy = node->getAverageStrategy();
+
+        std::discrete_distribution<int> actionSpread(currentStrategy.begin(),currentStrategy.end());
+        int actionChoice = actionSpread(generator);
+        playGame(game.transition(game.getAvailActions()[actionChoice]));
+        return;
+    }
+
 }
 
 #endif //EVALUATOR_HPP
