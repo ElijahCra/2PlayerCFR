@@ -9,7 +9,12 @@
 
 namespace Preflop {
 class GameBase {
+protected:
+  /// @brief acting player
+  int currentPlayer = 0;
  public:
+
+  [[nodiscard]] int getCurrentPlayer() const { return currentPlayer; }
   /// constants
   static constexpr uint8_t PlayerNum = 2;
   static constexpr uint8_t DeckCardNum = 52;
@@ -44,6 +49,8 @@ class GameBase {
     Reraise20,
     AllIn
   };
+
+
 };
 } // Preflop
 #endif //INC_2PLAYERCFR_PREFLOP_HPP

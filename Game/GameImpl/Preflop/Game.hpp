@@ -91,9 +91,6 @@ class Game : public GameBase {
 
   PreCards cards;
 
-  /// @brief acting player
-  int currentPlayer = 0;
-
   float averageUtility{};
 
   float averageUtilitySum{};
