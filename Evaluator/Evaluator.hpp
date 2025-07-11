@@ -12,8 +12,8 @@ class Evaluator
 {
 public:
     Evaluator();
-    void Evaluate(const CFR::NodeStorage& strat1, const CFR::NodeStorage& strat2, uint32_t iterations);
-    void playGame(GameType& game, const CFR::NodeStorage& strat1, const CFR::NodeStorage& strat2);
+    void Evaluate(CFR::NodeStorage& strat1, CFR::NodeStorage& strat2, uint32_t iterations);
+    void playGame(GameType& game, CFR::NodeStorage& strat1, CFR::NodeStorage& strat2);
 private:
     std::mt19937 generator;
     std::array<float,2> utilitySums{};
@@ -26,20 +26,24 @@ Evaluator<GameType>::Evaluator() : generator(std::random_device()())
 
 
 template <typename GameType>
-void Evaluator<GameType>::Evaluate(const CFR::NodeStorage& strat1, const CFR::NodeStorage& strat2, uint32_t iterations)
+void Evaluator<GameType>::Evaluate(CFR::NodeStorage& strat1, CFR::NodeStorage& strat2, uint32_t iterations)
 {
     for (uint32_t i = 0; i < iterations; ++i)
     {
-        playGame(strat1,strat2);
+        generator();
+        GameType game(generator);
+        playGame(game,strat1,strat2);
     }
+    std::cout << "Strat 1: "<< utilitySums[0] << " Strat 2: "<< utilitySums[1] << std::endl;
 }
 
 template <typename GameType>
-void Evaluator<GameType>::playGame(GameType& game,const CFR::NodeStorage& strat1, const CFR::NodeStorage& strat2)
+void Evaluator<GameType>::playGame(GameType& game,CFR::NodeStorage& strat1,CFR::NodeStorage& strat2)
 {
     if ("chance" == game.getType())
     {
-        playGame(game.transition());
+        game.transition(GameType::Action::None);
+        playGame(game,strat1,strat2);
         return;
     }
     if ("terminal" == game.getType())
@@ -51,15 +55,20 @@ void Evaluator<GameType>::playGame(GameType& game,const CFR::NodeStorage& strat1
     if (game.getCurrentPlayer() == 0)
     {
         auto node = strat1.getNode(game.getInfoSet(0));
+        std::vector<float> currentStrategy;
         if (node == nullptr)
         {
-            node = std::make_shared<CFR::Node>(game.getActions());
+            node = std::make_shared<CFR::Node>(game.getActions().size());
+            currentStrategy = node->getStrategy();
+        } else
+        {
+            currentStrategy = node->getAverageStrategy();
         }
-        auto currentStrategy = node->getAverageStrategy();
 
         std::discrete_distribution<int> actionSpread(currentStrategy.begin(),currentStrategy.end());
         int actionChoice = actionSpread(generator);
-        playGame(game.transition(game.getAvailActions()[actionChoice]));
+        game.transition(game.getActions()[actionChoice]);
+        playGame(game,strat1,strat2);
         return;
     }
 
@@ -68,13 +77,13 @@ void Evaluator<GameType>::playGame(GameType& game,const CFR::NodeStorage& strat1
         auto node = strat2.getNode(game.getInfoSet(1));
         if (node == nullptr)
         {
-            node = std::make_shared<CFR::Node>(game.getActions());
+            node = std::make_shared<CFR::Node>(game.getActions().size());
         }
         auto currentStrategy = node->getAverageStrategy();
-
         std::discrete_distribution<int> actionSpread(currentStrategy.begin(),currentStrategy.end());
         int actionChoice = actionSpread(generator);
-        playGame(game.transition(game.getAvailActions()[actionChoice]));
+        game.transition(game.getActions()[actionChoice]);
+        playGame(game,strat1,strat2);
         return;
     }
 

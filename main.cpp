@@ -9,16 +9,16 @@ template<typename K, typename V> using MyMap = std::unordered_map<K, V>;
 template<typename T> using MyList = std::list<T>;
 
 int main() {
-    CFR::RegretMinimizer<Preflop::Game, CFR::HybridNodeStorage<CFR::LRUNodeCache<MyMap,LRUList>>> Minimize; //Rocksdb and lru cache
-    
-    //CFR::RegretMinimizer<Preflop::Game> Minimize; //Raw mem cache
-    // auto start = std::chrono::high_resolution_clock::now();
-    // Minimize.Train(1010000);
-    // auto end = std::chrono::high_resolution_clock::now();
+    // CFR::RegretMinimizer<Preflop::Game, CFR::HybridNodeStorage<CFR::LRUNodeCache<MyMap,LRUList>>> Minimize; //Rocksdb and lru cach
     //
-    // auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    // // CFR::RegretMinimizer<Preflop::Game> Minimize; //Raw mem cache
+    //  auto start = std::chrono::high_resolution_clock::now();
+    //  Minimize.Train(1010000);
+    //  auto end = std::chrono::high_resolution_clock::now();
     //
-    // std::cout << "\nTraining completed in " << duration.count() << " ms\n";
+    //  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    //
+    //  std::cout << "\nTraining completed in " << duration.count() << " ms\n";
     RandomStrategy<Preflop::Game> randomStrategy{};
     CFR::HybridNodeStorage<CFR::LRUNodeCache<MyMap,LRUList>> trainedStrategy{};
 

@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 template <typename GameType>
-class RandomStrategy : CFR::NodeStorage
+class RandomStrategy : public CFR::NodeStorage
 {
 public:
     std::shared_ptr<CFR::Node> getNode(const std::string& infoSet) override
