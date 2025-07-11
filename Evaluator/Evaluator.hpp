@@ -48,7 +48,7 @@ void Evaluator<GameType>::playGame(GameType& game,const CFR::NodeStorage& strat1
     }
     if (game.getCurrentPlayer() == 0)
     {
-        auto currentStrategy = strat1.getNode(game.getInfoSet(0));
+        auto currentStrategy = strat1.getNode(game.getInfoSet(0))->getAverageStrategy();
 
         std::discrete_distribution<int> actionSpread(currentStrategy.begin(),currentStrategy.end());
         int actionChoice = actionSpread(generator);
