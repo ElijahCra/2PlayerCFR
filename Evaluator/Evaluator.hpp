@@ -34,7 +34,7 @@ void Evaluator<GameType>::Evaluate(CFR::NodeStorage& strat1, CFR::NodeStorage& s
         GameType game(generator);
         playGame(game,strat1,strat2);
     }
-    std::cout << "Strat 1: "<< utilitySums[0] << " Strat 2: "<< utilitySums[1] << std::endl;
+    std::cout << "Strat 1: "<< utilitySums[0]/1000 << "bb Strat 2: "<< utilitySums[1]/1000 <<"bb" <<std::endl;
 }
 
 template <typename GameType>

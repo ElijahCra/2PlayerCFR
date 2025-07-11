@@ -23,5 +23,5 @@ int main() {
     CFR::HybridNodeStorage<CFR::LRUNodeCache<MyMap,LRUList>> trainedStrategy{};
 
     Evaluator<Preflop::Game> evaluator;
-    evaluator.Evaluate(randomStrategy,trainedStrategy,1000);
+    evaluator.Evaluate(trainedStrategy,randomStrategy,10000);
 }
