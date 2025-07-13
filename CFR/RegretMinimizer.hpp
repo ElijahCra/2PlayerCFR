@@ -5,12 +5,9 @@
 #ifndef INC_2PLAYERCFR_REGRETMINIMIZER_HPP
 #define INC_2PLAYERCFR_REGRETMINIMIZER_HPP
 
-#include <iostream>
 #include <thread>
 #include <random>
 #include "../Game/GameImpl/Preflop/Game.hpp"
-#include "../Game/GameImpl/Texas/Game.hpp"
-#include <unordered_map>
 #include <memory>
 #include "Node.hpp"
 #include "../Game/Utility/Utility.hpp"
