@@ -240,8 +240,6 @@ auto RegretMinimizer<GameType, StorageType>::getNodeInformation(const std::strin
     res.push_back(node->getStrategy());
     node->calcAverageStrategy();
     res.push_back(node->getAverageStrategy());
-  } else {
-    throw std::runtime_error("getNodeInformation Returned no node");
   }
   return res;
 }
