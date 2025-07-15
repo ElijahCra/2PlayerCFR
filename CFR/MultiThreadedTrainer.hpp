@@ -81,7 +81,7 @@ public:
 
         // Monitor progress and call callback
         auto lastUpdate = std::chrono::steady_clock::now();
-        while (m_totalIterationsCompleted < totalIterations) {
+        while (m_totalIterationsCompleted < totalIterations && !m_shouldStop) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
             auto now = std::chrono::steady_clock::now();
@@ -118,6 +118,10 @@ public:
     uint32_t getCompletedIterations() const {
         return m_totalIterationsCompleted.load();
     }
+
+
+  /// @brief Set cancellation flag to interrupt training
+  void setCancelled(bool cancelled) { m_shouldStop = cancelled; }
 
 private:
     void workerLoop(uint32_t threadId) {
