@@ -6,6 +6,7 @@
 #define MULTITHREADEDTRAINER_HPP
 #include <memory>
 #include <random>
+#include <iostream>
 
 #include "RegretMinimizer.hpp"
 #include "../Storage/LRUList.hpp"

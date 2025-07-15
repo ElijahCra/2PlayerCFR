@@ -16,7 +16,7 @@ int main() {
     CFR::MultiThreadedTrainer<Preflop::Game, CFR::HybridNodeStorage<CFR::ShardedLRUCache<MyMap,LRUList>>> Minimize; //multi threaded Rocksdb and sharded lru cach
     //CFR::RegretMinimizer<Preflop::Game> Minimize; //Raw mem cache
     auto start = std::chrono::high_resolution_clock::now();
-    Minimize.Train(1100100);
+    Minimize.Train(10100100);
     auto end = std::chrono::high_resolution_clock::now();
 
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
