@@ -44,6 +44,24 @@ public:
         m_threads.clear();
         m_regretMinimizers.clear();
     }
+
+    auto getNodeInformation(const std::string& index) noexcept -> std::vector<std::vector<float>>
+    {
+        std::vector<std::vector<float>> res;
+        auto node = m_storage->getNode(index);
+        if (node)
+        {
+            res.push_back(node->getRegretSum());
+            res.push_back(node->getStrategy());
+            node->calcAverageStrategy();
+            res.push_back(node->getAverageStrategy());
+        }
+        else
+        {
+            throw std::runtime_error("getNodeInformation Returned no node");
+        }
+        return res;
+    }
 private:
     std::shared_ptr<StorageType> m_storage;
     std::vector<std::thread> m_threads;
