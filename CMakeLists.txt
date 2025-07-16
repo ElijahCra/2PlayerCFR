@@ -9,6 +9,7 @@ add_subdirectory(Game)
 add_subdirectory(Test)
 add_subdirectory(Storage)
 add_subdirectory(Evaluator)
+add_subdirectory(DeepCFR)
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 add_executable(2PlayerCFR main.cpp)
