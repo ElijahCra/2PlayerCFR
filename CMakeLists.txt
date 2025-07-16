@@ -14,7 +14,7 @@ add_subdirectory(DeepCFR)
 add_compile_options(-Wall -Wextra -Wpedantic)
 add_executable(2PlayerCFR main.cpp)
 
-target_link_libraries(2PlayerCFR PUBLIC CFR Texas Preflop Evaluator)
+target_link_libraries(2PlayerCFR PUBLIC CFR Texas Preflop Evaluator DeepCFR)
 
 message(STATUS "Current binary directory: ${CMAKE_BINARY_DIR}")
 message(STATUS "Current source directory: ${CMAKE_CURRENT_SOURCE_DIR}")

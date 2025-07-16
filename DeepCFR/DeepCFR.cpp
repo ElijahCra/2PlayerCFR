@@ -30,7 +30,10 @@ void DeepRegretMinimizer<GameType>::Train(uint32_t iterations) {
         if (i % 10 == 0) {
             update_networks();
         }
-        std::cout << "Iteration " << i << " completed." << std::endl;
+        if (i % 100 == 0)
+        {
+            std::cout << "Iteration " << i << " completed." << std::endl;
+        }
     }
 }
 

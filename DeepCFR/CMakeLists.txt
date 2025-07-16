@@ -1,4 +1,4 @@
-add_library(DeepCFR INTERFACE
+add_library(DeepCFR STATIC
         DeepCFR.cpp
         Net.cpp
 )
@@ -12,5 +12,5 @@ set(nvtx3_dir "/usr/lib/cmake/nvtx3/")
 find_package(CUDAToolkit REQUIRED)
 find_package(Torch REQUIRED PATHS "/opt/libtorch/share/cmake")
 
-target_link_libraries(DeepCFR INTERFACE Utility ${TORCH_LIBRARIES})
-target_include_directories(DeepCFR INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} ${TORCH_INCLUDE_DIRS})
+target_link_libraries(DeepCFR PUBLIC Utility Preflop Texas ${TORCH_LIBRARIES})
+target_include_directories(DeepCFR PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${TORCH_INCLUDE_DIRS})

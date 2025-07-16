@@ -12,6 +12,9 @@
 
 #include "Net.hpp"
 #include "torch/torch.h"
+#include "../Game/GameImpl/Preflop/Game.hpp"
+#include "../Game/GameImpl/Texas/Game.hpp"
+#include "../Game/Utility/Utility.hpp"
 
 /// @struct TrainingSample
 /// @brief Stores a single experience tuple for training the neural networks.
