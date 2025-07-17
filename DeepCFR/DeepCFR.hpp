@@ -46,8 +46,8 @@ private:
     GameType m_game;
 
     // Neural Networks for advantage (regret) and strategy
-    std::shared_ptr<Net> m_adv_network;
-    std::shared_ptr<Net> m_strategy_network;
+    std::shared_ptr<DeepCFRModelImpl> m_adv_network;
+    std::shared_ptr<DeepCFRModelImpl> m_strategy_network;
 
     // Optimizers
     std::unique_ptr<torch::optim::Adam> m_adv_optimizer{};

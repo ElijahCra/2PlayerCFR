@@ -9,8 +9,8 @@ template<typename GameType>
 DeepRegretMinimizer<GameType>::DeepRegretMinimizer(uint32_t seed)
     : m_rng(seed),
       m_game(m_rng),
-      m_adv_network(std::make_shared<Net>(InfoSetConverter::INPUT_SIZE, InfoSetConverter::NUM_ACTION_TYPES)),
-      m_strategy_network(std::make_shared<Net>(InfoSetConverter::INPUT_SIZE, InfoSetConverter::NUM_ACTION_TYPES)),
+      m_adv_network(std::make_shared<DeepCFRModelImpl>(InfoSetConverter::INPUT_SIZE, InfoSetConverter::NUM_ACTION_TYPES)),
+      m_strategy_network(std::make_shared<DeepCFRModelImpl>(InfoSetConverter::INPUT_SIZE, InfoSetConverter::NUM_ACTION_TYPES)),
       m_adv_optimizer(std::make_unique<torch::optim::Adam>(m_adv_network->parameters(), LEARNING_RATE)),
       m_strategy_optimizer(std::make_unique<torch::optim::Adam>(m_strategy_network->parameters(), LEARNING_RATE))
 {
