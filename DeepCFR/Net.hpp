@@ -61,6 +61,7 @@ class DeepCFRModelImpl : public torch::nn::Module {
 public:
     DeepCFRModelImpl(int64_t n_card_types, int64_t n_bets, int64_t n_actions, int64_t dim = 256) {
         // Initialize card embeddings
+        card_embeddings = torch::nn::ModuleList();
         for (int64_t i = 0; i < n_card_types; ++i) {
             card_embeddings->push_back(CardEmbedding(dim));
         }
@@ -90,7 +91,7 @@ public:
 
         // Embed hole, flop, and optionally turn and river
         for (size_t i = 0; i < cards.size(); ++i) {
-            auto emb = card_embeddings[i]->as<CardEmbedding>()->forward(cards[i]);
+            auto emb = card_embeddings[i]->as<CardEmbeddingImpl>()->forward(cards[i]);
             card_embs_list.push_back(emb);
         }
 
@@ -104,7 +105,7 @@ public:
 
         // 2. Bet branch
         auto bet_size = bets.clamp(0, 1e6);
-        auto bet_occurred = bets.ge(0).to(torch::kFloat32);
+        auto bet_occurred = bets.ge(0);
 
         // Concatenate bet features
         auto bet_feats = torch::cat({bet_size, bet_occurred}, 1);
@@ -124,6 +125,14 @@ public:
 
         // Return action logits
         return action_head->forward(z);
+    }
+
+    /// @brief Clips the gradients of the model's parameters.
+    void clip_gradients(double clip_value) {
+        auto params = this->parameters();
+        if (!params.empty()) {
+            torch::nn::utils::clip_grad_norm_(params, clip_value);
+        }
     }
 
 private:
