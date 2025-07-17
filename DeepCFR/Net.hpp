@@ -37,7 +37,8 @@ public:
 
         // Get embeddings
         auto card_embs = card->forward(x);
-        auto rank_embs = rank->forward(x / 4);  // Integer division
+        auto rank_embs = rank->forward(torch::div(x, 4, "floor").to(torch::kLong));
+
         auto suit_embs = suit->forward(x % 4);
 
         // Sum embeddings
@@ -85,13 +86,15 @@ public:
         action_head = register_module("action_head", torch::nn::Linear(dim, n_actions));
     }
 
-    torch::Tensor forward(std::vector<torch::Tensor> cards, torch::Tensor bets) {
+    torch::Tensor forward(const std::vector<torch::Tensor>& cards, torch::Tensor bets) {
+        std::cout << "card list size: "<<cards.size() << " cards: " << cards[0].sizes() << std::endl;
+        std::cout << "bets: " <<bets.sizes() << std::endl;
         // 1. Card branch
         std::vector<torch::Tensor> card_embs_list;
 
         // Embed hole, flop, and optionally turn and river
         for (size_t i = 0; i < cards.size(); ++i) {
-            auto emb = card_embeddings[i]->as<CardEmbeddingImpl>()->forward(cards[i]);
+            auto emb = card_embeddings[i]->as<CardEmbedding>()->forward(cards[i]);
             card_embs_list.push_back(emb);
         }
 
@@ -108,7 +111,7 @@ public:
         auto bet_occurred = bets.ge(0);
 
         // Concatenate bet features
-        auto bet_feats = torch::cat({bet_size, bet_occurred}, 1);
+        auto bet_feats = torch::cat({bet_size, bet_occurred}, 1).to(torch::kFloat32);
 
         // Bet branch forward pass with residual connection
         auto y = torch::relu(bet1->forward(bet_feats));
@@ -120,8 +123,12 @@ public:
         z = torch::relu(comb2->forward(z) + z);  // Residual connection
         z = torch::relu(comb3->forward(z) + z);  // Residual connection
 
+
+        std::cout << z.sizes() << std::endl;
         // Normalize (z - mean) / std
         z = normalize(z);
+
+
 
         // Return action logits
         return action_head->forward(z);

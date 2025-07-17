@@ -17,5 +17,5 @@ endif()
 
 
 
-target_link_libraries(DeepCFR PUBLIC Utility  ${TORCH_LIBRARIES})
+target_link_libraries(DeepCFR PUBLIC Utility Texas Preflop ${TORCH_LIBRARIES})
 target_include_directories(DeepCFR PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${TORCH_INCLUDE_DIRS})
