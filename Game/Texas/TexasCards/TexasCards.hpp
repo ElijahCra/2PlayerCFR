@@ -5,7 +5,7 @@
 #ifndef TEXASCARDS_HPP
 #define TEXASCARDS_HPP
 
-#include "../../../Utility/HandAbstraction/hand_index.h"
+#include "../../Utility/HandAbstraction/hand_index.h"
 #include <variant>
 #include <vector>
 #include <array>

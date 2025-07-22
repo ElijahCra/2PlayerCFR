@@ -22,7 +22,7 @@ DeepRegretMinimizer<GameType>::DeepRegretMinimizer(uint32_t seed)
     {
         m_advantage_networks[i] = DeepCFRModel(GameType::NUM_CARD_TYPES, GameType::NUM_BET_FEATURES,
                                                GameType::MAX_ACTIONS);
-        m_advantage_optimizers.push_back (torch::optim::Adam(m_advantage_networks[i]->parameters(), LEARNING_RATE));
+        m_advantage_optimizers.emplace_back(m_advantage_networks[i]->parameters(), LEARNING_RATE);
 
         // Reserve memory for replay buffers
         m_adv_memories[i].reserve(MEMORY_SIZE);
@@ -76,12 +76,12 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
     }
 
     int currentPlayer = game.getCurrentPlayer();
-    auto infoset = game.getInfoSet(currentPlayer);
+    //auto infoset = game.getInfoSet(currentPlayer);
     auto legal_actions = game.getActions();
 
     // Get current strategy from advantage network
     torch::NoGradGuard no_grad;
-    auto cards = game.getCardTensors();
+    auto cards = game.getCardTensors(game.getCurrentPlayer(),game.getCurrentRound());
     auto bets = game.getBetTensor();
 
     auto advantages_tensor = m_advantage_networks[currentPlayer]->forward(cards, bets);

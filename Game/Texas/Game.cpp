@@ -4,8 +4,6 @@
 
 #include "GameBase.hpp"
 #include "ConcreteGameStates.hpp"
-#include "Game.hpp"
-
 #include <utility>
 #include <unordered_map>
 #include <stdexcept>
@@ -14,8 +12,10 @@
 #include <algorithm>
 #include <format>
 
-namespace Preflop {
-Game::Game(std::mt19937 &engine) : RNG(engine) {
+namespace Texas {
+Game::Game(std::mt19937 &engine) : RNG(engine)
+{
+
   std::array<uint8_t,DeckCardNum> temp = baseDeck;
   std::ranges::shuffle(temp.begin(),temp.end(),RNG);
   std::copy(temp.begin(),temp.begin()+2*PlayerNum+5, playableCards.begin());
@@ -71,6 +71,27 @@ float Game::getUtility(int payoffPlayer) const {
   }
 }
 
+void Game::initCardTensors(std::span<uint8_t, 9> cards)
+{
+    m_cardTensors[0].clear();
+    m_cardTensors[1].clear();
+    for (int p=0; p<2;++p) { //2 players
+        m_cardTensors[p].push_back(torch::from_blob(cards.data()+(2*p),2)); // each player's hole cards
+        m_cardTensors[p].push_back(torch::from_blob(cards.data()+4,3)); // flop
+        m_cardTensors[p].push_back(torch::from_blob(cards.data()+7,1)); // turn
+        m_cardTensors[p].push_back(torch::from_blob(cards.data()+8,1)); // river
+    }
+}
+
+std::vector<torch::Tensor> Game::getCardTensors(int player, int round) const noexcept
+{
+    std::vector<torch::Tensor> cardTensors;
+    for (int i=0; i < round+1; ++i) {
+        cardTensors.push_back(m_cardTensors[player][i]);
+    }
+    return std::move(cardTensors);
+}
+
 void Game::updateInfoSet(Action action) {
   for (int i = 0; i < PlayerNum; ++i) {
     infoSet[i].append(actionToStr(action));
@@ -84,7 +105,7 @@ void Game::updateInfoSet() {
     while (i < infoSet[j].length() && std::isdigit(infoSet[j][i])) {
       ++i;
     }
-    infoSet[j] = std::format("{}{}", cards.playerIndices[currentRound + (2 * j)], infoSet[j].substr(i));
+    infoSet[j] = infoSet[j] = std::format("{}{}", cards.playerIndices[currentRound + (4 * j)], infoSet[j].substr(i));
   }
 }
 
@@ -94,7 +115,7 @@ std::string Game::getInfoSet(int player) const noexcept {
 
 
 std::string Game::actionToStr(Action action) {
-  using enum Preflop::GameBase::Action;
+  using enum Texas::GameBase::Action;
   static std::unordered_map<Action, std::string> converter = {
       {Check, "Ch"},
       {Fold, "Fo"},
@@ -114,7 +135,7 @@ std::string Game::actionToStr(Action action) {
   return converter[action];
 }
 
-void Game::updateCurrentPlayer() {
+void Game::updatePlayer() {
   currentPlayer = 1 - currentPlayer;
 }
 
@@ -137,7 +158,7 @@ void Game::reInitialize() {
 
   std::array<uint8_t,DeckCardNum> temp = baseDeck;
   std::ranges::shuffle(temp.begin(),temp.end(),RNG);
-  std::copy(temp.begin(),temp.begin()+2*PlayerNum+5, playableCardsBegin());
+  std::copy(temp.begin(),temp.begin()+2*PlayerNum+5, playableCards.begin());
 
   cards.initIndices(std::span<uint8_t, 9>(temp.begin(), 9));
 
@@ -148,6 +169,10 @@ void Game::reInitialize() {
   currentState->enter(*this, Action::None);
 }
 
+float Game::getAverageUtility() const noexcept {
+  return averageUtility;
+}
+
 void Game::updateAverageUtilitySum(float value) {
   averageUtilitySum += value;
 }
@@ -156,17 +181,7 @@ void Game::updateAverageUtility(int i) {
   averageUtility = averageUtilitySum / ((float)i);
 }
 
-float Game::getAverageUtility() const noexcept {
-  return averageUtility;
-}
-
 int Game::getCurrentPlayer() const noexcept{
   return currentPlayer;
-}
-int Game::getPlayableCards(int index) const noexcept {
-  return playableCards[index];
-}
-std::array<unsigned char, 9>::iterator Game::playableCardsBegin() {
-  return playableCards.begin();
 }
 }

@@ -7,7 +7,7 @@
 
 #include <thread>
 #include <random>
-#include "../Game/GameImpl/Preflop/Game.hpp"
+#include "../Game/Preflop/Game.hpp"
 #include <memory>
 #include "Node.hpp"
 #include "../Game/Utility/Utility.hpp"

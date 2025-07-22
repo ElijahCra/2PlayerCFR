@@ -8,16 +8,12 @@
 #include <memory>
 #include <random>
 #include <regex>
-#include <string>
 #include <vector>
-#include <unordered_map>
-#include <tuple>
-#include <deque>
 
 #include "Net.hpp"
 #include "torch/torch.h"
-#include "../Game/GameImpl/Preflop/Game.hpp"
-#include "../Game/GameImpl/Texas/Game.hpp"
+#include "../Game/Preflop/Game.hpp"
+#include "../Game/Texas/Game.hpp"
 #include "../Game/Utility/Utility.hpp"
 
 
@@ -26,8 +22,8 @@ struct InfoSet
     std::vector<torch::Tensor> cardTensors;
     torch::Tensor betTensor;
 
-    std::vector<torch::Tensor> getCardTensors() const { return cardTensors; }
-    torch::Tensor getBetTensor() const { return betTensor; }
+    [[nodiscard]] std::vector<torch::Tensor> getCardTensors() const { return cardTensors; }
+    [[nodiscard]] torch::Tensor getBetTensor() const { return betTensor; }
 };
 
 // For advantage Memory

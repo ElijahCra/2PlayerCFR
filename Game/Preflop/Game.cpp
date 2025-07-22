@@ -4,6 +4,8 @@
 
 #include "GameBase.hpp"
 #include "ConcreteGameStates.hpp"
+#include "Game.hpp"
+
 #include <utility>
 #include <unordered_map>
 #include <stdexcept>
@@ -12,10 +14,8 @@
 #include <algorithm>
 #include <format>
 
-namespace Texas {
-Game::Game(std::mt19937 &engine) : RNG(engine)
-{
-
+namespace Preflop {
+Game::Game(std::mt19937 &engine) : RNG(engine) {
   std::array<uint8_t,DeckCardNum> temp = baseDeck;
   std::ranges::shuffle(temp.begin(),temp.end(),RNG);
   std::copy(temp.begin(),temp.begin()+2*PlayerNum+5, playableCards.begin());
@@ -23,6 +23,7 @@ Game::Game(std::mt19937 &engine) : RNG(engine)
   addMoney();
 
   cards.initIndices(std::span<uint8_t, 9>(temp.begin(), 9));
+  initCardTensors(std::span<uint8_t, 9>(temp.begin(), 9));
 
   currentState = &ChanceState::getInstance();
   currentState->enter(*this, Action::None);
@@ -84,7 +85,7 @@ void Game::updateInfoSet() {
     while (i < infoSet[j].length() && std::isdigit(infoSet[j][i])) {
       ++i;
     }
-    infoSet[j] = infoSet[j] = std::format("{}{}", cards.playerIndices[currentRound + (4 * j)], infoSet[j].substr(i));
+    infoSet[j] = std::format("{}{}", cards.playerIndices[currentRound + (2 * j)], infoSet[j].substr(i));
   }
 }
 
@@ -94,7 +95,7 @@ std::string Game::getInfoSet(int player) const noexcept {
 
 
 std::string Game::actionToStr(Action action) {
-  using enum Texas::GameBase::Action;
+  using enum Preflop::GameBase::Action;
   static std::unordered_map<Action, std::string> converter = {
       {Check, "Ch"},
       {Fold, "Fo"},
@@ -114,7 +115,7 @@ std::string Game::actionToStr(Action action) {
   return converter[action];
 }
 
-void Game::updatePlayer() {
+void Game::updateCurrentPlayer() {
   currentPlayer = 1 - currentPlayer;
 }
 
@@ -124,6 +125,33 @@ void Game::setType(std::string type1) {
 
 std::string Game::getType() const noexcept{
   return type;
+}
+
+void Game::initCardTensors(std::span<uint8_t, 9> cards)
+{
+    m_cardTensors[0].clear();
+    m_cardTensors[1].clear();
+    for (int p=0; p<2;++p) { //2 players
+        m_cardTensors[p].push_back(torch::from_blob(cards.data()+(2*p),2)); // each player's hole cards
+        m_cardTensors[p].push_back(torch::from_blob(cards.data()+4,3)); // flop
+        m_cardTensors[p].push_back(torch::from_blob(cards.data()+7,1)); // turn
+        m_cardTensors[p].push_back(torch::from_blob(cards.data()+8,1)); // river
+    }
+    std::cout << m_cardTensors[0].size() << std::endl;
+    std::cout << m_cardTensors[0][0].sizes() << std::endl;
+    std::cout << m_cardTensors[0][1].sizes() << std::endl;
+    std::cout << m_cardTensors[0][2].sizes() << std::endl;
+    std::cout << m_cardTensors[0][3].sizes() << std::endl;
+    std::cout <<m_cardTensors[0][0] << std::endl;
+}
+
+std::vector<torch::Tensor> Game::getCardTensors(int player, int round) const noexcept
+{
+    std::vector<torch::Tensor> cardTensors;
+    for (int i=0; i < round+1; ++i) {
+        cardTensors.push_back(m_cardTensors[player][i]);
+    }
+    return std::move(cardTensors);
 }
 
 void Game::reInitialize() {
@@ -137,19 +165,16 @@ void Game::reInitialize() {
 
   std::array<uint8_t,DeckCardNum> temp = baseDeck;
   std::ranges::shuffle(temp.begin(),temp.end(),RNG);
-  std::copy(temp.begin(),temp.begin()+2*PlayerNum+5, playableCards.begin());
+  std::copy(temp.begin(),temp.begin()+2*PlayerNum+5, playableCardsBegin());
 
   cards.initIndices(std::span<uint8_t, 9>(temp.begin(), 9));
+  initCardTensors(std::span<uint8_t, 9>(temp.begin(), 9));
 
   winner = -1;
   type = "chance";
   currentRound = 0;
   currentState = &ChanceState::getInstance();
   currentState->enter(*this, Action::None);
-}
-
-float Game::getAverageUtility() const noexcept {
-  return averageUtility;
 }
 
 void Game::updateAverageUtilitySum(float value) {
@@ -160,7 +185,17 @@ void Game::updateAverageUtility(int i) {
   averageUtility = averageUtilitySum / ((float)i);
 }
 
+float Game::getAverageUtility() const noexcept {
+  return averageUtility;
+}
+
 int Game::getCurrentPlayer() const noexcept{
   return currentPlayer;
+}
+int Game::getPlayableCards(int index) const noexcept {
+  return playableCards[index];
+}
+std::array<unsigned char, 9>::iterator Game::playableCardsBegin() {
+  return playableCards.begin();
 }
 }

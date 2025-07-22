@@ -29,7 +29,7 @@ class Game : public GameBase {
   ///Modifier
   void transition(Action action);
   void reInitialize();
-
+  void initCardTensors(std::span<uint8_t, 9> cards);
 
 
   /// Getters
@@ -40,8 +40,9 @@ class Game : public GameBase {
   [[nodiscard]] std::string getType() const noexcept;
   [[nodiscard]] int getCurrentPlayer() const noexcept;
   [[nodiscard]] float getAverageUtility() const noexcept;
-    [[nodiscard]] std::vector<torch::Tensor> getCardTensors() const noexcept {return cardTensors;}
-    [[nodiscard]] torch::Tensor getBetTensor() const noexcept {return betTensor;}
+  [[nodiscard]] std::vector<torch::Tensor> getCardTensors(int player, int round) const noexcept;
+  [[nodiscard]] torch::Tensor getBetTensor() const noexcept {return betTensor;}
+  [[nodiscard]] int getCurrentRound() const noexcept {return currentRound;}
 
   ///@brief deck of cards
   std::array<uint8_t, 2*PlayerNum+5> playableCards{};
@@ -86,8 +87,6 @@ class Game : public GameBase {
   }
  private:
 
-  std::vector<torch::Tensor> cardTensors;
-  torch::Tensor betTensor;
   std::string type = "chance";
 
   Action prevAction = Action::None;
@@ -125,6 +124,9 @@ class Game : public GameBase {
   ///@brief rng engine, mersienne twister
   std::mt19937 &RNG;
 
+
+  std::array<std::vector<torch::Tensor>,2> m_cardTensors;
+  torch::Tensor betTensor;
 
 };
 }

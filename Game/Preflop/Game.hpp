@@ -34,6 +34,7 @@ namespace Preflop
     void reInitialize();
     void updateAverageUtilitySum(float value);
     void updateAverageUtility(int i);
+      void initCardTensors(std::span<uint8_t, 9> cards);
 
 
     /// Getters
@@ -46,8 +47,9 @@ namespace Preflop
     [[nodiscard]] float getAverageUtility() const noexcept;
     [[nodiscard]] int getPlayableCards(int index) const noexcept;
     [[nodiscard]] std::array<unsigned char, 9>::iterator playableCardsBegin();
-    [[nodiscard]] std::vector<torch::Tensor> getCardTensors() const noexcept {return cardTensors;}
+    [[nodiscard]] std::vector<torch::Tensor> getCardTensors(int player, int round) const noexcept;
     [[nodiscard]] torch::Tensor getBetTensor() const noexcept {return betTensor;}
+      [[nodiscard]] int getCurrentRound() const noexcept {return currentRound;}
 
     static constexpr int NUM_CARD_TYPES = 4;
     static constexpr int NUM_BET_FEATURES = 2;
@@ -104,7 +106,7 @@ namespace Preflop
 
   float averageUtilitySum{};
 
-  std::vector<torch::Tensor> cardTensors;
+  std::array<std::vector<torch::Tensor>,2> m_cardTensors;
   torch::Tensor betTensor;
 
   std::string type = "chance";
