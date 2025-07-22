@@ -132,10 +132,10 @@ void Game::initCardTensors(std::span<uint8_t, 9> cards)
     m_cardTensors[0].clear();
     m_cardTensors[1].clear();
     for (int p=0; p<2;++p) { //2 players
-        m_cardTensors[p].push_back(torch::from_blob(cards.data()+(2*p),2)); // each player's hole cards
-        m_cardTensors[p].push_back(torch::from_blob(cards.data()+4,3)); // flop
-        m_cardTensors[p].push_back(torch::from_blob(cards.data()+7,1)); // turn
-        m_cardTensors[p].push_back(torch::from_blob(cards.data()+8,1)); // river
+        m_cardTensors[p].push_back(torch::from_blob(cards.data()+(2*p),{1,2}, torch::kUInt8).to(torch::kInt)); // each player's hole cards
+        m_cardTensors[p].push_back(torch::from_blob(cards.data()+4,{1,3}, torch::kUInt8).to(torch::kInt)); // flop
+        m_cardTensors[p].push_back(torch::from_blob(cards.data()+7,{1,1}, torch::kUInt8).to(torch::kInt)); // turn
+        m_cardTensors[p].push_back(torch::from_blob(cards.data()+8,{1,1}, torch::kUInt8).to(torch::kInt)); // river
     }
     std::cout << m_cardTensors[0].size() << std::endl;
     std::cout << m_cardTensors[0][0].sizes() << std::endl;
@@ -149,7 +149,20 @@ std::vector<torch::Tensor> Game::getCardTensors(int player, int round) const noe
 {
     std::vector<torch::Tensor> cardTensors;
     for (int i=0; i < round+1; ++i) {
-        cardTensors.push_back(m_cardTensors[player][i]);
+        cardTensors.push_back(m_cardTensors[player][i].clone());
+    }
+    for (int i = round; i<5; ++i)
+    {
+      if (i==1)
+      {
+        cardTensors.push_back(torch::zeros({1,3}).to(torch::kInt));
+      } else if (i ==2)
+      {
+        cardTensors.push_back(torch::zeros({1,1}).to(torch::kInt));
+      } else if (i ==3)
+      {
+        cardTensors.push_back(torch::zeros({1,1}).to(torch::kInt));
+      }
     }
     return std::move(cardTensors);
 }
