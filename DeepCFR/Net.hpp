@@ -60,6 +60,8 @@ TORCH_MODULE(CardEmbedding);
 // Deep CFR Model
 class DeepCFRModelImpl : public torch::nn::Module {
 public:
+    DeepCFRModelImpl() = default;
+    
     DeepCFRModelImpl(int64_t n_card_types, int64_t n_bets, int64_t n_actions, int64_t dim = 256) {
         // Initialize card embeddings
         card_embeddings = torch::nn::ModuleList();

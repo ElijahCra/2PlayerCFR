@@ -10,6 +10,7 @@
 #include "GameBase.hpp"
 #include "GameState.hpp"
 #include "./TexasCards/TexasCards.hpp"
+#include "torch/torch.h"
 
 namespace Texas {
 class GameState;
@@ -39,9 +40,14 @@ class Game : public GameBase {
   [[nodiscard]] std::string getType() const noexcept;
   [[nodiscard]] int getCurrentPlayer() const noexcept;
   [[nodiscard]] float getAverageUtility() const noexcept;
+    [[nodiscard]] std::vector<torch::Tensor> getCardTensors() const noexcept {return cardTensors;}
+    [[nodiscard]] torch::Tensor getBetTensor() const noexcept {return betTensor;}
 
   ///@brief deck of cards
   std::array<uint8_t, 2*PlayerNum+5> playableCards{};
+    static constexpr int NUM_CARD_TYPES = 4;
+    static constexpr int NUM_BET_FEATURES = 2;
+    static constexpr int MAX_ACTIONS = 10;
  protected:
 
   /// Setters
@@ -79,6 +85,9 @@ class Game : public GameBase {
     }
   }
  private:
+
+  std::vector<torch::Tensor> cardTensors;
+  torch::Tensor betTensor;
   std::string type = "chance";
 
   Action prevAction = Action::None;

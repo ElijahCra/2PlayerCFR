@@ -12,6 +12,7 @@
 #include <vector>
 #include <unordered_map>
 #include <tuple>
+#include <deque>
 
 #include "Net.hpp"
 #include "torch/torch.h"
@@ -20,11 +21,42 @@
 #include "../Game/Utility/Utility.hpp"
 
 
+struct InfoSet
+{
+    std::vector<torch::Tensor> cardTensors;
+    torch::Tensor betTensor;
+
+    std::vector<torch::Tensor> getCardTensors() const { return cardTensors; }
+    torch::Tensor getBetTensor() const { return betTensor; }
+};
+
+// For advantage Memory
+struct TrainingSampleAdvantage {
+    InfoSet infoset;
+    int iteration;
+    std::vector<float> advantages;  // r_tilde(I, a) for each action
+    float weight;                   // iteration weight for Linear CFR
+};
+
+//For strategy memory
+struct TrainingSampleStrategy
+{
+    InfoSet infoset;
+    int iteration;
+    std::vector<float> strategy;    // sigma(I, a) for each action
+    float weight;                   // iteration weight for Linear CFR
+};
+
 template<typename GameType>
 class DeepRegretMinimizer {
 public:
     /// @brief Constructor initializes networks, optimizers, and the game engine.
     explicit DeepRegretMinimizer(uint32_t seed = std::random_device()());
+
+    ~DeepRegretMinimizer()
+    {
+        torch::save(m_strategy_network,"stratmodel.pt");
+    }
 
     /// @brief Main training loop.
     /// @param iterations The total number of game traversals to perform.
@@ -35,23 +67,32 @@ private:
     float traverse_cfr(const GameType& game, int updatePlayer, int current_iter, float p0, float p1);
 
     /// @brief Trains the advantage network from scratch using data from its replay buffer.
-    void train_advantage_network();
+    void train_advantage_network(int player);
 
     /// @brief Trains the strategy network using data from its replay buffer.
     void train_strategy_network();
 
+    /// @brief Compute strategy using regret matching
+    std::vector<float> compute_strategy_from_advantages(const std::vector<float>& advantages);
+
+    /// @brief Add sample to memory with reservoir sampling
+    template<typename T>
+    void add_to_memory(std::vector<T>& memory, const T& sample, size_t max_size);
+
     std::mt19937 m_rng;
     GameType m_game;
 
-    // Neural Networks for advantage (regret) and strategy - 1 or two for each?
+    // Neural Networks for advantage (regret) and strategy
+    std::array<DeepCFRModel, 2> m_advantage_networks{nullptr, nullptr};
+    DeepCFRModel m_strategy_network{nullptr};
 
     // Optimizers
-
-
+    std::vector<torch::optim::Adam> m_advantage_optimizers{};
+    torch::optim::Adam m_strategy_optimizer;
 
     // Replay Buffers
-    std::array<std::vector<TrainingSample>,2> m_adv_memories;
-    std::array<std::vector<TrainingSample>,2> m_strategy_memories;
+    std::array<std::vector<TrainingSampleAdvantage>, 2> m_adv_memories;
+    std::vector<TrainingSampleStrategy> m_strategy_memory;
 
     // Training constants from the paper
     static constexpr size_t BATCH_SIZE = 10000;
@@ -59,8 +100,7 @@ private:
     static constexpr float LEARNING_RATE = 0.001f;
     static constexpr int SGD_ITERATIONS = 4000; // SGD iterations per training step
     static constexpr double GRADIENT_CLIP_NORM = 1.0;
+    static constexpr int K_TRAVERSALS = 10000; // Number of traversals per iteration
 };
-
-
 
 #endif //DEEPCFR_HPP

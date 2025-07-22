@@ -7,42 +7,51 @@
 
 #include <random>
 #include <array>
+#include "torch/torch.h"
+
 #include "GameBase.hpp"
 #include "GameState.hpp"
 #include "PreCards/PreCards.hpp"
 
-namespace Preflop {
-class GameState;
+namespace Preflop
+{
+  class GameState;
 
-class Game : public GameBase {
-  friend class ChanceState;
-  friend class ActionStateNoBet;
-  friend class ActionStateBet;
-  friend class TerminalState;
-  friend class PreflopTests_Game1_Test;
+  class Game : public GameBase
+  {
+    friend class ChanceState;
+    friend class ActionStateNoBet;
+    friend class ActionStateBet;
+    friend class TerminalState;
+    friend class PreflopTests_Game1_Test;
 
- public:
-  ///Constructor
-  explicit Game(std::mt19937 &engine); // try another rng? boost or xorshift
+  public:
+    ///Constructor
+    explicit Game(std::mt19937 &engine); // try another rng? boost or xorshift
+    
+    ///Modifier
+    void transition(Action action);
+    void reInitialize();
+    void updateAverageUtilitySum(float value);
+    void updateAverageUtility(int i);
 
-  ///Modifier
-  void transition(Action action);
-  void reInitialize();
-  void updateAverageUtilitySum(float value);
-  void updateAverageUtility(int i);
 
+    /// Getters
+    [[nodiscard]] inline GameState *getCurrentState() const noexcept{ return currentState; }
+    [[nodiscard]] std::vector<Action> getActions() const noexcept;
+    [[nodiscard]] float getUtility(int payoffPlayer) const;
+    [[nodiscard]] std::string getInfoSet(int player) const noexcept;
+    [[nodiscard]] std::string getType() const noexcept;
+    [[nodiscard]] int getCurrentPlayer() const noexcept;
+    [[nodiscard]] float getAverageUtility() const noexcept;
+    [[nodiscard]] int getPlayableCards(int index) const noexcept;
+    [[nodiscard]] std::array<unsigned char, 9>::iterator playableCardsBegin();
+    [[nodiscard]] std::vector<torch::Tensor> getCardTensors() const noexcept {return cardTensors;}
+    [[nodiscard]] torch::Tensor getBetTensor() const noexcept {return betTensor;}
 
-  /// Getters
-  [[nodiscard]] inline GameState *getCurrentState() const noexcept{ return currentState; }
-  [[nodiscard]] std::vector<Action> getActions() const noexcept;
-  [[nodiscard]] float getUtility(int payoffPlayer) const;
-  [[nodiscard]] std::string getInfoSet(int player) const noexcept;
-  [[nodiscard]] std::string getType() const noexcept;
-  [[nodiscard]] int getCurrentPlayer() const noexcept;
-  [[nodiscard]] float getAverageUtility() const noexcept;
-  [[nodiscard]] int getPlayableCards(int index) const noexcept;
-  [[nodiscard]] std::array<unsigned char, 9>::iterator playableCardsBegin();
-
+    static constexpr int NUM_CARD_TYPES = 4;
+    static constexpr int NUM_BET_FEATURES = 2;
+    static constexpr int MAX_ACTIONS = 10;
  protected:
   /// Setters
   void setType(std::string type);
@@ -94,6 +103,9 @@ class Game : public GameBase {
   float averageUtility{};
 
   float averageUtilitySum{};
+
+  std::vector<torch::Tensor> cardTensors;
+  torch::Tensor betTensor;
 
   std::string type = "chance";
   /// @brief the players private info set, contains their cards public cards and all actions played
