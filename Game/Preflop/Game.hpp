@@ -56,6 +56,26 @@ namespace Preflop
     static constexpr int MAX_ACTIONS = 10;
     static constexpr int positions_per_round = 6;
     static constexpr int total_bet_positions = positions_per_round * NUM_CARD_TYPES;
+
+
+
+   struct ActionMapping {
+    static constexpr int getActionIndex(Action action) {
+        switch(action) {
+            case Action::Fold: return 0;
+            case Action::Check: return 1;
+            case Action::Call: return 2;
+            case Action::Raise1: return 3;
+            case Action::Raise2: return 4;
+            case Action::Raise3: return 5;
+            case Action::Raise5: return 6;
+            case Action::Raise10: return 7;
+            case Action::AllIn: return 8;
+            // ... etc
+            default: return -1;
+        }
+    }
+};
  protected:
   /// Setters
   void setType(std::string type);
@@ -76,7 +96,7 @@ namespace Preflop
 
   /// Constants
   ///@brief how many unique deals are possible
-  [[nodiscard]] constexpr int getChanceActionNum() {
+  [[nodiscard]] constexpr int getChanceActionNum() const {
     if (0 == currentRound) {
       //(cardNum choose 2) * (cardNum-2 choose 2)
       return DeckCardNum * (DeckCardNum - 1) * (DeckCardNum - 2) * (DeckCardNum - 3);
@@ -129,6 +149,7 @@ namespace Preflop
   ///@brief actions available at this point in the game
   std::vector <Action> availActions;
 };
+
 }
 
 

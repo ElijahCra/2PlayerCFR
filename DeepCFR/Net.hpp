@@ -89,8 +89,8 @@ public:
     }
 
     torch::Tensor forward(const std::vector<torch::Tensor>& cards, torch::Tensor bets) {
-        std::cout << "card list size: "<<cards.size() << " cards: " << cards[0].sizes() << std::endl;
-        std::cout << "bets: " <<bets.sizes() << std::endl;
+        //std::cout << "card list size: "<<cards.size() << " cards: " << cards[0].sizes() << std::endl;
+        //std::cout << "bets: " <<bets.sizes() << std::endl;
         // 1. Card branch
         std::vector<torch::Tensor> card_embs_list;
 
@@ -126,7 +126,7 @@ public:
         z = torch::relu(comb3->forward(z) + z);  // Residual connection
 
 
-        std::cout << z.sizes() << std::endl;
+        //std::cout << z.sizes() << std::endl;
         // Normalize (z - mean) / std
         z = normalize(z);
 

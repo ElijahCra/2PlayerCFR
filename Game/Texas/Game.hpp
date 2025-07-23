@@ -49,6 +49,24 @@ class Game : public GameBase {
     static constexpr int NUM_CARD_TYPES = 4;
     static constexpr int NUM_BET_FEATURES = 2;
     static constexpr int MAX_ACTIONS = 10;
+
+   struct ActionMapping {
+    static constexpr int getActionIndex(Action action) {
+        switch(action) {
+            case Action::Fold: return 0;
+            case Action::Check: return 1;
+            case Action::Call: return 2;
+            case Action::Raise1: return 3;
+            case Action::Raise2: return 4;
+            case Action::Raise3: return 5;
+            case Action::Raise5: return 6;
+            case Action::Raise10: return 7;
+            case Action::AllIn: return 8;
+            // ... etc
+            default: return -1;
+        }
+    }
+};
  protected:
 
   /// Setters
@@ -85,6 +103,9 @@ class Game : public GameBase {
       return DeckCardNum - (currentRound + 5);
     }
   }
+
+
+
  private:
 
   std::string type = "chance";
@@ -129,6 +150,8 @@ class Game : public GameBase {
   torch::Tensor betTensor;
 
 };
+
+
 }
 
 #endif //INC_TEXAS_GAME_HPP

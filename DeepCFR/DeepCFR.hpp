@@ -31,6 +31,7 @@ struct TrainingSampleAdvantage {
     InfoSet infoset;
     int iteration;
     std::vector<float> advantages;  // r_tilde(I, a) for each action
+    std::vector<int> legal_action_indices;
     float weight;                   // iteration weight for Linear CFR
 };
 

@@ -49,8 +49,8 @@ protected:
     Reraise20,
     AllIn
   };
-
-
 };
+
+
 } // Preflop
 #endif //INC_2PLAYERCFR_PREFLOP_HPP

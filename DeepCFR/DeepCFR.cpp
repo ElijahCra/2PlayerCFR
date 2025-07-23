@@ -78,19 +78,26 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
     int currentPlayer = game.getCurrentPlayer();
     //auto infoset = game.getInfoSet(currentPlayer);
     auto legal_actions = game.getActions();
-
+    std::vector<int> legal_indices;
+    for (auto action : legal_actions) {
+        legal_indices.push_back(GameType::ActionMapping::getActionIndex(action));
+    }
     // Get current strategy from advantage network
     torch::NoGradGuard no_grad;
     auto cards = game.getCardTensors(game.getCurrentPlayer(),game.getCurrentRound());
     auto bets = game.getBetTensor();
-    std::cout << "bets sizes: "<<bets.sizes() << std::endl;
+    //std::cout << "bets sizes: "<<bets.sizes() << std::endl;
 
     auto advantages_tensor = m_advantage_networks[currentPlayer]->forward(cards, bets);
-    std::vector<float> advantages(advantages_tensor.template data_ptr<float>(),
-                                 advantages_tensor.template data_ptr<float>() + advantages_tensor.numel());
+    // std::vector<float> advantages(advantages_tensor.template data_ptr<float>(),
+    //                              advantages_tensor.template data_ptr<float>() + advantages_tensor.numel());
+    std::vector<float> legal_advantages;
+    for (int idx : legal_indices) {
+        legal_advantages.push_back(advantages_tensor[0][idx].template item<float>());
+    }
 
     // Compute strategy using regret matching
-    auto strategy = compute_strategy_from_advantages(advantages);
+    auto strategy = compute_strategy_from_advantages(legal_advantages);
 
     if (currentPlayer == updatePlayer) {
         // Traverser: explore all actions
@@ -120,7 +127,9 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
 
         // Store in memory with Linear CFR weighting
         TrainingSampleAdvantage sample;
+        sample.infoset = {cards,bets};
         sample.iteration = current_iter;
+        sample.legal_action_indices = legal_indices;
         sample.advantages = instant_regrets;
         sample.weight = static_cast<float>(current_iter); // Linear weighting
 
@@ -176,17 +185,32 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
             // Get network prediction
             auto cards = sample.infoset.getCardTensors();
             auto bets = sample.infoset.getBetTensor();
-            auto predicted = m_advantage_networks[player]->forward(cards, bets);
+
 
             // Compute weighted MSE loss
-            auto target = torch::from_blob(const_cast<float*>(sample.advantages.data()),
-                                          {static_cast<long>(sample.advantages.size())});
+            // auto target = torch::from_blob(const_cast<float*>(sample.advantages.data()),
+            //                               {static_cast<long>(sample.advantages.size())});
 
+            // Create full-size advantage target initialized to 0
+            auto target = torch::zeros({GameType::MAX_ACTIONS});
+
+            // Fill in only the legal action positions
+            for (size_t i = 0; i < sample.legal_action_indices.size(); ++i) {
+                target[sample.legal_action_indices[i]] = sample.advantages[i];
+            }
+
+            // Create mask for legal actions
+            auto mask = torch::zeros({GameType::MAX_ACTIONS});
+            for (int idx : sample.legal_action_indices) {
+                mask[idx] = 1.0f;
+            }
+
+            auto predicted = m_advantage_networks[player]->forward(cards, bets);
             // Normalize weight as per Linear CFR
             float normalized_weight = sample.weight / m_adv_memories[player].back().iteration;
-            auto loss = normalized_weight * torch::mse_loss(predicted.squeeze(), target);
-
-            total_loss += loss;
+            //auto loss = normalized_weight * torch::mse_loss(predicted.squeeze(), target);
+            auto masked_loss = torch::mse_loss(predicted * mask, target * mask, torch::Reduction::Sum) / mask.sum();
+            total_loss += masked_loss;
         }
 
         // Backprop
