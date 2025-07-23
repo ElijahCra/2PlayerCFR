@@ -15,7 +15,11 @@
 #include <format>
 
 namespace Preflop {
-Game::Game(std::mt19937 &engine) : RNG(engine) {
+Game::Game(std::mt19937 &engine) :
+    RNG(engine),
+    bettingSequence(positions_per_round*NUM_CARD_TYPES,0.0f),
+    bettingBinaries(positions_per_round*NUM_CARD_TYPES,false)
+  {
   std::array<uint8_t,DeckCardNum> temp = baseDeck;
   std::ranges::shuffle(temp.begin(),temp.end(),RNG);
   std::copy(temp.begin(),temp.begin()+2*PlayerNum+5, playableCards.begin());
@@ -27,7 +31,8 @@ Game::Game(std::mt19937 &engine) : RNG(engine) {
 
   currentState = &ChanceState::getInstance();
   currentState->enter(*this, Action::None);
-
+  bettingBinaries.reserve(positions_per_round*NUM_CARD_TYPES);
+  bettingSequence.reserve(positions_per_round*NUM_CARD_TYPES);
 }
 
 void Game::setState(GameState &newState, Action action) {
@@ -41,6 +46,31 @@ void Game::transition(Action action) {
   assert(std::find(Actions.begin(),Actions.end(),action)!=Actions.end());
   currentState->transition(*this, action);
 }
+
+void Game::recordAction(Action action) {
+      switch(action) {
+          case Action::Check:
+              break;
+          case Action::Fold:
+              break;
+      case Action::Call:
+            if (prevAction == Action::None)
+            {
+             bettingSequence[currentBettingPosition] = 500;
+            } else
+            {
+              bettingSequence[currentBettingPosition] = bettingSequence[currentBettingPosition-1];
+            }
+          case Action::Raise1:
+              bettingSequence[currentBettingPosition] = 1000;
+          case Action::Raise2:
+              // Record the actual bet/call amount
+              bettingSequence[currentBettingPosition] = 2000;
+              break;
+          default: break;
+      }
+      currentBettingPosition++;
+  }
 
 void Game::addMoney() { //preflop ante's in milliBigBlinds
   utilities[0] = -500;
@@ -92,7 +122,6 @@ void Game::updateInfoSet() {
 std::string Game::getInfoSet(int player) const noexcept {
   return infoSet[player];
 }
-
 
 std::string Game::actionToStr(Action action) {
   using enum Preflop::GameBase::Action;
@@ -166,6 +195,21 @@ std::vector<torch::Tensor> Game::getCardTensors(int player, int round) const noe
     }
     return std::move(cardTensors);
 }
+
+torch::Tensor Game::getBetTensor() const {
+        torch::Tensor betTensor = torch::zeros({1, total_bet_positions * 2});
+
+        for (int i = 0; i < bettingSequence.size(); ++i) {
+            if (bettingSequence[i] > 0) {
+                betTensor[0][i] = bettingSequence[i];                // Bet amount
+                betTensor[0][i + total_bet_positions] = 1.0f;            // Bet occurred
+            }
+            // If 0, both values remain 0
+        }
+
+        return betTensor;
+    }
+
 
 void Game::reInitialize() {
   RNG();

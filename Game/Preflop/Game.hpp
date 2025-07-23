@@ -48,12 +48,14 @@ namespace Preflop
     [[nodiscard]] int getPlayableCards(int index) const noexcept;
     [[nodiscard]] std::array<unsigned char, 9>::iterator playableCardsBegin();
     [[nodiscard]] std::vector<torch::Tensor> getCardTensors(int player, int round) const noexcept;
-    [[nodiscard]] torch::Tensor getBetTensor() const noexcept {return betTensor;}
+    [[nodiscard]] torch::Tensor getBetTensor() const noexcept;
       [[nodiscard]] int getCurrentRound() const noexcept {return currentRound;}
 
     static constexpr int NUM_CARD_TYPES = 4;
     static constexpr int NUM_BET_FEATURES = 2;
     static constexpr int MAX_ACTIONS = 10;
+    static constexpr int positions_per_round = 6;
+    static constexpr int total_bet_positions = positions_per_round * NUM_CARD_TYPES;
  protected:
   /// Setters
   void setType(std::string type);
@@ -63,6 +65,7 @@ namespace Preflop
   /// Modifiers
   void addMoney();
   void addMoney(float amount);
+  void recordAction(Action action);
 
   void updateInfoSet();
   void updateInfoSet(Action action);
@@ -84,6 +87,11 @@ namespace Preflop
     }
   }
  private:
+
+
+  std::vector<float> bettingSequence;
+  std::vector<bool> bettingBinaries;
+  int currentBettingPosition = 0;
   std::array<uint8_t, 2*GameBase::PlayerNum+5> playableCards{};
 
   /// @brief number of raises + reraises played this round
