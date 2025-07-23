@@ -52,7 +52,7 @@ namespace Preflop
       [[nodiscard]] int getCurrentRound() const noexcept {return currentRound;}
 
     static constexpr int NUM_CARD_TYPES = 4;
-    static constexpr int NUM_BET_FEATURES = 2;
+    static constexpr int NUM_BET_FEATURES = 24;
     static constexpr int MAX_ACTIONS = 10;
     static constexpr int positions_per_round = 6;
     static constexpr int total_bet_positions = positions_per_round * NUM_CARD_TYPES;
@@ -90,7 +90,6 @@ namespace Preflop
 
 
   std::vector<float> bettingSequence;
-  std::vector<bool> bettingBinaries;
   int currentBettingPosition = 0;
   std::array<uint8_t, 2*GameBase::PlayerNum+5> playableCards{};
 

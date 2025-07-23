@@ -83,6 +83,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
     torch::NoGradGuard no_grad;
     auto cards = game.getCardTensors(game.getCurrentPlayer(),game.getCurrentRound());
     auto bets = game.getBetTensor();
+    std::cout << "bets sizes: "<<bets.sizes() << std::endl;
 
     auto advantages_tensor = m_advantage_networks[currentPlayer]->forward(cards, bets);
     std::vector<float> advantages(advantages_tensor.template data_ptr<float>(),

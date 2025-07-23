@@ -17,8 +17,7 @@
 namespace Preflop {
 Game::Game(std::mt19937 &engine) :
     RNG(engine),
-    bettingSequence(positions_per_round*NUM_CARD_TYPES,0.0f),
-    bettingBinaries(positions_per_round*NUM_CARD_TYPES,false)
+    bettingSequence(positions_per_round*NUM_CARD_TYPES,-1.0f)
   {
   std::array<uint8_t,DeckCardNum> temp = baseDeck;
   std::ranges::shuffle(temp.begin(),temp.end(),RNG);
@@ -31,8 +30,6 @@ Game::Game(std::mt19937 &engine) :
 
   currentState = &ChanceState::getInstance();
   currentState->enter(*this, Action::None);
-  bettingBinaries.reserve(positions_per_round*NUM_CARD_TYPES);
-  bettingSequence.reserve(positions_per_round*NUM_CARD_TYPES);
 }
 
 void Game::setState(GameState &newState, Action action) {
@@ -196,20 +193,19 @@ std::vector<torch::Tensor> Game::getCardTensors(int player, int round) const noe
     return std::move(cardTensors);
 }
 
-torch::Tensor Game::getBetTensor() const {
-        torch::Tensor betTensor = torch::zeros({1, total_bet_positions * 2});
+torch::Tensor Game::getBetTensor() const noexcept {
+    torch::Tensor betTensor = torch::zeros({1, total_bet_positions });
 
-        for (int i = 0; i < bettingSequence.size(); ++i) {
-            if (bettingSequence[i] > 0) {
-                betTensor[0][i] = bettingSequence[i];                // Bet amount
-                betTensor[0][i + total_bet_positions] = 1.0f;            // Bet occurred
-            }
-            // If 0, both values remain 0
+    for (int i = 0; i < bettingSequence.size(); ++i) {
+        if (bettingSequence[i] > 0) {
+            betTensor[0][i] = bettingSequence[i];                // Bet amount
+            betTensor[0][i + total_bet_positions] = 1.0f;            // Bet occurred
         }
-
-        return betTensor;
+        // If 0, both values remain 0
     }
 
+    return betTensor;
+}
 
 void Game::reInitialize() {
   RNG();
@@ -232,6 +228,8 @@ void Game::reInitialize() {
   currentRound = 0;
   currentState = &ChanceState::getInstance();
   currentState->enter(*this, Action::None);
+
+  std::ranges::fill(bettingSequence,-1.0f);
 }
 
 void Game::updateAverageUtilitySum(float value) {

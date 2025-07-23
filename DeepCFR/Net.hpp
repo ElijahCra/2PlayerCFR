@@ -152,7 +152,7 @@ private:
     torch::nn::Linear action_head{nullptr};
 
     // Normalization function
-    torch::Tensor normalize(torch::Tensor z) {
+    static torch::Tensor normalize(torch::Tensor z) {
         auto mean = z.mean(1, true);
         auto std = z.std(1, true);
         // Add small epsilon to avoid division by zero
