@@ -186,68 +186,59 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
     m_advantage_optimizers[player] = torch::optim::Adam(m_advantage_networks[player]->parameters(), LEARNING_RATE);
     m_advantage_networks[player]->train();
 
+
+    // Prepare batched data
+    std::vector<torch::Tensor> all_cards_batched;
+
+    // Pre-allocate and batch all data
+    int total_samples = std::min(BATCH_SIZE * SGD_ITERATIONS, m_adv_memories[player].size());
+
+    // Create all batches at once
+    for (int i = 0; i < GameType::NUM_CARD_TYPES; ++i) {
+        all_cards_batched.push_back(torch::empty({total_samples, 2}, m_device)); // Adjust size
+    }
+    torch::Tensor all_bets_batched = torch::empty({total_samples, GameType::NUM_BET_FEATURES}, m_device);
+    torch::Tensor all_targets_batched = torch::empty({total_samples, GameType::MAX_ACTIONS}, m_device);
+    torch::Tensor all_masks_batched = torch::empty({total_samples, GameType::MAX_ACTIONS}, m_device);
+
+    // Fill batches
+    std::vector<int> all_indices(m_adv_memories[player].size());
+    std::iota(all_indices.begin(), all_indices.end(), 0);
+    std::shuffle(all_indices.begin(), all_indices.end(), m_rng);
+
     // Training loop
+    // Process in true batches
     for (int iter = 0; iter < SGD_ITERATIONS; ++iter) {
-        auto t1 = std::chrono::high_resolution_clock::now();
-        // Sample batch
-        std::vector<int> indices(m_adv_memories[player].size());
-        std::iota(indices.begin(), indices.end(), 0);
-        std::ranges::shuffle(indices, m_rng);
+         auto t1 = std::chrono::high_resolution_clock::now();
+        int batch_start = iter * BATCH_SIZE;
+        int batch_end = std::min(batch_start + BATCH_SIZE, static_cast<size_t>(total_samples));
 
-        int batch_size = std::min(BATCH_SIZE, static_cast<const size_t>(m_adv_memories[player].size()));
-
-        torch::Tensor total_loss = torch::zeros({1}).to(m_device);
-
-        for (int b = 0; b < batch_size; ++b) {
-            const auto& sample = m_adv_memories[player][indices[b]];
-
-            // Get network prediction - move tensors to device
-            auto cards = sample.infoset.getCardTensors();
-            auto bets = sample.infoset.getBetTensor().to(m_device);
-            
-            // Move card tensors to device
-            std::vector<torch::Tensor> cards_gpu;
-            for (auto& card_tensor : cards) {
-                cards_gpu.push_back(card_tensor.to(m_device));
-            }
-
-            // Create full-size advantage target initialized to 0
-            auto target = torch::zeros({GameType::MAX_ACTIONS}).to(m_device);
-
-            // Fill in only the legal action positions
-            for (size_t i = 0; i < sample.legal_action_indices.size(); ++i) {
-                target[sample.legal_action_indices[i]] = sample.advantages[i];
-            }
-
-            // Create mask for legal actions
-            auto mask = torch::zeros({GameType::MAX_ACTIONS}).to(m_device);
-            for (int idx : sample.legal_action_indices) {
-                mask[idx] = 1.0f;
-            }
-
-            auto predicted = m_advantage_networks[player]->forward(cards_gpu, bets);
-            // Normalize weight as per Linear CFR
-            float normalized_weight = sample.weight / m_adv_memories[player].back().iteration;
-            //auto loss = normalized_weight * torch::mse_loss(predicted.squeeze(), target);
-            auto masked_loss = torch::mse_loss(predicted * mask, target * mask, torch::Reduction::Sum) / mask.sum();
-            total_loss += masked_loss;
+        // Create batch tensors
+        std::vector<torch::Tensor> batch_cards;
+        for (int i = 0; i < GameType::NUM_CARD_TYPES; ++i) {
+            batch_cards.push_back(all_cards_batched[i].slice(0, batch_start, batch_end));
         }
+        auto batch_bets = all_bets_batched.slice(0, batch_start, batch_end);
+        auto batch_targets = all_targets_batched.slice(0, batch_start, batch_end);
+        auto batch_masks = all_masks_batched.slice(0, batch_start, batch_end);
+
+        // Single forward pass for entire batch
+        auto predictions = m_advantage_networks[player]->forward(batch_cards, batch_bets);
+        auto masked_loss = torch::mse_loss(predictions * batch_masks,
+                                          batch_targets * batch_masks,
+                                          torch::Reduction::Mean);
 
         // Backprop
         m_advantage_optimizers[player].zero_grad();
-        total_loss.backward();
-
-        // Gradient clipping
+        masked_loss.backward();
         m_advantage_networks[player]->clip_gradients(GRADIENT_CLIP_NORM);
-
         m_advantage_optimizers[player].step();
 
         auto t2 = std::chrono::high_resolution_clock::now();
         auto s_int = duration_cast<std::chrono::seconds>(t2 - t1);
 
             std::cout << "Player " << player << " advantage network training iter " << iter
-                     << ", loss: " << total_loss.item<float>() / batch_size << " time: "<< s_int<<std::endl;
-
+                     << ", loss: " << masked_loss.item<float>() / total_samples << " time: "<< s_int<<std::endl;
     }
 }
 
