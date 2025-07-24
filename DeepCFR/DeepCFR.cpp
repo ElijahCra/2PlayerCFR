@@ -12,16 +12,23 @@ template<typename GameType>
 DeepRegretMinimizer<GameType>::DeepRegretMinimizer(uint32_t seed)
     : m_rng(seed),
       m_game(m_rng),
+      m_device(torch::cuda::is_available() ? torch::kCUDA : torch::kCPU),
       m_strategy_network(GameType::NUM_CARD_TYPES, GameType::NUM_BET_FEATURES, GameType::MAX_ACTIONS),
       m_strategy_optimizer({m_strategy_network->parameters()}, torch::optim::AdamOptions(LEARNING_RATE))
 {
+    std::cout << "Using device: " << (m_device.is_cuda() ? "CUDA" : "CPU") << std::endl;
+    
     Utility::initLookup();
+
+    // Move strategy network to device
+    m_strategy_network->to(m_device);
 
     // Initialize advantage networks and optimizers for each player
     for (int i = 0; i < 2; ++i)
     {
         m_advantage_networks[i] = DeepCFRModel(GameType::NUM_CARD_TYPES, GameType::NUM_BET_FEATURES,
                                                GameType::MAX_ACTIONS);
+        m_advantage_networks[i]->to(m_device);
         m_advantage_optimizers.emplace_back(m_advantage_networks[i]->parameters(), LEARNING_RATE);
 
         // Reserve memory for replay buffers
@@ -85,10 +92,15 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
     // Get current strategy from advantage network
     torch::NoGradGuard no_grad;
     auto cards = game.getCardTensors(game.getCurrentPlayer(),game.getCurrentRound());
-    auto bets = game.getBetTensor();
-    //std::cout << "bets sizes: "<<bets.sizes() << std::endl;
-
-    auto advantages_tensor = m_advantage_networks[currentPlayer]->forward(cards, bets);
+    auto bets = game.getBetTensor().to(m_device);
+    
+    // Move card tensors to device
+    std::vector<torch::Tensor> cards_gpu;
+    for (auto& card_tensor : cards) {
+        cards_gpu.push_back(card_tensor.to(m_device));
+    }
+    
+    auto advantages_tensor = m_advantage_networks[currentPlayer]->forward(cards_gpu, bets);
     // std::vector<float> advantages(advantages_tensor.template data_ptr<float>(),
     //                              advantages_tensor.template data_ptr<float>() + advantages_tensor.numel());
     std::vector<float> legal_advantages;
@@ -125,9 +137,9 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
             instant_regrets[a] = action_values[a] - cfr_value;
         }
 
-        // Store in memory with Linear CFR weighting
+        // Store in memory with Linear CFR weighting (keep tensors on CPU for memory efficiency)
         TrainingSampleAdvantage sample;
-        sample.infoset = {cards,bets};
+        sample.infoset = {cards, game.getBetTensor()};  // Store original CPU tensors
         sample.iteration = current_iter;
         sample.legal_action_indices = legal_indices;
         sample.advantages = instant_regrets;
@@ -139,6 +151,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
     } else {
         // Opponent: sample single action and store strategy
         TrainingSampleStrategy sample;
+        sample.infoset = {cards, game.getBetTensor()};  // Store original CPU tensors
         sample.iteration = current_iter;
         sample.strategy = strategy;
         sample.weight = static_cast<float>(current_iter); // Linear weighting
@@ -165,11 +178,13 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
 
     // Reinitialize network (train from scratch)
     m_advantage_networks[player] = DeepCFRModel(GameType::NUM_CARD_TYPES, GameType::NUM_BET_FEATURES, GameType::MAX_ACTIONS);
+    m_advantage_networks[player]->to(m_device);
     m_advantage_optimizers[player] = torch::optim::Adam(m_advantage_networks[player]->parameters(), LEARNING_RATE);
     m_advantage_networks[player]->train();
 
     // Training loop
     for (int iter = 0; iter < SGD_ITERATIONS; ++iter) {
+        auto t1 = std::chrono::high_resolution_clock::now();
         // Sample batch
         std::vector<int> indices(m_adv_memories[player].size());
         std::iota(indices.begin(), indices.end(), 0);
@@ -177,22 +192,23 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
 
         int batch_size = std::min(BATCH_SIZE, static_cast<const size_t>(m_adv_memories[player].size()));
 
-        torch::Tensor total_loss = torch::zeros({1});
+        torch::Tensor total_loss = torch::zeros({1}).to(m_device);
 
         for (int b = 0; b < batch_size; ++b) {
             const auto& sample = m_adv_memories[player][indices[b]];
 
-            // Get network prediction
+            // Get network prediction - move tensors to device
             auto cards = sample.infoset.getCardTensors();
-            auto bets = sample.infoset.getBetTensor();
-
-
-            // Compute weighted MSE loss
-            // auto target = torch::from_blob(const_cast<float*>(sample.advantages.data()),
-            //                               {static_cast<long>(sample.advantages.size())});
+            auto bets = sample.infoset.getBetTensor().to(m_device);
+            
+            // Move card tensors to device
+            std::vector<torch::Tensor> cards_gpu;
+            for (auto& card_tensor : cards) {
+                cards_gpu.push_back(card_tensor.to(m_device));
+            }
 
             // Create full-size advantage target initialized to 0
-            auto target = torch::zeros({GameType::MAX_ACTIONS});
+            auto target = torch::zeros({GameType::MAX_ACTIONS}).to(m_device);
 
             // Fill in only the legal action positions
             for (size_t i = 0; i < sample.legal_action_indices.size(); ++i) {
@@ -200,12 +216,12 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
             }
 
             // Create mask for legal actions
-            auto mask = torch::zeros({GameType::MAX_ACTIONS});
+            auto mask = torch::zeros({GameType::MAX_ACTIONS}).to(m_device);
             for (int idx : sample.legal_action_indices) {
                 mask[idx] = 1.0f;
             }
 
-            auto predicted = m_advantage_networks[player]->forward(cards, bets);
+            auto predicted = m_advantage_networks[player]->forward(cards_gpu, bets);
             // Normalize weight as per Linear CFR
             float normalized_weight = sample.weight / m_adv_memories[player].back().iteration;
             //auto loss = normalized_weight * torch::mse_loss(predicted.squeeze(), target);
@@ -222,10 +238,12 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
 
         m_advantage_optimizers[player].step();
 
-        if (iter % 1000 == 0) {
+        auto t2 = std::chrono::high_resolution_clock::now();
+        auto s_int = duration_cast<std::chrono::seconds>(t2 - t1);
+
             std::cout << "Player " << player << " advantage network training iter " << iter
-                     << ", loss: " << total_loss.item<float>() / batch_size << std::endl;
-        }
+                     << ", loss: " << total_loss.item<float>() / batch_size << " time: "<< s_int<<std::endl;
+
     }
 }
 
@@ -244,22 +262,29 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
 
         int batch_size = std::min(BATCH_SIZE, static_cast<size_t>(m_strategy_memory.size()));
 
-        torch::Tensor total_loss = torch::zeros({1});
+        torch::Tensor total_loss = torch::zeros({1}).to(m_device);
 
         for (int b = 0; b < batch_size; ++b) {
             const auto& sample = m_strategy_memory[indices[b]];
 
-            // Get network prediction (logits)
+            // Get network prediction (logits) - move tensors to device
             auto cards = sample.infoset.getCardTensors();
-            auto bets = sample.infoset.getBetTensor();
-            auto logits = m_strategy_network->forward(cards, bets);
+            auto bets = sample.infoset.getBetTensor().to(m_device);
+            
+            // Move card tensors to device
+            std::vector<torch::Tensor> cards_gpu;
+            for (auto& card_tensor : cards) {
+                cards_gpu.push_back(card_tensor.to(m_device));
+            }
+            
+            auto logits = m_strategy_network->forward(cards_gpu, bets);
 
             // Convert to probabilities
             auto predicted_probs = torch::softmax(logits, -1);
 
             // Compute weighted cross-entropy loss
             auto target = torch::from_blob(const_cast<float*>(sample.strategy.data()),
-                                          {static_cast<long>(sample.strategy.size())});
+                                          {static_cast<long>(sample.strategy.size())}).to(m_device);
 
             // Normalize weight
             float normalized_weight = sample.weight / m_strategy_memory.back().iteration;

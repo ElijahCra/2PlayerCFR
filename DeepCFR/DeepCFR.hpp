@@ -78,6 +78,7 @@ private:
 
     std::mt19937 m_rng;
     GameType m_game;
+    torch::Device m_device;
 
     // Neural Networks for advantage (regret) and strategy
     std::array<DeepCFRModel, 2> m_advantage_networks{nullptr, nullptr};
