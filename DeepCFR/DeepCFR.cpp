@@ -139,7 +139,11 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
 
         // Store in memory with Linear CFR weighting (keep tensors on CPU for memory efficiency)
         TrainingSampleAdvantage sample;
-        sample.infoset = {cards, game.getBetTensor()};  // Store original CPU tensors
+        auto cards_gpu = game.getCardTensors(game.getCurrentPlayer(), game.getCurrentRound());
+        for (auto& card : cards_gpu) {
+            card = card.to(m_device);
+        }
+        sample.infoset = {cards_gpu, game.getBetTensor().to(m_device)};
         sample.iteration = current_iter;
         sample.legal_action_indices = legal_indices;
         sample.advantages = instant_regrets;
@@ -188,7 +192,7 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
         // Sample batch
         std::vector<int> indices(m_adv_memories[player].size());
         std::iota(indices.begin(), indices.end(), 0);
-        std::shuffle(indices.begin(), indices.end(), m_rng);
+        std::ranges::shuffle(indices, m_rng);
 
         int batch_size = std::min(BATCH_SIZE, static_cast<const size_t>(m_adv_memories[player].size()));
 
