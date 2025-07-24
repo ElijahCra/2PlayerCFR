@@ -69,7 +69,7 @@ namespace Preflop
             case Action::Raise2: return 4;
             case Action::Raise3: return 5;
             case Action::Raise5: return 6;
-            case Action::Raise10: return 7;
+            case Action::Reraise2: return 7;
             case Action::AllIn: return 8;
             // ... etc
             default: return -1;

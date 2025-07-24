@@ -188,23 +188,60 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
 
 
     // Prepare batched data
-    std::vector<torch::Tensor> all_cards_batched;
-
-    // Pre-allocate and batch all data
     int total_samples = std::min(BATCH_SIZE * SGD_ITERATIONS, m_adv_memories[player].size());
-
-    // Create all batches at once
-    for (int i = 0; i < GameType::NUM_CARD_TYPES; ++i) {
-        all_cards_batched.push_back(torch::empty({total_samples, 2}, m_device)); // Adjust size
-    }
-    torch::Tensor all_bets_batched = torch::empty({total_samples, GameType::NUM_BET_FEATURES}, m_device);
-    torch::Tensor all_targets_batched = torch::empty({total_samples, GameType::MAX_ACTIONS}, m_device);
-    torch::Tensor all_masks_batched = torch::empty({total_samples, GameType::MAX_ACTIONS}, m_device);
-
-    // Fill batches
+    
     std::vector<int> all_indices(m_adv_memories[player].size());
-    std::iota(all_indices.begin(), all_indices.end(), 0);
-    std::shuffle(all_indices.begin(), all_indices.end(), m_rng);
+
+    std::ranges::shuffle(all_indices, m_rng);
+
+    // Collect all data on CPU first
+    std::vector<std::vector<torch::Tensor>> all_cards_cpu(total_samples);
+    std::vector<torch::Tensor> all_bets_cpu(total_samples);
+    std::vector<std::vector<float>> all_targets_cpu(total_samples);
+    std::vector<std::vector<float>> all_masks_cpu(total_samples);
+    
+    for (int i = 0; i < total_samples; ++i) {
+        const auto& sample = m_adv_memories[player][all_indices[i]];
+        all_cards_cpu[i] = sample.infoset.getCardTensors(); // Keep on CPU
+        all_bets_cpu[i] = sample.infoset.getBetTensor();    // Keep on CPU
+        
+        // Prepare targets and masks
+        std::vector<float> targets(GameType::MAX_ACTIONS, 0.0f);
+        std::vector<float> masks(GameType::MAX_ACTIONS, 0.0f);
+        
+        for (size_t j = 0; j < sample.legal_action_indices.size(); ++j) {
+            int action_idx = sample.legal_action_indices[j];
+            targets[action_idx] = sample.advantages[j] * sample.weight;
+            masks[action_idx] = 1.0f;
+        }
+        
+        all_targets_cpu[i] = targets;
+        all_masks_cpu[i] = masks;
+    }
+
+    // Bulk GPU transfer using torch::stack
+    std::vector<torch::Tensor> all_cards_batched(GameType::NUM_CARD_TYPES);
+    for (int card_type = 0; card_type < GameType::NUM_CARD_TYPES; ++card_type) {
+        std::vector<torch::Tensor> cards_for_type;
+        cards_for_type.reserve(total_samples);
+        for (int i = 0; i < total_samples; ++i) {
+            cards_for_type.push_back(all_cards_cpu[i][card_type]);
+        }
+        all_cards_batched[card_type] = torch::stack(cards_for_type).to(m_device);
+    }
+    
+    auto all_bets_batched = torch::stack(all_bets_cpu).to(m_device);
+    
+    // Convert targets and masks to tensors
+    torch::Tensor all_targets_batched = torch::zeros({total_samples, GameType::MAX_ACTIONS}, m_device);
+    torch::Tensor all_masks_batched = torch::zeros({total_samples, GameType::MAX_ACTIONS}, m_device);
+    
+    for (int i = 0; i < total_samples; ++i) {
+        for (int j = 0; j < GameType::MAX_ACTIONS; ++j) {
+            all_targets_batched[i][j] = all_targets_cpu[i][j];
+            all_masks_batched[i][j] = all_masks_cpu[i][j];
+        }
+    }
 
     // Training loop
     // Process in true batches
