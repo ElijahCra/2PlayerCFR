@@ -199,9 +199,8 @@ torch::Tensor Game::getBetTensor() const noexcept {
     for (int i = 0; i < bettingSequence.size(); ++i) {
         if (bettingSequence[i] > 0) {
             betTensor[0][i] = bettingSequence[i];                // Bet amount
-            betTensor[0][i + total_bet_positions] = 1.0f;            // Bet occurred
         }
-        // If 0, both values remain 0
+        // If 0, bet amount remains 0 (and the network will derive bet_occurred from this)
     }
 
     return betTensor;

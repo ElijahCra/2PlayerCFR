@@ -104,7 +104,7 @@ public:
         auto card_embs = torch::cat(card_embs_list, 1);
 
         // Card branch forward pass
-        auto x = torch::relu(card1->forward(card_embs));
+auto x = torch::relu(card1->forward(card_embs));
         x = torch::relu(card2->forward(x));
         x = torch::relu(card3->forward(x));
 
@@ -153,10 +153,17 @@ private:
 
     // Normalization function
     static torch::Tensor normalize(torch::Tensor z) {
-        auto mean = z.mean(1, true);
-        auto std = z.std(1, true);
-        // Add small epsilon to avoid division by zero
-        return (z - mean) / (std + 1e-8);
+        if (z.dim() == 1) {
+            // Single sample case: normalize across features
+            auto mean = z.mean();
+            auto std = z.std();
+            return (z - mean) / (std + 1e-8);
+        } else {
+            // Batched case: normalize each sample independently across features (dim=1)
+            auto mean = z.mean(1, true);  // [batch_size, 1]
+            auto std = z.std(1, true);    // [batch_size, 1]
+            return (z - mean) / (std + 1e-8);
+        }
     }
 };
 TORCH_MODULE(DeepCFRModel);

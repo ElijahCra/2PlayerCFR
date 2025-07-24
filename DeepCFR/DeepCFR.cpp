@@ -227,10 +227,10 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
         for (int i = 0; i < total_samples; ++i) {
             cards_for_type.push_back(all_cards_cpu[i][card_type]);
         }
-        all_cards_batched[card_type] = torch::stack(cards_for_type).to(m_device);
+        all_cards_batched[card_type] = torch::stack(cards_for_type).squeeze(1).to(m_device);
     }
     
-    auto all_bets_batched = torch::stack(all_bets_cpu).to(m_device);
+    auto all_bets_batched = torch::stack(all_bets_cpu).squeeze(1).to(m_device);
     
     // Convert targets and masks to tensors
     torch::Tensor all_targets_batched = torch::zeros({total_samples, GameType::MAX_ACTIONS}, m_device);
