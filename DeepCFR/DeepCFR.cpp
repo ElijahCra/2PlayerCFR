@@ -250,6 +250,11 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
         int batch_start = iter * BATCH_SIZE;
         int batch_end = std::min(batch_start + BATCH_SIZE, static_cast<size_t>(total_samples));
 
+        // Skip empty batches
+        if (batch_start >= total_samples || batch_end <= batch_start) {
+            continue;
+        }
+
         // Create batch tensors
         std::vector<torch::Tensor> batch_cards;
         for (int i = 0; i < GameType::NUM_CARD_TYPES; ++i) {
