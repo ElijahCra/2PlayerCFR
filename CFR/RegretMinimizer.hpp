@@ -126,7 +126,7 @@ auto RegretMinimizer<GameType, StorageType>::ChanceCFR(const GameType &game, int
     nodeValue = ChanceCFR(copiedGame, updatePlayer, probCounterFactual, probUpdatePlayer);
     return nodeValue;
   }
-  if ("action" == type) { //Decision Node
+ //Decision Node
     /// get actions and their size
     std::vector<typename GameType::Action> const actions = game.getActions();
     const auto actionNum = static_cast<int>(actions.size());
@@ -165,9 +165,7 @@ auto RegretMinimizer<GameType, StorageType>::ChanceCFR(const GameType &game, int
       node->calcUpdatedStrategy();
     }
     return nodeValue;
-  }
-  throw GameStageViolation("did not match a game type in ChanceSamplingCFR");
-}
+ }
 
 template<typename GameType, typename StorageType>
 auto RegretMinimizer<GameType, StorageType>::ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) -> float {
@@ -191,7 +189,7 @@ auto RegretMinimizer<GameType, StorageType>::ExternalSamplingCFR(const GameType 
     return nodeValue;
   }
 
-  if ("action" == type) { //Decision Node
+ //Decision Node
     float nodeValue = 0.f;
 
     std::string infoSet = game.getInfoSet(game.getCurrentPlayer());
@@ -225,12 +223,10 @@ auto RegretMinimizer<GameType, StorageType>::ExternalSamplingCFR(const GameType 
       std::discrete_distribution actionSpread(currentStrategy.begin(),currentStrategy.end());
       auto sampledAction = actionSpread(rng);
       gamePlusOneAction.transition(actions[sampledAction]);
-      nodeValue = ExternalSamplingCFR(gamePlusOneAction, updatePlayer, probCounterFactual, probUpdatePlayer);
+      nodeValue = ExternalSamplingCFR(gamePlusOneAction, updatePlayer, probCounterFactual * currentStrategy[sampledAction], probUpdatePlayer);
     }
     return nodeValue;
-  }
-  throw GameStageViolation("did not match a game type in ExternalSamplingCFR");
-}
+ }
 template <typename GameType, typename StorageType>
 auto RegretMinimizer<GameType, StorageType>::getNodeInformation(const std::string& index) noexcept -> std::vector<std::vector<float>>{
   std::vector<std::vector<float>> res;

@@ -12,11 +12,11 @@ template<typename GameType>
 DeepRegretMinimizer<GameType>::DeepRegretMinimizer(uint32_t seed)
     : m_rng(seed),
       m_game(m_rng),
-      m_device(torch::cuda::is_available() ? torch::kCUDA : torch::kCPU),
+      m_device(torch::cuda::is_available() ? torch::kCUDA : torch::mps::is_available() ? torch::kMPS : torch::kCPU),
       m_strategy_network(GameType::NUM_CARD_TYPES, GameType::NUM_BET_FEATURES, GameType::MAX_ACTIONS),
       m_strategy_optimizer({m_strategy_network->parameters()}, torch::optim::AdamOptions(LEARNING_RATE))
 {
-    std::cout << "Using device: " << (m_device.is_cuda() ? "CUDA" : "CPU") << std::endl;
+    std::cout << "Using device: " << (m_device.is_cuda() ? "CUDA" : torch::mps::is_available() ? "METAL" : "CPU") << std::endl;
     
     Utility::initLookup();
 
@@ -66,6 +66,66 @@ void DeepRegretMinimizer<GameType>::Train(uint32_t iterations) {
 
     // Final training of strategy network
     train_strategy_network();
+}
+template<typename GameType>
+void DeepRegretMinimizer<GameType>::TrainParallel(uint32_t iterations, int num_threads)
+{
+    for (uint32_t iter = 1; iter <= iterations; ++iter) {
+        for (int p = 0; p < GameType::PlayerNum; ++p) {
+
+            std::vector<std::thread> traversal_threads;
+
+            // A thread-safe way to collect results
+            std::array<std::vector<TrainingSampleAdvantage>,2> advantage_results;
+            std::vector<TrainingSampleStrategy> strategy_results;
+            std::mutex results_mutex;
+
+            int traversals_per_thread = K_TRAVERSALS / num_threads;
+
+            for (int i = 0; i < num_threads; ++i) {
+                traversal_threads.emplace_back([&]() {
+                    //thread local game, rng, and memory vecs
+                    std::mt19937 local_rng(std::random_device{}());
+                    GameType local_game(local_rng); // Use a thread-safe way to seed this
+                    // Each thread collects its own samples locally
+                    std::array<std::vector<TrainingSampleAdvantage>, 2> local_adv_samples;
+                    std::vector<TrainingSampleStrategy> local_strat_samples;
+
+                    for (int k = 0; k < traversals_per_thread; ++k) {
+                        // The traverse function needs to be adapted to store samples in the local vectors
+                        // instead of directly into the main class members m_adv_memories and m_strategy_memory.
+                        traverse_cfr_parallel(local_game, p, iter, 1.0f, 1.0f, local_adv_samples, local_strat_samples);
+                    }
+
+                    // --- Safely merge local results into the main results vectors ---
+                    std::lock_guard<std::mutex> lock(results_mutex);
+                    for (int j=0; j<local_adv_samples.size(); ++j) {
+                        advantage_results[j].insert(advantage_results[j].end(), local_adv_samples[j].begin(), local_adv_samples[j].end());
+                    }
+                    strategy_results.insert(strategy_results.end(), local_strat_samples.begin(), local_strat_samples.end());
+                });
+            }
+
+            // Wait for all threads to finish
+            for (auto& t : traversal_threads) {
+                t.join();
+            }
+
+            // --- Now, add all the collected samples to the main memory ---
+            for (const auto& vec : advantage_results) {
+                for (const auto& sample : vec) {
+                    add_to_memory(m_adv_memories[p], sample, MEMORY_SIZE);
+                }
+            }
+            for (const auto& sample : strategy_results) {
+                add_to_memory(m_strategy_memory, sample, MEMORY_SIZE);
+            }
+
+            // The rest of the training proceeds as before...
+            m_game.reInitialize();
+            train_advantage_network(p);
+        }
+    }
 }
 
 template<typename GameType>
@@ -139,11 +199,11 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
 
         // Store in memory with Linear CFR weighting (keep tensors on CPU for memory efficiency)
         TrainingSampleAdvantage sample;
-        auto cards_gpu = game.getCardTensors(game.getCurrentPlayer(), game.getCurrentRound());
-        for (auto& card : cards_gpu) {
+        auto card_tensors_gpu = game.getCardTensors(game.getCurrentPlayer(), game.getCurrentRound());
+        for (auto& card : card_tensors_gpu) {
             card = card.to(m_device);
         }
-        sample.infoset = {cards_gpu, game.getBetTensor().to(m_device)};
+        sample.infoset = {card_tensors_gpu, game.getBetTensor().to(m_device)};
         sample.iteration = current_iter;
         sample.legal_action_indices = legal_indices;
         sample.advantages = instant_regrets;
@@ -173,6 +233,114 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
         float new_p1 = (currentPlayer == 1) ? p1 * strategy[action_idx] : p1;
 
         return traverse_cfr(next_game, updatePlayer, current_iter, new_p0, new_p1);
+    }
+}
+template<typename GameType>
+float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game, int updatePlayer, int current_iter, float p0, float p1, std::array<std::vector<TrainingSampleAdvantage>, 2> &local_adv_samples, std::vector<TrainingSampleStrategy> local_strat_samples)
+{
+        // Terminal node
+    if (game.getType() == "terminal") {
+        return game.getUtility(updatePlayer);
+    }
+
+    // Chance node
+    if (game.getType() == "chance") {
+        GameType next_game(game);
+        next_game.transition(GameType::Action::None);
+        return traverse_cfr_parallel(next_game, updatePlayer, current_iter, p0, p1);
+    }
+
+    int currentPlayer = game.getCurrentPlayer();
+    //auto infoset = game.getInfoSet(currentPlayer);
+    auto legal_actions = game.getActions();
+    std::vector<int> legal_indices;
+    for (auto action : legal_actions) {
+        legal_indices.push_back(GameType::ActionMapping::getActionIndex(action));
+    }
+    // Get current strategy from advantage network
+    torch::NoGradGuard no_grad;
+    auto cards = game.getCardTensors(game.getCurrentPlayer(),game.getCurrentRound());
+    auto bets = game.getBetTensor().to(m_device);
+
+    // Move card tensors to device
+    std::vector<torch::Tensor> cards_gpu;
+    for (auto& card_tensor : cards) {
+        cards_gpu.push_back(card_tensor.to(m_device));
+    }
+
+    auto advantages_tensor = m_advantage_networks[currentPlayer]->forward(cards_gpu, bets);
+    // std::vector<float> advantages(advantages_tensor.template data_ptr<float>(),
+    //                              advantages_tensor.template data_ptr<float>() + advantages_tensor.numel());
+    std::vector<float> legal_advantages;
+    for (int idx : legal_indices) {
+        legal_advantages.push_back(advantages_tensor[0][idx].template item<float>());
+    }
+
+    // Compute strategy using regret matching
+    auto strategy = compute_strategy_from_advantages(legal_advantages);
+
+    if (currentPlayer == updatePlayer) {
+        // Traverser: explore all actions
+        std::vector<float> action_values(legal_actions.size());
+
+        for (size_t a = 0; a < legal_actions.size(); ++a) {
+            GameType next_game = game;
+            next_game.transition(legal_actions[a]);
+
+            float new_p0 = (currentPlayer == 0) ? p0 * strategy[a] : p0;
+            float new_p1 = (currentPlayer == 1) ? p1 * strategy[a] : p1;
+
+            action_values[a] = traverse_cfr_parallel(next_game, updatePlayer, current_iter, new_p0, new_p1);
+        }
+
+        // Compute counterfactual value
+        float cfr_value = 0.0f;
+        for (size_t a = 0; a < legal_actions.size(); ++a) {
+            cfr_value += strategy[a] * action_values[a];
+        }
+
+        // Compute advantages (instantaneous regrets)
+        std::vector<float> instant_regrets(legal_actions.size());
+        for (size_t a = 0; a < legal_actions.size(); ++a) {
+            instant_regrets[a] = action_values[a] - cfr_value;
+        }
+
+        // Store in memory with Linear CFR weighting (keep tensors on CPU for memory efficiency)
+        TrainingSampleAdvantage sample;
+        auto card_tensors_gpu = game.getCardTensors(game.getCurrentPlayer(), game.getCurrentRound());
+        for (auto& card : card_tensors_gpu) {
+            card = card.to(m_device);
+        }
+        sample.infoset = {card_tensors_gpu, game.getBetTensor().to(m_device)};
+        sample.iteration = current_iter;
+        sample.legal_action_indices = legal_indices;
+        sample.advantages = instant_regrets;
+        sample.weight = static_cast<float>(current_iter); // Linear weighting
+
+        add_to_memory(m_adv_memories[updatePlayer], sample, MEMORY_SIZE);
+
+        return cfr_value;
+    } else {
+        // Opponent: sample single action and store strategy
+        TrainingSampleStrategy sample;
+        sample.infoset = {cards, game.getBetTensor()};  // Store original CPU tensors
+        sample.iteration = current_iter;
+        sample.strategy = strategy;
+        sample.weight = static_cast<float>(current_iter); // Linear weighting
+
+        add_to_memory(m_strategy_memory, sample, MEMORY_SIZE);
+
+        // Sample action according to strategy
+        std::discrete_distribution<> dist(strategy.begin(), strategy.end());
+        int action_idx = dist(m_rng);
+
+        GameType next_game = game;
+        next_game.transition(legal_actions[action_idx]);
+
+        float new_p0 = (currentPlayer == 0) ? p0 * strategy[action_idx] : p0;
+        float new_p1 = (currentPlayer == 1) ? p1 * strategy[action_idx] : p1;
+
+        return traverse_cfr_parallel(next_game, updatePlayer, current_iter, new_p0, new_p1);
     }
 }
 
@@ -280,7 +448,7 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
         auto ms_int = duration_cast<std::chrono::milliseconds>(t2 - t1);
 
             std::cout << "Player " << player << " advantage network training iter " << iter
-                     << ", loss: " << masked_loss.item<float>() / total_samples << " time: "<< ms_int<<std::endl;
+                     << ", loss: " << masked_loss.template item<float>() / total_samples << " time: "<< ms_int<<std::endl;
     }
 }
 
