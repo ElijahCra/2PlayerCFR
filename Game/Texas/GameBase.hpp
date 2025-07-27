@@ -31,7 +31,7 @@ class GameBase {
   static constexpr std::array<uint8_t, DeckCardNum> baseDeck = rangeDeck;
 
   enum class Action : int {
-    None = -1,
+    Chance = -1,
     Fold,
     Check,
     Call,

@@ -110,7 +110,7 @@ class Game : public GameBase {
 
   std::string type = "chance";
 
-  Action prevAction = Action::None;
+  Action prevAction = Action::Chance;
 
   std::array<float,PlayerNum> playerStacks = {100.F,100.F};
 

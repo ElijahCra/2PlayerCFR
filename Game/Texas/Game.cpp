@@ -25,7 +25,7 @@ Game::Game(std::mt19937 &engine) : RNG(engine)
   cards.initIndices(std::span<uint8_t, 9>(temp.begin(), 9));
 
   currentState = &ChanceState::getInstance();
-  currentState->enter(*this, Action::None);
+  currentState->enter(*this, Action::Chance);
 
 }
 
@@ -166,7 +166,7 @@ void Game::reInitialize() {
   type = "chance";
   currentRound = 0;
   currentState = &ChanceState::getInstance();
-  currentState->enter(*this, Action::None);
+  currentState->enter(*this, Action::Chance);
 }
 
 float Game::getAverageUtility() const noexcept {

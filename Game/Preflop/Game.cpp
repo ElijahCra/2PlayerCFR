@@ -29,7 +29,7 @@ Game::Game(std::mt19937 &engine) :
   initCardTensors(std::span<uint8_t, 9>(temp.begin(), 9));
 
   currentState = &ChanceState::getInstance();
-  currentState->enter(*this, Action::None);
+  currentState->enter(*this, Action::Chance);
 }
 
 void Game::setState(GameState &newState, Action action) {
@@ -51,7 +51,7 @@ void Game::recordAction(Action action) {
           case Action::Fold:
               break;
       case Action::Call:
-            if (prevAction == Action::None)
+            if (prevAction == Action::Chance)
             {
              bettingSequence[currentBettingPosition] = 500;
             } else
@@ -226,7 +226,7 @@ void Game::reInitialize() {
   type = "chance";
   currentRound = 0;
   currentState = &ChanceState::getInstance();
-  currentState->enter(*this, Action::None);
+  currentState->enter(*this, Action::Chance);
 
   std::ranges::fill(bettingSequence,-1.0f);
 }

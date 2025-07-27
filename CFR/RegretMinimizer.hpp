@@ -54,7 +54,7 @@ class RegretMinimizer {
   auto ChanceCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) -> float;
 
   /// @brief same as ChanceCFR except at each action node sample one action for non update player
-  auto ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) -> float;
+  auto ExternalSamplingCFR(const GameType &game, int updatePlayer) -> float;
 
 
  private:
@@ -121,7 +121,7 @@ auto RegretMinimizer<GameType, StorageType>::ChanceCFR(const GameType &game, int
 
     /// sample one chance outcome at each chance node
     GameType copiedGame(game);
-    copiedGame.transition(GameType::Action::None);
+    copiedGame.transition(GameType::Action::Chance);
     float nodeValue;
     nodeValue = ChanceCFR(copiedGame, updatePlayer, probCounterFactual, probUpdatePlayer);
     return nodeValue;
@@ -168,7 +168,7 @@ auto RegretMinimizer<GameType, StorageType>::ChanceCFR(const GameType &game, int
  }
 
 template<typename GameType, typename StorageType>
-auto RegretMinimizer<GameType, StorageType>::ExternalSamplingCFR(const GameType &game, int updatePlayer, float probCounterFactual, float probUpdatePlayer) -> float {
+auto RegretMinimizer<GameType, StorageType>::ExternalSamplingCFR(const GameType &game, int updatePlayer) -> float {
   ++nodesTouched;
 
   std::string type = game.getType();
@@ -184,8 +184,8 @@ auto RegretMinimizer<GameType, StorageType>::ExternalSamplingCFR(const GameType 
   if ("chance" == type) {
     //sample one chance outcome at each chance node
     GameType copiedGame(game);
-    copiedGame.transition(GameType::Action::None);
-    float nodeValue = ExternalSamplingCFR(copiedGame, updatePlayer, probCounterFactual, probUpdatePlayer);
+    copiedGame.transition(GameType::Action::Chance);
+    float nodeValue = ExternalSamplingCFR(copiedGame, updatePlayer);
     return nodeValue;
   }
 
@@ -199,33 +199,34 @@ auto RegretMinimizer<GameType, StorageType>::ExternalSamplingCFR(const GameType 
       m_storage->putNode(infoSet, node);
     }
 
+    node->calcUpdatedStrategy();
     const std::vector<float> currentStrategy = node->getStrategy();
+
     std::vector<float> counterfactualValue(actionNum);
     if (updatePlayer == game.getCurrentPlayer()) {
       for (int i = 0; i < actionNum; ++i) {
         GameType gamePlusOneAction(game); // copy current gamestate
         gamePlusOneAction.transition(actions[i]); // go one level deeper with action i
-        counterfactualValue[i] = ExternalSamplingCFR(gamePlusOneAction, updatePlayer, probCounterFactual, probUpdatePlayer * currentStrategy[i]);
+        counterfactualValue[i] = ExternalSamplingCFR(gamePlusOneAction, updatePlayer);
         nodeValue += currentStrategy[i] * counterfactualValue[i];
       }
 
       for (int i = 0; i < actionNum; ++i) {
         const float regret = counterfactualValue[i] - nodeValue;
-        node->updateRegretSum(i, regret, probCounterFactual);
+        node->updateRegretSum(i, regret, 1.0f);
       }
-      node->updateStrategySum(currentStrategy, probUpdatePlayer);
-
-      node->calcUpdatedStrategy();
-
-
+      return nodeValue;
     } else { //sample single player action for non update player
       GameType gamePlusOneAction(game);
       std::discrete_distribution actionSpread(currentStrategy.begin(),currentStrategy.end());
       auto sampledAction = actionSpread(rng);
       gamePlusOneAction.transition(actions[sampledAction]);
-      nodeValue = ExternalSamplingCFR(gamePlusOneAction, updatePlayer, probCounterFactual * currentStrategy[sampledAction], probUpdatePlayer);
+      nodeValue = ExternalSamplingCFR(gamePlusOneAction, updatePlayer);
+
+      node->updateStrategySum(currentStrategy, 1.0f);
+      return nodeValue;
     }
-    return nodeValue;
+
  }
 template <typename GameType, typename StorageType>
 auto RegretMinimizer<GameType, StorageType>::getNodeInformation(const std::string& index) noexcept -> std::vector<std::vector<float>>{

@@ -12,7 +12,7 @@ namespace Texas {
     void ChanceState::enter(Game &game, Game::Action action) {
         game.setType("chance");
         game.raiseNum = 0;
-        game.setActions({Game::Action::None});
+        game.setActions({Game::Action::Chance});
         game.updateInfoSet();
     }
 
@@ -22,11 +22,11 @@ namespace Texas {
         } else {
             game.currentPlayer = 1;
         }
-        game.prevAction = Game::Action::None;
+        game.prevAction = Game::Action::Chance;
     }
 
     void ChanceState::transition(Game &game, Game::Action action) {
-        game.setState(ActionStateNoBet::getInstance(), Game::Action::None);
+        game.setState(ActionStateNoBet::getInstance(), Game::Action::Chance);
     }
 
     GameState &ChanceState::getInstance() {
@@ -36,7 +36,7 @@ namespace Texas {
 
     void ActionStateNoBet::enter(Game &game, Game::Action action) {
         if (0 == game.currentRound) {
-            if (Game::Action::None == action) {
+            if (Game::Action::Chance == action) {
                 game.setActions({Game::Action::Raise1, Game::Action::Call, Game::Action::Fold});
             } else if (Game::Action::Call == action) {
                 game.setActions({Game::Action::Raise1, Game::Action::Check});
