@@ -138,7 +138,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
     // Chance node
     if (game.getType() == "chance") {
         GameType next_game(game);
-        next_game.transition(GameType::Action::None);
+        next_game.transition(GameType::Action::Chance);
         return traverse_cfr(next_game, updatePlayer, current_iter, p0, p1);
     }
 
@@ -246,8 +246,8 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
     // Chance node
     if (game.getType() == "chance") {
         GameType next_game(game);
-        next_game.transition(GameType::Action::None);
-        return traverse_cfr_parallel(next_game, updatePlayer, current_iter, p0, p1);
+        next_game.transition(GameType::Action::Chance);
+        return traverse_cfr_parallel(next_game, updatePlayer, current_iter, p0, p1,local_adv_samples, local_strat_samples);
     }
 
     int currentPlayer = game.getCurrentPlayer();
@@ -290,7 +290,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
             float new_p0 = (currentPlayer == 0) ? p0 * strategy[a] : p0;
             float new_p1 = (currentPlayer == 1) ? p1 * strategy[a] : p1;
 
-            action_values[a] = traverse_cfr_parallel(next_game, updatePlayer, current_iter, new_p0, new_p1);
+            action_values[a] = traverse_cfr_parallel(next_game, updatePlayer, current_iter, new_p0, new_p1,local_adv_samples,local_strat_samples);
         }
 
         // Compute counterfactual value
@@ -340,7 +340,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
         float new_p0 = (currentPlayer == 0) ? p0 * strategy[action_idx] : p0;
         float new_p1 = (currentPlayer == 1) ? p1 * strategy[action_idx] : p1;
 
-        return traverse_cfr_parallel(next_game, updatePlayer, current_iter, new_p0, new_p1);
+        return traverse_cfr_parallel(next_game, updatePlayer, current_iter, new_p0, new_p1,local_adv_samples,local_strat_samples);
     }
 }
 

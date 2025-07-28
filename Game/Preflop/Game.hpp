@@ -123,7 +123,7 @@ namespace Preflop
 
   int currentRound = 0;
 
-  Action prevAction = Action::None;
+  Action prevAction = Action::Chance;
 
   std::array<float,PlayerNum> playerStacks = {100.0f};
 
