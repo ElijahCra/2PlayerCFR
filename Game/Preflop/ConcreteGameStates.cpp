@@ -12,7 +12,7 @@ namespace Preflop {
 void ChanceState::enter(Game &game, Game::Action action) {
   game.setType("chance");
   game.raiseNum = 0;
-  game.setActions({Game::Action::Chance});
+  game.setActions({Game::Action::None});
   game.updateInfoSet();
 }
 
@@ -22,11 +22,11 @@ void ChanceState::exit(Game &game, Game::Action action) {
   } else {
     game.currentPlayer = 1;
   }
-  game.prevAction = Game::Action::Chance;
+  game.prevAction = Game::Action::None;
 }
 
 void ChanceState::transition(Game &game, Game::Action action) {
-  game.setState(ActionStateNoBet::getInstance(), Game::Action::Chance);
+  game.setState(ActionStateNoBet::getInstance(), Game::Action::None);
 }
 
 GameState &ChanceState::getInstance() {
@@ -37,7 +37,7 @@ GameState &ChanceState::getInstance() {
 void ActionStateNoBet::enter(Game &game, Game::Action action) {
   using enum Preflop::GameBase::Action;
   if (0 == game.currentRound) {
-    if (Chance== action) {
+    if (None == action) {
       game.setActions({Raise1, Call, Fold});
     } else if (Call == action) {
       game.setActions({Raise1, Check});

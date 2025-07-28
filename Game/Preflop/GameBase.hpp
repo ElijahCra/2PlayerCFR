@@ -33,7 +33,7 @@ protected:
   static constexpr std::array<uint8_t, DeckCardNum> baseDeck = rangeDeck;
 
   enum class Action : int {
-    Chance = -1,
+    None = -1,
     Fold,
     Check,
     Call,
