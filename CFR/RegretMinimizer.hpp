@@ -101,7 +101,7 @@ void RegretMinimizer<GameType, StorageType>::Train(uint32_t iterations) {
   for (uint32_t i = 0; i < iterations; ++i) {
     for (uint32_t p = 0; p < GameType::PlayerNum; ++p) {
       if (m_cancelledTraining) break;
-      value[p] = ExternalSamplingCFR(Game, p, 1.0, 1.0);
+      value[p] = ExternalSamplingCFR(Game, p, 1.0);
     }
     Game.reInitialize();
   }
