@@ -177,10 +177,6 @@ auto RegretMinimizer<GameType, StorageType>::ExternalSamplingCFR(const GameType 
     return game.getUtility(updatePlayer);
   }
 
-  //actions available at this game state / node
-  const auto actions = game.getActions();
-  const auto actionNum = static_cast<uint8_t >(actions.size());
-
   if ("chance" == type) {
     //sample one chance outcome at each chance node
     GameType copiedGame(game);
@@ -188,6 +184,10 @@ auto RegretMinimizer<GameType, StorageType>::ExternalSamplingCFR(const GameType 
     float nodeValue = ExternalSamplingCFR(copiedGame, updatePlayer, probUpdatePlayer);
     return nodeValue;
   }
+
+  //actions available at this game state / node
+  const auto actions = game.getActions();
+  const auto actionNum = static_cast<uint8_t >(actions.size());
 
  //Decision Node
     float nodeValue = 0.f;

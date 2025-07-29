@@ -50,7 +50,7 @@ void DeepRegretMinimizer<GameType>::Train(uint32_t iterations) {
             // Perform K traversals for this player
             for (int k = 0; k < K_TRAVERSALS; ++k) {
                 // Traverse game tree with external sampling
-                traverse_cfr(m_game, p, iter, 1.0f, 1.0f);
+                traverse_cfr(m_game, p, iter, 1.0f);
             }
             m_game.reInitialize();
 
@@ -94,7 +94,7 @@ void DeepRegretMinimizer<GameType>::TrainParallel(uint32_t iterations, int num_t
                     for (int k = 0; k < traversals_per_thread; ++k) {
                         // The traverse function needs to be adapted to store samples in the local vectors
                         // instead of directly into the main class members m_adv_memories and m_strategy_memory.
-                        traverse_cfr_parallel(local_game, p, iter, 1.0f, 1.0f, local_adv_samples, local_strat_samples);
+                        traverse_cfr_parallel(local_game, p, iter, 1.0f, local_adv_samples, local_strat_samples);
                     }
 
                     // --- Safely merge local results into the main results vectors ---
@@ -129,7 +129,7 @@ void DeepRegretMinimizer<GameType>::TrainParallel(uint32_t iterations, int num_t
 }
 
 template<typename GameType>
-float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int updatePlayer, int current_iter, float p0, float p1) {
+float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer) {
     // Terminal node
     if (game.getType() == "terminal") {
         return game.getUtility(updatePlayer);
@@ -139,7 +139,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
     if (game.getType() == "chance") {
         GameType next_game(game);
         next_game.transition(GameType::Action::Chance);
-        return traverse_cfr(next_game, updatePlayer, current_iter, p0, p1);
+        return traverse_cfr(next_game, updatePlayer, current_iter, probUpdatePlayer);
     }
 
     int currentPlayer = game.getCurrentPlayer();
@@ -150,7 +150,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
         legal_indices.push_back(GameType::ActionMapping::getActionIndex(action));
     }
     // Get current strategy from advantage network
-    torch::NoGradGuard no_grad;
+    //torch::NoGradGuard no_grad;
     auto cards = game.getCardTensors(game.getCurrentPlayer(),game.getCurrentRound());
     auto bets = game.getBetTensor().to(m_device);
     
@@ -171,30 +171,22 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
     // Compute strategy using regret matching
     auto strategy = compute_strategy_from_advantages(legal_advantages);
 
+    float nodeValue = 0.0f;
     if (currentPlayer == updatePlayer) {
         // Traverser: explore all actions
-        std::vector<float> action_values(legal_actions.size());
+        std::vector<float> counterfactualValue(legal_actions.size());
 
         for (size_t a = 0; a < legal_actions.size(); ++a) {
-            GameType next_game = game;
+            GameType next_game(game);
             next_game.transition(legal_actions[a]);
-
-            float new_p0 = (currentPlayer == 0) ? p0 * strategy[a] : p0;
-            float new_p1 = (currentPlayer == 1) ? p1 * strategy[a] : p1;
-
-            action_values[a] = traverse_cfr(next_game, updatePlayer, current_iter, new_p0, new_p1);
-        }
-
-        // Compute counterfactual value
-        float cfr_value = 0.0f;
-        for (size_t a = 0; a < legal_actions.size(); ++a) {
-            cfr_value += strategy[a] * action_values[a];
+            counterfactualValue[a] = traverse_cfr(next_game, updatePlayer, current_iter, probUpdatePlayer * strategy[a]);
+            nodeValue += strategy[a] * counterfactualValue[a];
         }
 
         // Compute advantages (instantaneous regrets)
         std::vector<float> instant_regrets(legal_actions.size());
         for (size_t a = 0; a < legal_actions.size(); ++a) {
-            instant_regrets[a] = action_values[a] - cfr_value;
+            instant_regrets[a] = counterfactualValue[a] - nodeValue;
         }
 
         // Store in memory with Linear CFR weighting (keep tensors on CPU for memory efficiency)
@@ -211,7 +203,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
 
         add_to_memory(m_adv_memories[updatePlayer], sample, MEMORY_SIZE);
 
-        return cfr_value;
+        return nodeValue;
     } else {
         // Opponent: sample single action and store strategy
         TrainingSampleStrategy sample;
@@ -225,18 +217,13 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
         // Sample action according to strategy
         std::discrete_distribution<> dist(strategy.begin(), strategy.end());
         int action_idx = dist(m_rng);
-
-        GameType next_game = game;
+        GameType next_game(game);
         next_game.transition(legal_actions[action_idx]);
-
-        float new_p0 = (currentPlayer == 0) ? p0 * strategy[action_idx] : p0;
-        float new_p1 = (currentPlayer == 1) ? p1 * strategy[action_idx] : p1;
-
-        return traverse_cfr(next_game, updatePlayer, current_iter, new_p0, new_p1);
+        return traverse_cfr(next_game, updatePlayer, current_iter, probUpdatePlayer);
     }
 }
 template<typename GameType>
-float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game, int updatePlayer, int current_iter, float p0, float p1, std::array<std::vector<TrainingSampleAdvantage>, 2> &local_adv_samples, std::vector<TrainingSampleStrategy> local_strat_samples)
+float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game, int updatePlayer, int current_iter, float probUpdatePlayer, std::array<std::vector<TrainingSampleAdvantage>, 2> &local_adv_samples, std::vector<TrainingSampleStrategy>& local_strat_samples)
 {
         // Terminal node
     if (game.getType() == "terminal") {
@@ -247,7 +234,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
     if (game.getType() == "chance") {
         GameType next_game(game);
         next_game.transition(GameType::Action::Chance);
-        return traverse_cfr_parallel(next_game, updatePlayer, current_iter, p0, p1,local_adv_samples, local_strat_samples);
+        return traverse_cfr_parallel(next_game, updatePlayer, current_iter, probUpdatePlayer, local_adv_samples,local_strat_samples);
     }
 
     int currentPlayer = game.getCurrentPlayer();
@@ -258,7 +245,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
         legal_indices.push_back(GameType::ActionMapping::getActionIndex(action));
     }
     // Get current strategy from advantage network
-    torch::NoGradGuard no_grad;
+    //torch::NoGradGuard no_grad;
     auto cards = game.getCardTensors(game.getCurrentPlayer(),game.getCurrentRound());
     auto bets = game.getBetTensor().to(m_device);
 
@@ -279,30 +266,22 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
     // Compute strategy using regret matching
     auto strategy = compute_strategy_from_advantages(legal_advantages);
 
+    float nodeValue = 0.0f;
     if (currentPlayer == updatePlayer) {
         // Traverser: explore all actions
-        std::vector<float> action_values(legal_actions.size());
+        std::vector<float> counterfactualValue(legal_actions.size());
 
         for (size_t a = 0; a < legal_actions.size(); ++a) {
-            GameType next_game = game;
+            GameType next_game(game);
             next_game.transition(legal_actions[a]);
-
-            float new_p0 = (currentPlayer == 0) ? p0 * strategy[a] : p0;
-            float new_p1 = (currentPlayer == 1) ? p1 * strategy[a] : p1;
-
-            action_values[a] = traverse_cfr_parallel(next_game, updatePlayer, current_iter, new_p0, new_p1,local_adv_samples,local_strat_samples);
-        }
-
-        // Compute counterfactual value
-        float cfr_value = 0.0f;
-        for (size_t a = 0; a < legal_actions.size(); ++a) {
-            cfr_value += strategy[a] * action_values[a];
+            counterfactualValue[a] = traverse_cfr_parallel(next_game, updatePlayer, current_iter, probUpdatePlayer * strategy[a], local_adv_samples,local_strat_samples);
+            nodeValue += strategy[a] * counterfactualValue[a];
         }
 
         // Compute advantages (instantaneous regrets)
         std::vector<float> instant_regrets(legal_actions.size());
         for (size_t a = 0; a < legal_actions.size(); ++a) {
-            instant_regrets[a] = action_values[a] - cfr_value;
+            instant_regrets[a] = counterfactualValue[a] - nodeValue;
         }
 
         // Store in memory with Linear CFR weighting (keep tensors on CPU for memory efficiency)
@@ -319,7 +298,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
 
         add_to_memory(m_adv_memories[updatePlayer], sample, MEMORY_SIZE);
 
-        return cfr_value;
+        return nodeValue;
     } else {
         // Opponent: sample single action and store strategy
         TrainingSampleStrategy sample;
@@ -334,13 +313,9 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
         std::discrete_distribution<> dist(strategy.begin(), strategy.end());
         int action_idx = dist(m_rng);
 
-        GameType next_game = game;
+        GameType next_game(game);
         next_game.transition(legal_actions[action_idx]);
-
-        float new_p0 = (currentPlayer == 0) ? p0 * strategy[action_idx] : p0;
-        float new_p1 = (currentPlayer == 1) ? p1 * strategy[action_idx] : p1;
-
-        return traverse_cfr_parallel(next_game, updatePlayer, current_iter, new_p0, new_p1,local_adv_samples,local_strat_samples);
+        return traverse_cfr_parallel(next_game, updatePlayer, current_iter, probUpdatePlayer, local_adv_samples,local_strat_samples);
     }
 }
 

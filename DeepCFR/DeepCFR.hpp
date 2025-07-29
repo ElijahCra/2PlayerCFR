@@ -62,9 +62,9 @@ public:
     void TrainParallel(uint32_t iterations, int num_threads = std::thread::hardware_concurrency());
 private:
     /// @brief The recursive CFR traversal function.
-    float traverse_cfr(const GameType& game, int updatePlayer, int current_iter, float p0, float p1);
+    float traverse_cfr(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer);
 
-    float traverse_cfr_parallel(const GameType& game, int updatePlayer, int current_iter, float p0, float p1, std::array<std::vector<TrainingSampleAdvantage>,2>& local_adv_samples, std::vector<TrainingSampleStrategy> local_strat_samples);
+    float traverse_cfr_parallel(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer, std::array<std::vector<TrainingSampleAdvantage>,2>& local_adv_samples, std::vector<TrainingSampleStrategy>& local_strat_samples);
     /// @brief Trains the advantage network from scratch using data from its replay buffer.
     void train_advantage_network(int player);
 
