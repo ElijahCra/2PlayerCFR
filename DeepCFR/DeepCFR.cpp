@@ -332,19 +332,17 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
 
     // Prepare batched data
     int total_samples = std::min(BATCH_SIZE * SGD_ITERATIONS, m_adv_memories[player].size());
-    
-    std::vector<int> all_indices(m_adv_memories[player].size());
-
-    std::ranges::shuffle(all_indices, m_rng);
 
     // Collect all data on CPU first
     std::vector<std::vector<torch::Tensor>> all_cards_cpu(total_samples);
     std::vector<torch::Tensor> all_bets_cpu(total_samples);
     std::vector<std::vector<float>> all_targets_cpu(total_samples);
     std::vector<std::vector<float>> all_masks_cpu(total_samples);
-    
+
+    using param_t = std::uniform_int_distribution<>::param_type;
+    param_t params(0, m_adv_memories[player].size() - 1);
     for (int i = 0; i < total_samples; ++i) {
-        const auto& sample = m_adv_memories[player][all_indices[i]];
+        const auto& sample = m_adv_memories[player][m_int_dist(m_rng, params)];
         all_cards_cpu[i] = sample.infoset.getCardTensors(); // Keep on CPU
         all_bets_cpu[i] = sample.infoset.getBetTensor();    // Keep on CPU
         
@@ -433,12 +431,39 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
 
     m_strategy_network->train();
 
+    //Prep batches
+    int total_samples = std::min(BATCH_SIZE * SGD_ITERATIONS, m_strategy_memory.size());
+    std::vector<std::vector<torch::Tensor>> all_cards_cpu(total_samples);
+    std::vector<torch::Tensor> all_bets_cpu(total_samples);
+    std::vector<std::vector<float>> all_targets_cpu(total_samples);
+    std::vector<std::vector<float>> all_masks_cpu(total_samples);
+
+    using param_t = std::uniform_int_distribution<>::param_type;
+    param_t params(0, m_strategy_memory.size() - 1);
+
+    for (int i = 0; i < total_samples; ++i) {
+        const auto& sample = m_strategy_memory[m_int_dist(m_rng,params)];
+        all_cards_cpu[i] = sample.infoset.getCardTensors();
+        all_bets_cpu[i] = sample.infoset.getBetTensor();
+        // Prepare targets and masks
+        std::vector<float> targets(GameType::MAX_ACTIONS, 0.0f);
+        std::vector<float> masks(GameType::MAX_ACTIONS, 0.0f);
+
+        for (size_t j = 0; j < sample.legal_action_indices.size(); ++j) {
+            int action_idx = sample.legal_action_indices[j];
+            targets[action_idx] = sample.strategy[j] * sample.weight;
+            masks[action_idx] = 1.0f;
+        }
+
+        all_targets_cpu[i] = targets;
+        all_masks_cpu[i] = masks;
+    }
     // Training loop
     for (int iter = 0; iter < SGD_ITERATIONS; ++iter) {
         // Sample batch
         std::vector<int> indices(m_strategy_memory.size());
         std::iota(indices.begin(), indices.end(), 0);
-        std::shuffle(indices.begin(), indices.end(), m_rng);
+        std::ranges::shuffle(indices, m_rng);
 
         int batch_size = std::min(BATCH_SIZE, static_cast<size_t>(m_strategy_memory.size()));
 
