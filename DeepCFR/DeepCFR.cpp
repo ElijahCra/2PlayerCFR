@@ -419,7 +419,7 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
         auto ms_int = duration_cast<std::chrono::milliseconds>(t2 - t1);
 
             std::cout << "Player " << player << " advantage network training iter " << iter
-                     << ", loss: " << masked_loss << " time: "<< ms_int<<std::endl;
+                     << ", loss: " << masked_loss.values() << " time: "<< ms_int<<std::endl;
     }
 }
 
@@ -525,7 +525,7 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
         auto ms_int = duration_cast<std::chrono::milliseconds>(t2 - t1);
 
         std::cout << "Strategy network training iter " << iter
-                 << ", loss: " << masked_loss << " time: "<< ms_int<<std::endl;
+                 << ", loss: " << masked_loss.values() << " time: "<< ms_int<<std::endl;
 
         }
 
