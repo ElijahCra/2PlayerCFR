@@ -419,7 +419,7 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
         auto ms_int = duration_cast<std::chrono::milliseconds>(t2 - t1);
 
             std::cout << "Player " << player << " advantage network training iter " << iter
-                     << ", loss: " << masked_loss.template item<float>() / total_samples << " time: "<< ms_int<<std::endl;
+                     << ", loss: " << masked_loss << " time: "<< ms_int<<std::endl;
     }
 }
 
@@ -511,7 +511,7 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
 
 
         //loss on predicted probability from network
-        auto masked_loss = torch::mse_loss(probabilities * batch_bets, batch_targets * batch_masks, torch::Reduction::Mean);
+        auto masked_loss = torch::mse_loss(probabilities * batch_masks, batch_targets * batch_masks, torch::Reduction::Mean);
 
         m_strategy_optimizer.zero_grad();
         masked_loss.backward();
@@ -525,7 +525,7 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
         auto ms_int = duration_cast<std::chrono::milliseconds>(t2 - t1);
 
         std::cout << "Strategy network training iter " << iter
-                 << ", loss: " << masked_loss.template item<float>() / total_samples << " time: "<< ms_int<<std::endl;
+                 << ", loss: " << masked_loss << " time: "<< ms_int<<std::endl;
 
         }
 
