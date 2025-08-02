@@ -102,7 +102,6 @@ private:
     static constexpr int SGD_ITERATIONS = 4000; // SGD iterations per training step
     static constexpr double GRADIENT_CLIP_NORM = 1.0;
     static constexpr int K_TRAVERSALS = 10000; // Number of traversals per iteration
-    std::uniform_int_distribution<> m_int_dist;
 };
 
 #endif //DEEPCFR_HPP

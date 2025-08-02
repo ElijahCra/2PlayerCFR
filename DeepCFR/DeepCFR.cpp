@@ -59,7 +59,7 @@ void DeepRegretMinimizer<GameType>::Train(uint32_t iterations) {
         }
 
         // Periodically train strategy network
-        if (iter % 10 == 0) {
+        if (iter % 1 == 0) {
             train_strategy_network();
         }
     }
@@ -339,10 +339,11 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
     std::vector<std::vector<float>> all_targets_cpu(total_samples);
     std::vector<std::vector<float>> all_masks_cpu(total_samples);
 
-    using param_t = std::uniform_int_distribution<>::param_type;
-    param_t params(0, m_adv_memories[player].size() - 1);
+    std::vector<int> all_indices(total_samples);
+    std::iota(all_indices.begin(), all_indices.end(), 0);
+    std::ranges::shuffle(all_indices,m_rng);
     for (int i = 0; i < total_samples; ++i) {
-        const auto& sample = m_adv_memories[player][m_int_dist(m_rng, params)];
+        const auto& sample = m_adv_memories[player][all_indices[i]];
         all_cards_cpu[i] = sample.infoset.getCardTensors(); // Keep on CPU
         all_bets_cpu[i] = sample.infoset.getBetTensor();    // Keep on CPU
         
@@ -385,9 +386,8 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
     }
 
     // Training loop
-    // Process in true batches
     for (int iter = 0; iter < SGD_ITERATIONS; ++iter) {
-         auto t1 = std::chrono::high_resolution_clock::now();
+        auto t1 = std::chrono::high_resolution_clock::now();
         int batch_start = iter * BATCH_SIZE;
         int batch_end = std::min(batch_start + BATCH_SIZE, static_cast<size_t>(total_samples));
 
@@ -407,9 +407,7 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
 
         // Single forward pass for entire batch
         auto predictions = m_advantage_networks[player]->forward(batch_cards, batch_bets);
-        auto masked_loss = torch::mse_loss(predictions * batch_masks,
-                                          batch_targets * batch_masks,
-                                          torch::Reduction::Mean);
+        auto masked_loss = torch::mse_loss(predictions * batch_masks, batch_targets * batch_masks, torch::Reduction::Mean);
 
         // Backprop
         m_advantage_optimizers[player].zero_grad();
@@ -438,13 +436,15 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
     std::vector<std::vector<float>> all_targets_cpu(total_samples);
     std::vector<std::vector<float>> all_masks_cpu(total_samples);
 
-    using param_t = std::uniform_int_distribution<>::param_type;
-    param_t params(0, m_strategy_memory.size() - 1);
+    std::vector<int> all_indices(total_samples);
+    std::iota(all_indices.begin(), all_indices.end(), 0);
+    std::ranges::shuffle(all_indices,m_rng);
 
     for (int i = 0; i < total_samples; ++i) {
-        const auto& sample = m_strategy_memory[m_int_dist(m_rng,params)];
+        const auto& sample = m_strategy_memory[all_indices[i]];
         all_cards_cpu[i] = sample.infoset.getCardTensors();
         all_bets_cpu[i] = sample.infoset.getBetTensor();
+
         // Prepare targets and masks
         std::vector<float> targets(GameType::MAX_ACTIONS, 0.0f);
         std::vector<float> masks(GameType::MAX_ACTIONS, 0.0f);
@@ -458,62 +458,71 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
         all_targets_cpu[i] = targets;
         all_masks_cpu[i] = masks;
     }
+
+
+    // Bulk GPU transfer using torch::stack
+    std::vector<torch::Tensor> all_cards_batched(GameType::NUM_CARD_TYPES);
+    for (int card_type = 0; card_type < GameType::NUM_CARD_TYPES; ++card_type) {
+        std::vector<torch::Tensor> cards_for_type;
+        cards_for_type.reserve(total_samples);
+        for (int i = 0; i < total_samples; ++i) {
+            cards_for_type.push_back(all_cards_cpu[i][card_type]);
+        }
+        all_cards_batched[card_type] = torch::stack(cards_for_type).squeeze(1).to(m_device);
+    }
+
+    auto all_bets_batched = torch::stack(all_bets_cpu).squeeze(1).to(m_device);
+
+    // Convert targets and masks to tensors
+    torch::Tensor all_targets_batched = torch::zeros({total_samples, GameType::MAX_ACTIONS}, m_device);
+    torch::Tensor all_masks_batched = torch::zeros({total_samples, GameType::MAX_ACTIONS}, m_device);
+
+    for (int i = 0; i < total_samples; ++i) {
+        for (int j = 0; j < GameType::MAX_ACTIONS; ++j) {
+            all_targets_batched[i][j] = all_targets_cpu[i][j];
+            all_masks_batched[i][j] = all_masks_cpu[i][j];
+        }
+    }
     // Training loop
     for (int iter = 0; iter < SGD_ITERATIONS; ++iter) {
-        // Sample batch
-        std::vector<int> indices(m_strategy_memory.size());
-        std::iota(indices.begin(), indices.end(), 0);
-        std::ranges::shuffle(indices, m_rng);
+        auto t1 = std::chrono::high_resolution_clock::now();
+        int batch_start = iter * BATCH_SIZE;
+        int batch_end = std::min(batch_start + BATCH_SIZE, static_cast<size_t>(total_samples));
+
+        // Skip empty batches
+        if (batch_start >= total_samples || batch_end <= batch_start) {
+            continue;
+        }
+
+        // Create batch tensors
+        std::vector<torch::Tensor> batch_cards;
+        for (int i = 0; i < GameType::NUM_CARD_TYPES; ++i) {
+            batch_cards.push_back(all_cards_batched[i].slice(0, batch_start, batch_end));
+        }
+        auto batch_bets = all_bets_batched.slice(0, batch_start, batch_end);
+        auto batch_targets = all_targets_batched.slice(0, batch_start, batch_end);
+        auto batch_masks = all_masks_batched.slice(0, batch_start, batch_end);
+
+        auto logits = m_strategy_network->forward(batch_cards, batch_bets);
+        //loss on predicted probability from network
+        auto masked_loss = torch::mse_loss(torch::softmax(logits * batch_masks,-1), batch_targets * batch_masks, torch::Reduction::Mean);
+
+        m_strategy_optimizer.zero_grad();
+        masked_loss.backward();
+        m_strategy_network->clip_gradients(GRADIENT_CLIP_NORM);
+        m_strategy_optimizer.step();
 
         int batch_size = std::min(BATCH_SIZE, static_cast<size_t>(m_strategy_memory.size()));
 
         torch::Tensor total_loss = torch::zeros({1}).to(m_device);
+        auto t2 = std::chrono::high_resolution_clock::now();
+        auto ms_int = duration_cast<std::chrono::milliseconds>(t2 - t1);
 
-        for (int b = 0; b < batch_size; ++b) {
-            const auto& sample = m_strategy_memory[indices[b]];
+        std::cout << "Strategy network training iter " << iter
+                 << ", loss: " << masked_loss.template item<float>() / total_samples << " time: "<< ms_int<<std::endl;
 
-            // Get network prediction (logits) - move tensors to device
-            auto cards = sample.infoset.getCardTensors();
-            auto bets = sample.infoset.getBetTensor().to(m_device);
-            
-            // Move card tensors to device
-            std::vector<torch::Tensor> cards_gpu;
-            for (auto& card_tensor : cards) {
-                cards_gpu.push_back(card_tensor.to(m_device));
-            }
-            
-            auto logits = m_strategy_network->forward(cards_gpu, bets);
-
-            // Convert to probabilities
-            auto predicted_probs = torch::softmax(logits, -1);
-
-            // Compute weighted cross-entropy loss
-            auto target = torch::from_blob(const_cast<float*>(sample.strategy.data()),
-                                          {static_cast<long>(sample.strategy.size())}).to(m_device);
-
-            // Normalize weight
-            float normalized_weight = sample.weight / m_strategy_memory.back().iteration;
-
-            // Cross entropy: -sum(target * log(predicted))
-            auto loss = normalized_weight * (-torch::sum(target * torch::log(predicted_probs.squeeze() + 1e-8)));
-
-            total_loss += loss;
         }
 
-        // Backprop
-        m_strategy_optimizer.zero_grad();
-        total_loss.backward();
-
-        // Gradient clipping
-        m_strategy_network->clip_gradients(GRADIENT_CLIP_NORM);
-
-        m_strategy_optimizer.step();
-
-        if (iter % 1000 == 0) {
-            std::cout << "Strategy network training iter " << iter
-                     << ", loss: " << total_loss.item<float>() / batch_size << std::endl;
-        }
-    }
 }
 
 template<typename GameType>
