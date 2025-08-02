@@ -407,7 +407,9 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
 
         // Single forward pass for entire batch
         auto predictions = m_advantage_networks[player]->forward(batch_cards, batch_bets);
-        auto masked_loss = torch::mse_loss(predictions * batch_masks, batch_targets * batch_masks, torch::Reduction::Mean);
+        auto loss = (predictions - batch_targets).pow(2) * batch_masks;
+        auto masked_loss = loss.sum() / (batch_masks.sum() + 1e-9);
+        //auto masked_loss = torch::mse_loss(predictions * batch_masks, batch_targets * batch_masks, torch::Reduction::Mean);
 
         // Backprop
         m_advantage_optimizers[player].zero_grad();
@@ -507,11 +509,11 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
         auto logits = m_strategy_network->forward(batch_cards, batch_bets);
         auto illegal_action_mask = (batch_masks == 0);
         logits = logits.masked_fill_(illegal_action_mask, -1e9);
-        auto probabilities = torch::softmax(logits,-1);
-
+        auto log_probabilities = torch::softmax(logits,-1);
+        auto loss = -(batch_targets * log_probabilities);
 
         //loss on predicted probability from network
-        auto masked_loss = torch::mse_loss(probabilities * batch_masks, batch_targets * batch_masks, torch::Reduction::Mean);
+        auto masked_loss = (loss*batch_masks).sum() / (batch_masks.sum() + 1e-9);
 
         m_strategy_optimizer.zero_grad();
         masked_loss.backward();
