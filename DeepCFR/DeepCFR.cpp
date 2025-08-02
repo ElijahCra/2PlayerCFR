@@ -407,9 +407,13 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
 
         // Single forward pass for entire batch
         auto predictions = m_advantage_networks[player]->forward(batch_cards, batch_bets);
+
+        // Calculate the sum of squared errors, masked to include only legal actions.
         auto loss = (predictions - batch_targets).pow(2) * batch_masks;
+
+        // Calculate the true mean by dividing by the number of legal actions.
+        // Add a small epsilon (1e-9) to the denominator to prevent division by zero.
         auto masked_loss = loss.sum() / (batch_masks.sum() + 1e-9);
-        //auto masked_loss = torch::mse_loss(predictions * batch_masks, batch_targets * batch_masks, torch::Reduction::Mean);
 
         // Backprop
         m_advantage_optimizers[player].zero_grad();
@@ -421,9 +425,11 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
         auto ms_int = duration_cast<std::chrono::milliseconds>(t2 - t1);
 
             std::cout << "Player " << player << " advantage network training iter " << iter
-                     << ", loss: " << masked_loss.values() << " time: "<< ms_int<<std::endl;
+                     << ", loss: " << masked_loss.template item<float>() << " time: "<< ms_int<<std::endl;
     }
 }
+
+
 
 template<typename GameType>
 void DeepRegretMinimizer<GameType>::train_strategy_network() {
@@ -505,29 +511,30 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
         auto batch_targets = all_targets_batched.slice(0, batch_start, batch_end);
         auto batch_masks = all_masks_batched.slice(0, batch_start, batch_end);
 
-        //process network output into legal strategy probabilities
+        // Get raw logits from the network
         auto logits = m_strategy_network->forward(batch_cards, batch_bets);
+
+        // Mask illegal actions before calculating loss
         auto illegal_action_mask = (batch_masks == 0);
         logits = logits.masked_fill_(illegal_action_mask, -1e9);
-        auto log_probabilities = torch::softmax(logits,-1);
-        auto loss = -(batch_targets * log_probabilities);
+        // Calculate cross-entropy loss for soft targets
+        auto log_probabilities = torch::log_softmax(logits, -1);
+        auto loss_per_element = -(batch_targets * log_probabilities);
 
-        //loss on predicted probability from network
-        auto masked_loss = (loss*batch_masks).sum() / (batch_masks.sum() + 1e-9);
+        // Calculate the true mean loss over legal actions
+        auto masked_loss = (loss_per_element * batch_masks).sum() / (batch_masks.sum() + 1e-9);
 
+        // Backprop
         m_strategy_optimizer.zero_grad();
         masked_loss.backward();
         m_strategy_network->clip_gradients(GRADIENT_CLIP_NORM);
         m_strategy_optimizer.step();
 
-        int batch_size = std::min(BATCH_SIZE, static_cast<size_t>(m_strategy_memory.size()));
-
-        torch::Tensor total_loss = torch::zeros({1}).to(m_device);
         auto t2 = std::chrono::high_resolution_clock::now();
         auto ms_int = duration_cast<std::chrono::milliseconds>(t2 - t1);
 
         std::cout << "Strategy network training iter " << iter
-                 << ", loss: " << masked_loss.values() << " time: "<< ms_int<<std::endl;
+                 << ", loss: " << masked_loss.template item<float>() << " time: "<< ms_int<<std::endl;
 
         }
 
