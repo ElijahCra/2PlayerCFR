@@ -503,9 +503,15 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
         auto batch_targets = all_targets_batched.slice(0, batch_start, batch_end);
         auto batch_masks = all_masks_batched.slice(0, batch_start, batch_end);
 
+        //process network output into legal strategy probabilities
         auto logits = m_strategy_network->forward(batch_cards, batch_bets);
+        auto illegal_action_mask = (batch_masks == 0);
+        logits = logits.masked_fill_(illegal_action_mask, -1e9);
+        auto probabilities = torch::softmax(logits,-1);
+
+
         //loss on predicted probability from network
-        auto masked_loss = torch::mse_loss(torch::softmax(logits * batch_masks,-1), batch_targets * batch_masks, torch::Reduction::Mean);
+        auto masked_loss = torch::mse_loss(probabilities * batch_bets, batch_targets * batch_masks, torch::Reduction::Mean);
 
         m_strategy_optimizer.zero_grad();
         masked_loss.backward();
