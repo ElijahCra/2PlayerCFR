@@ -40,9 +40,9 @@ struct TrainingSampleStrategy
 {
     InfoSet infoset;
     int iteration;
-    std::vector<float> strategy;    // sigma(I, a) for each action
+    std::vector<float> strategy;
     std::vector<int> legal_action_indices;
-    float weight;                   // iteration weight for Linear CFR
+    float weight;
 };
 
 template<typename GameType>

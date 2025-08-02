@@ -209,6 +209,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
         TrainingSampleStrategy sample;
         sample.infoset = {cards, game.getBetTensor()};  // Store original CPU tensors
         sample.iteration = current_iter;
+        sample.legal_action_indices = legal_indices;
         sample.strategy = strategy;
         sample.weight = static_cast<float>(current_iter); // Linear weighting
 
