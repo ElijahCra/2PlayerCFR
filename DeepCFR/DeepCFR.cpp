@@ -151,16 +151,19 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
     }
     // Get current strategy from advantage network
     //torch::NoGradGuard no_grad;
-    auto cards = game.getCardTensors(game.getCurrentPlayer(),game.getCurrentRound());
-    auto bets = game.getBetTensor().to(m_device);
+    auto cards_cpu = game.getCardTensors(game.getCurrentPlayer(), game.getCurrentRound());
+    auto bets_cpu = game.getBetTensor();
     
-    // Move card tensors to device
-    std::vector<torch::Tensor> cards_gpu;
-    for (auto& card_tensor : cards) {
-        cards_gpu.push_back(card_tensor.to(m_device));
+    std::vector<torch::Tensor> cards_device;
+    cards_device.reserve(cards_cpu.size());
+    for (const auto& t : cards_cpu) {
+        cards_device.push_back(t.to(m_device));
     }
-    
-    auto advantages_tensor = m_advantage_networks[currentPlayer]->forward(cards_gpu, bets);
+    auto bets_device = bets_cpu.to(m_device);
+
+    torch::NoGradGuard no_grad;
+    auto advantages_tensor = m_advantage_networks[currentPlayer]->forward(cards_device, bets_device);
+
     // std::vector<float> advantages(advantages_tensor.template data_ptr<float>(),
     //                              advantages_tensor.template data_ptr<float>() + advantages_tensor.numel());
     std::vector<float> legal_advantages;
@@ -191,11 +194,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
 
         // Store in memory with Linear CFR weighting (keep tensors on CPU for memory efficiency)
         TrainingSampleAdvantage sample;
-        auto card_tensors_gpu = game.getCardTensors(game.getCurrentPlayer(), game.getCurrentRound());
-        for (auto& card : card_tensors_gpu) {
-            card = card.to(m_device);
-        }
-        sample.infoset = {card_tensors_gpu, game.getBetTensor().to(m_device)};
+        sample.infoset = {cards_cpu, bets_cpu};
         sample.iteration = current_iter;
         sample.legal_action_indices = legal_indices;
         sample.advantages = instant_regrets;
@@ -207,7 +206,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
     } else {
         // Opponent: sample single action and store strategy
         TrainingSampleStrategy sample;
-        sample.infoset = {cards, game.getBetTensor()};  // Store original CPU tensors
+        sample.infoset = {cards_cpu,bets_cpu};  // Store original CPU tensors
         sample.iteration = current_iter;
         sample.legal_action_indices = legal_indices;
         sample.strategy = strategy;
