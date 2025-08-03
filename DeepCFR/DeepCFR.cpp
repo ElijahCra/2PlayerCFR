@@ -223,6 +223,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
         return traverse_cfr(next_game, updatePlayer, current_iter, probUpdatePlayer);
     }
 }
+
 template<typename GameType>
 float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game, int updatePlayer, int current_iter, float probUpdatePlayer, std::array<std::vector<TrainingSampleAdvantage>, 2> &local_adv_samples, std::vector<TrainingSampleStrategy>& local_strat_samples)
 {
@@ -297,7 +298,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
         sample.advantages = instant_regrets;
         sample.weight = static_cast<float>(current_iter); // Linear weighting
 
-        add_to_memory(m_adv_memories[updatePlayer], sample, MEMORY_SIZE);
+        add_to_memory(local_adv_samples[updatePlayer], sample, MEMORY_SIZE);
 
         return nodeValue;
     } else {
@@ -308,7 +309,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
         sample.strategy = strategy;
         sample.weight = static_cast<float>(current_iter); // Linear weighting
 
-        add_to_memory(m_strategy_memory, sample, MEMORY_SIZE);
+        add_to_memory(local_strat_samples, sample, MEMORY_SIZE);
 
         // Sample action according to strategy
         std::discrete_distribution<> dist(strategy.begin(), strategy.end());
@@ -339,22 +340,25 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
     std::vector<torch::Tensor> all_bets_cpu(total_samples);
     std::vector<std::vector<float>> all_targets_cpu(total_samples);
     std::vector<std::vector<float>> all_masks_cpu(total_samples);
+    std::vector<float> all_weights_cpu(total_samples);
 
     std::vector<int> all_indices(total_samples);
     std::iota(all_indices.begin(), all_indices.end(), 0);
     std::ranges::shuffle(all_indices,m_rng);
+
     for (int i = 0; i < total_samples; ++i) {
         const auto& sample = m_adv_memories[player][all_indices[i]];
-        all_cards_cpu[i] = sample.infoset.getCardTensors(); // Keep on CPU
-        all_bets_cpu[i] = sample.infoset.getBetTensor();    // Keep on CPU
-        
+        all_cards_cpu[i] = sample.infoset.getCardTensors();
+        all_bets_cpu[i] = sample.infoset.getBetTensor();
+        all_weights_cpu[i] = sample.weight;
         // Prepare targets and masks
         std::vector<float> targets(GameType::MAX_ACTIONS, 0.0f);
+        std::vector<float> weights(GameType::MAX_ACTIONS, 0.0f);
         std::vector<float> masks(GameType::MAX_ACTIONS, 0.0f);
         
         for (size_t j = 0; j < sample.legal_action_indices.size(); ++j) {
             int action_idx = sample.legal_action_indices[j];
-            targets[action_idx] = sample.advantages[j] * sample.weight;
+            targets[action_idx] = sample.advantages[j];
             masks[action_idx] = 1.0f;
         }
         
@@ -374,7 +378,7 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
     }
     
     auto all_bets_batched = torch::stack(all_bets_cpu).squeeze(1).to(m_device);
-    
+    auto all_weights_batched = torch::from_blob(all_weights_cpu.data(), {total_samples, 1}).clone().to(m_device);
     // Convert targets and masks to tensors
     torch::Tensor all_targets_batched = torch::zeros({total_samples, GameType::MAX_ACTIONS}, m_device);
     torch::Tensor all_masks_batched = torch::zeros({total_samples, GameType::MAX_ACTIONS}, m_device);
@@ -404,17 +408,14 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
         }
         auto batch_bets = all_bets_batched.slice(0, batch_start, batch_end);
         auto batch_targets = all_targets_batched.slice(0, batch_start, batch_end);
+        auto batch_weights = all_weights_batched.slice(0, batch_start, batch_end);
         auto batch_masks = all_masks_batched.slice(0, batch_start, batch_end);
 
         // Single forward pass for entire batch
         auto predictions = m_advantage_networks[player]->forward(batch_cards, batch_bets);
-
-        // Calculate the sum of squared errors, masked to include only legal actions.
-        auto loss = (predictions - batch_targets).pow(2) * batch_masks;
-
-        // Calculate the true mean by dividing by the number of legal actions.
-        // Add a small epsilon (1e-9) to the denominator to prevent division by zero.
-        auto masked_loss = loss.sum() / (batch_masks.sum() + 1e-9);
+        auto squared_error = (predictions - batch_targets).pow(2);
+        auto weighted_error = squared_error * batch_masks * batch_weights;
+        auto masked_loss = weighted_error.sum() / ((batch_masks * batch_weights).sum() + 1e-9);
 
         // Backprop
         m_advantage_optimizers[player].zero_grad();
@@ -443,6 +444,7 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
     std::vector<torch::Tensor> all_bets_cpu(total_samples);
     std::vector<std::vector<float>> all_targets_cpu(total_samples);
     std::vector<std::vector<float>> all_masks_cpu(total_samples);
+    std::vector<float> all_weights_cpu(total_samples);
 
     std::vector<int> all_indices(total_samples);
     std::iota(all_indices.begin(), all_indices.end(), 0);
@@ -452,6 +454,7 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
         const auto& sample = m_strategy_memory[all_indices[i]];
         all_cards_cpu[i] = sample.infoset.getCardTensors();
         all_bets_cpu[i] = sample.infoset.getBetTensor();
+        all_weights_cpu[i] = sample.weight;
 
         // Prepare targets and masks
         std::vector<float> targets(GameType::MAX_ACTIONS, 0.0f);
@@ -459,7 +462,7 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
 
         for (size_t j = 0; j < sample.legal_action_indices.size(); ++j) {
             int action_idx = sample.legal_action_indices[j];
-            targets[action_idx] = sample.strategy[j] * sample.weight;
+            targets[action_idx] = sample.strategy[j];
             masks[action_idx] = 1.0f;
         }
 
@@ -480,7 +483,7 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
     }
 
     auto all_bets_batched = torch::stack(all_bets_cpu).squeeze(1).to(m_device);
-
+    auto all_weights_batched = torch::from_blob(all_weights_cpu.data(), {total_samples, 1}).clone().to(m_device);
     // Convert targets and masks to tensors
     torch::Tensor all_targets_batched = torch::zeros({total_samples, GameType::MAX_ACTIONS}, m_device);
     torch::Tensor all_masks_batched = torch::zeros({total_samples, GameType::MAX_ACTIONS}, m_device);
@@ -510,6 +513,7 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
         auto batch_bets = all_bets_batched.slice(0, batch_start, batch_end);
         auto batch_targets = all_targets_batched.slice(0, batch_start, batch_end);
         auto batch_masks = all_masks_batched.slice(0, batch_start, batch_end);
+        auto batch_weights = all_weights_batched.slice(0, batch_start, batch_end);
 
         // Get raw logits from the network
         auto logits = m_strategy_network->forward(batch_cards, batch_bets);
@@ -520,9 +524,8 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
         // Calculate cross-entropy loss for soft targets
         auto log_probabilities = torch::log_softmax(logits, -1);
         auto loss_per_element = -(batch_targets * log_probabilities);
-
-        // Calculate the true mean loss over legal actions
-        auto masked_loss = (loss_per_element * batch_masks).sum() / (batch_masks.sum() + 1e-9);
+        auto weighted_loss_per_element = loss_per_element * batch_masks * batch_weights;
+        auto masked_loss = weighted_loss_per_element.sum() / ((batch_masks * batch_weights).sum() + 1e-9);
 
         // Backprop
         m_strategy_optimizer.zero_grad();
