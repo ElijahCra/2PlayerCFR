@@ -28,16 +28,12 @@ DeepRegretMinimizer<GameType>::DeepRegretMinimizer(uint32_t seed)
     {
         m_advantage_networks[i] = DeepCFRModel(GameType::NUM_CARD_TYPES, GameType::NUM_BET_FEATURES,
                                                GameType::MAX_ACTIONS);
-        m_advantage_networks[i]->to(m_device);
         m_advantage_optimizers.emplace_back(m_advantage_networks[i]->parameters(), LEARNING_RATE);
 
         // Reserve memory for replay buffers
         m_adv_memories[i].reserve(MEMORY_SIZE);
     }
     m_strategy_memory.reserve(MEMORY_SIZE);
-
-    // Set networks to training mode
-    m_strategy_network->train();
 }
 
 template<typename GameType>
@@ -47,6 +43,10 @@ void DeepRegretMinimizer<GameType>::Train(uint32_t iterations) {
 
         // Alternate between players (external sampling)
         for (int p = 0; p < GameType::PlayerNum; ++p) {
+            m_advantage_networks[0]->to(torch::kCPU);
+            m_advantage_networks[1]->to(torch::kCPU);
+            auto t1 = std::chrono::high_resolution_clock::now();
+
             // Perform K traversals for this player
             for (int k = 0; k < K_TRAVERSALS; ++k) {
                 // Traverse game tree with external sampling
@@ -54,13 +54,13 @@ void DeepRegretMinimizer<GameType>::Train(uint32_t iterations) {
             }
             m_game.reInitialize();
 
+            auto t2 = std::chrono::high_resolution_clock::now();
+            auto ms_int = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+            std::cout << "Training for player: "<<p<<" time: " << ms_int << std::endl;
             // Train advantage network from scratch for this player
-            train_advantage_network(p);
-        }
+            m_advantage_networks[p]->to(m_device);
 
-        // Periodically train strategy network
-        if (iter % 1 == 0) {
-            train_strategy_network();
+            train_advantage_network(p);
         }
     }
 
@@ -154,15 +154,8 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
     auto cards_cpu = game.getCardTensors(game.getCurrentPlayer(), game.getCurrentRound());
     auto bets_cpu = game.getBetTensor();
     
-    std::vector<torch::Tensor> cards_device;
-    cards_device.reserve(cards_cpu.size());
-    for (const auto& t : cards_cpu) {
-        cards_device.push_back(t.to(m_device));
-    }
-    auto bets_device = bets_cpu.to(m_device);
-
     torch::NoGradGuard no_grad;
-    auto advantages_tensor = m_advantage_networks[currentPlayer]->forward(cards_device, bets_device);
+    auto advantages_tensor = m_advantage_networks[currentPlayer]->forward(cards_cpu, bets_cpu);
 
     // std::vector<float> advantages(advantages_tensor.template data_ptr<float>(),
     //                              advantages_tensor.template data_ptr<float>() + advantages_tensor.numel());
@@ -324,6 +317,8 @@ template<typename GameType>
 void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
     if (m_adv_memories[player].empty()) return;
 
+    auto t1 = std::chrono::high_resolution_clock::now();
+
     // Reinitialize network (train from scratch)
     m_advantage_networks[player] = DeepCFRModel(GameType::NUM_CARD_TYPES, GameType::NUM_BET_FEATURES, GameType::MAX_ACTIONS);
     m_advantage_networks[player]->to(m_device);
@@ -388,10 +383,10 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
             all_masks_batched[i][j] = all_masks_cpu[i][j];
         }
     }
-
+    float total_loss = 0.0f;
     // Training loop
     for (int iter = 0; iter < SGD_ITERATIONS; ++iter) {
-        auto t1 = std::chrono::high_resolution_clock::now();
+
         int batch_start = iter * BATCH_SIZE;
         int batch_end = std::min(batch_start + BATCH_SIZE, static_cast<size_t>(total_samples));
 
@@ -415,6 +410,7 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
         auto squared_error = (predictions - batch_targets).pow(2);
         auto weighted_error = squared_error * batch_masks * batch_weights;
         auto masked_loss = weighted_error.sum() / ((batch_masks * batch_weights).sum() + 1e-9);
+        total_loss += masked_loss.template item<float>();
 
         // Backprop
         m_advantage_optimizers[player].zero_grad();
@@ -422,11 +418,12 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
         m_advantage_networks[player]->clip_gradients(GRADIENT_CLIP_NORM);
         m_advantage_optimizers[player].step();
 
-        auto t2 = std::chrono::high_resolution_clock::now();
-        auto ms_int = duration_cast<std::chrono::milliseconds>(t2 - t1);
+           }
+    auto t2 = std::chrono::high_resolution_clock::now();
+    auto ms_int = duration_cast<std::chrono::milliseconds>(t2 - t1);
 
-            std::cout << "Player " << player << " advantage network training iter " << iter << ", loss: " << masked_loss.template item<float>() << " time: "<< ms_int<<std::endl;
-    }
+    std::cout << "Player " << player << " advantage network training for " << total_samples << " samples, total loss: " << total_loss << " loss/sample " << total_loss/total_samples<<" samples/ms: "<< total_samples/ms_int.count()<< " iter runtime "<< ms_int <<std::endl;
+
 }
 
 
@@ -573,6 +570,7 @@ void DeepRegretMinimizer<GameType>::add_to_memory(std::vector<T>& memory, const 
         memory.push_back(sample);
     } else {
         // Reservoir sampling
+        std::cout << "reservoir" << std::endl;
         std::uniform_int_distribution<size_t> dist(0, memory.size());
         size_t idx = dist(m_rng);
         if (idx < max_size) {
