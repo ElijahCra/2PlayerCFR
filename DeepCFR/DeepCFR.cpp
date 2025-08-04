@@ -320,104 +320,77 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
     m_advantage_networks[player]->train();
 
 
-    // Prepare batched data
-    int total_samples = std::min(BATCH_SIZE * SGD_ITERATIONS, m_adv_memories[player].size());
+    int total_samples_to_train = std::min(BATCH_SIZE * SGD_ITERATIONS, m_adv_memories[player].size());
 
-    // Collect all data on CPU first
-    std::vector<std::vector<torch::Tensor>> all_cards_cpu(total_samples);
-    std::vector<torch::Tensor> all_bets_cpu(total_samples);
-    std::vector<std::vector<float>> all_targets_cpu(total_samples);
-    std::vector<std::vector<float>> all_masks_cpu(total_samples);
-    std::vector<float> all_weights_cpu(total_samples);
+    std::vector<int> shuffled_indices(m_adv_memories[player].size());
+    std::iota(shuffled_indices.begin(), shuffled_indices.end(), 0);
+    std::ranges::shuffle(shuffled_indices, m_rng);
 
-    std::vector<int> all_indices(total_samples);
-    std::iota(all_indices.begin(), all_indices.end(), 0);
-    std::ranges::shuffle(all_indices,m_rng);
-
-    for (int i = 0; i < total_samples; ++i) {
-        const auto& sample = m_adv_memories[player][all_indices[i]];
-        all_cards_cpu[i] = sample.infoset.getCardTensors();
-        all_bets_cpu[i] = sample.infoset.getBetTensor();
-        all_weights_cpu[i] = sample.weight;
-        // Prepare targets and masks
-        std::vector<float> targets(GameType::MAX_ACTIONS, 0.0f);
-        std::vector<float> weights(GameType::MAX_ACTIONS, 0.0f);
-        std::vector<float> masks(GameType::MAX_ACTIONS, 0.0f);
-        
-        for (size_t j = 0; j < sample.legal_action_indices.size(); ++j) {
-            int action_idx = sample.legal_action_indices[j];
-            targets[action_idx] = sample.advantages[j];
-            masks[action_idx] = 1.0f;
-        }
-        
-        all_targets_cpu[i] = targets;
-        all_masks_cpu[i] = masks;
-    }
-
-    // Bulk GPU transfer using torch::stack
-    std::vector<torch::Tensor> all_cards_batched(GameType::NUM_CARD_TYPES);
-    for (int card_type = 0; card_type < GameType::NUM_CARD_TYPES; ++card_type) {
-        std::vector<torch::Tensor> cards_for_type;
-        cards_for_type.reserve(total_samples);
-        for (int i = 0; i < total_samples; ++i) {
-            cards_for_type.push_back(all_cards_cpu[i][card_type]);
-        }
-        all_cards_batched[card_type] = torch::stack(cards_for_type).squeeze(1).to(m_device);
-    }
-    
-    auto all_bets_batched = torch::stack(all_bets_cpu).squeeze(1).to(m_device);
-    auto all_weights_batched = torch::from_blob(all_weights_cpu.data(), {total_samples, 1}).clone().to(m_device);
-    // Convert targets and masks to tensors
-    torch::Tensor all_targets_batched = torch::zeros({total_samples, GameType::MAX_ACTIONS}, m_device);
-    torch::Tensor all_masks_batched = torch::zeros({total_samples, GameType::MAX_ACTIONS}, m_device);
-    
-    for (int i = 0; i < total_samples; ++i) {
-        for (int j = 0; j < GameType::MAX_ACTIONS; ++j) {
-            all_targets_batched[i][j] = all_targets_cpu[i][j];
-            all_masks_batched[i][j] = all_masks_cpu[i][j];
-        }
-    }
     float total_loss = 0.0f;
-    auto s_int = std::chrono::steady_clock::now();
-    // Training loop
-    for (int iter = 0; iter < SGD_ITERATIONS; ++iter) {
 
-        int batch_start = iter * BATCH_SIZE;
-        int batch_end = std::min(batch_start + BATCH_SIZE, static_cast<size_t>(total_samples));
+    for (int i = 0; i < total_samples_to_train; i += BATCH_SIZE) {
+        int current_batch_size = std::min(static_cast<int>(BATCH_SIZE), total_samples_to_train - i);
+        if (current_batch_size <= 0) continue;
 
-        // Skip empty batches
-        if (batch_start >= total_samples || batch_end <= batch_start) {
-            continue;
+        // --- Batch-centric Data Preparation ---
+        std::vector<std::vector<torch::Tensor>> batch_cards_cpu(current_batch_size);
+        std::vector<torch::Tensor> batch_bets_cpu(current_batch_size);
+        std::vector<torch::Tensor> batch_targets_cpu(current_batch_size);
+        std::vector<torch::Tensor> batch_masks_cpu(current_batch_size);
+        std::vector<float> batch_weights_cpu(current_batch_size);
+
+        for (int j = 0; j < current_batch_size; ++j) {
+            const auto& sample = m_adv_memories[player][shuffled_indices[i + j]];
+            batch_cards_cpu[j] = sample.infoset.getCardTensors();
+            batch_bets_cpu[j] = sample.infoset.getBetTensor();
+            batch_weights_cpu[j] = sample.weight;
+
+            torch::Tensor targets = torch::zeros({GameType::MAX_ACTIONS});
+            torch::Tensor masks = torch::zeros({GameType::MAX_ACTIONS});
+
+            for (size_t k = 0; k < sample.legal_action_indices.size(); ++k) {
+                int action_idx = sample.legal_action_indices[k];
+                targets[action_idx] = sample.advantages[k];
+                masks[action_idx] = 1.0f;
+            }
+            batch_targets_cpu[j] = targets;
+            batch_masks_cpu[j] = masks;
         }
 
-        // Create batch tensors
-        std::vector<torch::Tensor> batch_cards;
-        for (int i = 0; i < GameType::NUM_CARD_TYPES; ++i) {
-            batch_cards.push_back(all_cards_batched[i].slice(0, batch_start, batch_end));
+        // --- Bulk Transfer for the Current Batch ---
+        std::vector<torch::Tensor> batch_cards_gpu;
+        for (int card_type = 0; card_type < GameType::NUM_CARD_TYPES; ++card_type) {
+            std::vector<torch::Tensor> cards_for_type;
+            cards_for_type.reserve(current_batch_size);
+            for(int k=0; k < current_batch_size; ++k) {
+                cards_for_type.push_back(batch_cards_cpu[k][card_type]);
+            }
+            batch_cards_gpu.push_back(torch::stack(cards_for_type).squeeze(1).to(m_device));
         }
-        auto batch_bets = all_bets_batched.slice(0, batch_start, batch_end);
-        auto batch_targets = all_targets_batched.slice(0, batch_start, batch_end);
-        auto batch_weights = all_weights_batched.slice(0, batch_start, batch_end);
-        auto batch_masks = all_masks_batched.slice(0, batch_start, batch_end);
 
-        // Single forward pass for entire batch
-        auto predictions = m_advantage_networks[player]->forward(batch_cards, batch_bets);
-        auto squared_error = (predictions - batch_targets).pow(2);
-        auto weighted_error = squared_error * batch_masks * batch_weights;
-        auto masked_loss = weighted_error.sum() / ((batch_masks * batch_weights).sum() + 1e-9);
-        total_loss += masked_loss.template item<float>();
+        auto batch_bets_gpu = torch::stack(batch_bets_cpu).squeeze(1).to(m_device);
+        auto batch_targets_gpu = torch::stack(batch_targets_cpu).to(m_device);
+        auto batch_masks_gpu = torch::stack(batch_masks_cpu).to(m_device);
+        auto batch_weights_gpu = torch::from_blob(batch_weights_cpu.data(), {current_batch_size, 1}).clone().to(m_device);
 
-        // Backprop
+
+        // --- Forward and Backward Pass ---
+        auto predictions = m_advantage_networks[player]->forward(batch_cards_gpu, batch_bets_gpu);
+        auto squared_error = (predictions - batch_targets_gpu).pow(2);
+        auto weighted_error = squared_error * batch_masks_gpu * batch_weights_gpu;
+        auto loss = weighted_error.sum() / ((batch_masks_gpu * batch_weights_gpu).sum() + 1e-9);
+
         m_advantage_optimizers[player].zero_grad();
-        masked_loss.backward();
+        loss.backward();
         m_advantage_networks[player]->clip_gradients(GRADIENT_CLIP_NORM);
         m_advantage_optimizers[player].step();
+        total_loss += loss.item<float>();
 
-           }
+    }
     auto t2 = std::chrono::high_resolution_clock::now();
     auto ms_int = duration_cast<std::chrono::milliseconds>(t2 - t1);
 
-    std::cout << "Player " << player << " advantage network training for " << total_samples << " samples, total loss: " << total_loss << " loss/sample " << total_loss/total_samples<<" samples/ms: "<< total_samples/ms_int.count()<< " iter runtime "<< ms_int <<std::endl;
+    std::cout << "Player " << player << " advantage network training for " << total_samples_to_train << " samples, total loss: " << total_loss << " loss/sample " << total_loss/total_samples_to_train<<" samples/ms: "<< total_samples_to_train/ms_int.count()<< " iter runtime "<< ms_int <<std::endl;
 
 }
 
