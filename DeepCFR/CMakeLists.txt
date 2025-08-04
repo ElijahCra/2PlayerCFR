@@ -1,6 +1,8 @@
 add_library(DeepCFR STATIC
         DeepCFR.cpp
         Net.hpp
+        types.hpp
+        DataLoader.hpp
 )
 if(UNIX AND NOT APPLE)
     set(CUDAToolkit_ROOT "/opt/cuda")

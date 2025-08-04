@@ -15,35 +15,7 @@
 #include "../Game/Preflop/Game.hpp"
 #include "../Game/Texas/Game.hpp"
 #include "../Game/Utility/Utility.hpp"
-
-
-struct InfoSet
-{
-    std::vector<torch::Tensor> cardTensors;
-    torch::Tensor betTensor;
-
-    [[nodiscard]] std::vector<torch::Tensor> getCardTensors() const { return cardTensors; }
-    [[nodiscard]] torch::Tensor getBetTensor() const { return betTensor; }
-};
-
-// For advantage Memory
-struct TrainingSampleAdvantage {
-    InfoSet infoset;
-    int iteration;
-    std::vector<float> advantages;  // r_tilde(I, a) for each action
-    std::vector<int> legal_action_indices;
-    float weight;                   // iteration weight for Linear CFR
-};
-
-//For strategy memory
-struct TrainingSampleStrategy
-{
-    InfoSet infoset;
-    int iteration;
-    std::vector<float> strategy;
-    std::vector<int> legal_action_indices;
-    float weight;
-};
+#include "types.hpp"
 
 template<typename GameType>
 class DeepRegretMinimizer {
@@ -60,7 +32,7 @@ public:
     /// @param iterations The total number of game traversals to perform.
     void Train(uint32_t iterations);
 
-    void TrainParallel(uint32_t iterations, int num_threads = std::thread::hardware_concurrency());
+    void TrainParallel(uint32_t iterations, size_t num_threads = std::thread::hardware_concurrency());
 private:
     /// @brief The recursive CFR traversal function.
     float traverse_cfr(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer);
