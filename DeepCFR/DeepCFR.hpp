@@ -16,6 +16,7 @@
 #include "../Game/Texas/Game.hpp"
 #include "../Game/Utility/Utility.hpp"
 #include "types.hpp"
+#include "AdvantageMemoryBuffer.hpp"
 
 template<typename GameType>
 class DeepRegretMinimizer {
@@ -49,7 +50,7 @@ private:
 
     /// @brief Add sample to memory with reservoir sampling
     template<typename T>
-    void add_to_memory(std::vector<T>& memory, const T& sample, size_t max_size);
+    void add_to_strategy_memory(std::vector<T>& memory, const T& sample, size_t max_size);
 
     std::mt19937 m_rng;
     GameType m_game;
@@ -64,7 +65,7 @@ private:
     torch::optim::Adam m_strategy_optimizer;
 
     // Replay Buffers
-    std::array<std::vector<TrainingSampleAdvantage>, 2> m_adv_memories;
+    std::array<AdvantageMemoryBuffer<GameType>, 2> m_adv_memories;
     std::vector<TrainingSampleStrategy> m_strategy_memory;
 
     // Training constants from the paper

@@ -16,7 +16,8 @@ DeepRegretMinimizer<GameType>::DeepRegretMinimizer(uint32_t seed)
       m_game(m_rng),
       m_device(torch::cuda::is_available() ? torch::kCUDA : torch::mps::is_available() ? torch::kMPS : torch::kCPU),
       m_strategy_network(GameType::NUM_CARD_TYPES, GameType::NUM_BET_FEATURES, GameType::MAX_ACTIONS),
-      m_strategy_optimizer({m_strategy_network->parameters()}, torch::optim::AdamOptions(LEARNING_RATE))
+      m_strategy_optimizer({m_strategy_network->parameters()}, torch::optim::AdamOptions(LEARNING_RATE)),
+      m_adv_memories{AdvantageMemoryBuffer<GameType>(MEMORY_SIZE), AdvantageMemoryBuffer<GameType>(MEMORY_SIZE)}
 {
     std::cout << "Using device: " << (m_device.is_cuda() ? "CUDA" : torch::mps::is_available() ? "METAL" : "CPU") << std::endl;
     
@@ -33,7 +34,7 @@ DeepRegretMinimizer<GameType>::DeepRegretMinimizer(uint32_t seed)
         m_advantage_optimizers.emplace_back(m_advantage_networks[i]->parameters(), LEARNING_RATE);
 
         // Reserve memory for replay buffers
-        m_adv_memories[i].reserve(MEMORY_SIZE);
+        //m_adv_memories[i].reserve(MEMORY_SIZE);
     }
     m_strategy_memory.reserve(MEMORY_SIZE);
 }
@@ -116,11 +117,11 @@ void DeepRegretMinimizer<GameType>::TrainParallel(uint32_t iterations, const siz
             // --- Now, add all the collected samples to the main memory ---
             for (const auto& vec : advantage_results) {
                 for (const auto& sample : vec) {
-                    add_to_memory(m_adv_memories[p], sample, MEMORY_SIZE);
+                    m_adv_memories[p].add_sample(sample, m_rng);
                 }
             }
             for (const auto& sample : strategy_results) {
-                add_to_memory(m_strategy_memory, sample, MEMORY_SIZE);
+                add_to_strategy_memory(m_strategy_memory, sample, MEMORY_SIZE);
             }
 
             // The rest of the training proceeds as before...
@@ -195,7 +196,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
         sample.advantages = instant_regrets;
         sample.weight = static_cast<float>(current_iter); // Linear weighting
 
-        add_to_memory(m_adv_memories[updatePlayer], sample, MEMORY_SIZE);
+        m_adv_memories[updatePlayer].add_sample(sample, m_rng);
 
         return nodeValue;
     } else {
@@ -207,7 +208,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
         sample.strategy = strategy;
         sample.weight = static_cast<float>(current_iter); // Linear weighting
 
-        add_to_memory(m_strategy_memory, sample, MEMORY_SIZE);
+        add_to_strategy_memory(m_strategy_memory, sample, MEMORY_SIZE);
 
         // Sample action according to strategy
         std::discrete_distribution<> dist(strategy.begin(), strategy.end());
@@ -286,7 +287,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
         sample.advantages = instant_regrets;
         sample.weight = static_cast<float>(current_iter); // Linear weighting
 
-        add_to_memory(local_adv_samples[updatePlayer], sample, MEMORY_SIZE);
+        m_adv_memories[updatePlayer].add_sample(sample, m_rng);
 
         return nodeValue;
     } else {
@@ -297,7 +298,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
         sample.strategy = strategy;
         sample.weight = static_cast<float>(current_iter); // Linear weighting
 
-        add_to_memory(local_strat_samples, sample, MEMORY_SIZE);
+        add_to_strategy_memory(local_strat_samples, sample, MEMORY_SIZE);
 
         // Sample action according to strategy
         std::discrete_distribution<> dist(strategy.begin(), strategy.end());
@@ -511,7 +512,7 @@ std::vector<float> DeepRegretMinimizer<GameType>::compute_strategy_from_advantag
 
 template<typename GameType>
 template<typename T>
-void DeepRegretMinimizer<GameType>::add_to_memory(std::vector<T>& memory, const T& sample, size_t max_size) {
+void DeepRegretMinimizer<GameType>::add_to_strategy_memory(std::vector<T>& memory, const T& sample, size_t max_size) {
     if (memory.size() < max_size) {
         memory.push_back(sample);
     } else {
