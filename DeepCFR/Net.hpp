@@ -161,7 +161,8 @@ private:
         } else {
             // Batched case: normalize each sample independently across features (dim=1)
             auto mean = z.mean({1}, true);  // [batch_size, 1]
-            auto std = z.std({1}, true).unsqueeze(1);    // Force [batch_size, 1]
+            auto std = z.std({1}, false,true);    // [batch_size, 1]
+            //std::cout << "Z: " << z.sizes() << "mean: " << mean.sizes() << "std " <<std.sizes() <<std::endl;
             
             return (z - mean) / (std + 1e-8);
         }

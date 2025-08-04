@@ -241,15 +241,9 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
     // Get current strategy from advantage network
     //torch::NoGradGuard no_grad;
     auto cards = game.getCardTensors(game.getCurrentPlayer(),game.getCurrentRound());
-    auto bets = game.getBetTensor().to(m_device);
+    auto bets = game.getBetTensor();
 
-    // Move card tensors to device
-    std::vector<torch::Tensor> cards_gpu;
-    for (auto& card_tensor : cards) {
-        cards_gpu.push_back(card_tensor.to(m_device));
-    }
-
-    auto advantages_tensor = m_advantage_networks[currentPlayer]->forward(cards_gpu, bets);
+    auto advantages_tensor = m_advantage_networks[currentPlayer]->forward(cards, bets);
     // std::vector<float> advantages(advantages_tensor.template data_ptr<float>(),
     //                              advantages_tensor.template data_ptr<float>() + advantages_tensor.numel());
     std::vector<float> legal_advantages;
@@ -384,6 +378,7 @@ void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {
         }
     }
     float total_loss = 0.0f;
+    auto s_int = std::chrono::steady_clock::now();
     // Training loop
     for (int iter = 0; iter < SGD_ITERATIONS; ++iter) {
 
