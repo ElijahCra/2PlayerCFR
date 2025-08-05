@@ -104,7 +104,7 @@ void TaskManager<GameType>::process_task(std::shared_ptr<Task<GameType>> task, s
             }
         } else {
             // This is the root of a traversal that was terminal
-            m_traversals_completed++;
+            ++m_traversals_completed;
             m_completion_cond.notify_all();
         }
         return;
@@ -134,6 +134,10 @@ void TaskManager<GameType>::process_task(std::shared_ptr<Task<GameType>> task, s
         sample.infoset = { task->game_state.getCardTensors(task->game_state.getCurrentPlayer(), task->game_state.getCurrentRound()), task->game_state.getBetTensor() };
         sample.iteration = task->iter;
         sample.advantages = instant_regrets;
+        for (const auto& action : parent_s->legal_actions)
+        {
+            sample.legal_action_indices.push_back(static_cast<int>(action));
+        }
     add_advantage_sample(task->update_player, std::move(sample));
 
         // Report our node_value up to our own parent (if we have one)
@@ -162,7 +166,7 @@ void TaskManager<GameType>::process_task(std::shared_ptr<Task<GameType>> task, s
         }
     } else {
         // If there's no grandparent, this task was the root of the traversal. We are done.
-        m_traversals_completed++;
+        ++m_traversals_completed;
         m_completion_cond.notify_all();
     }
     return;
@@ -225,9 +229,18 @@ void TaskManager<GameType>::process_task(std::shared_ptr<Task<GameType>> task, s
                 submit_task(std::move(child_task));
             }
         } else {
-            // Opponent: sample one action, store strategy
             TrainingSampleStrategy strat_sample;
-            // ... populate strat_sample ...
+            strat_sample.infoset = { task->game_state.getCardTensors(current_player, task->game_state.getCurrentRound()), task->game_state.getBetTensor() };
+            strat_sample.iteration = task->iter;
+            strat_sample.strategy = strategy;
+            strat_sample.weight = static_cast<float>(task->iter); // Or other weighting
+
+            // Get legal action indices for the strategy sample
+            strat_sample.legal_action_indices.reserve(legal_actions.size());
+            for(const auto& action : legal_actions) {
+                strat_sample.legal_action_indices.push_back(GameType::ActionMapping::getActionIndex(action));
+            }
+
             add_strategy_sample(std::move(strat_sample));
 
             std::discrete_distribution<> dist(strategy.begin(), strategy.end());
