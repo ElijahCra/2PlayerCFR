@@ -120,57 +120,50 @@ void TaskManager<GameType>::process_task(std::shared_ptr<Task<GameType>> task, s
 
     // ---- STATE 3: Parent Node (Finished Children) ----
     if (task->type == Task<GameType>::Type::PROCESS_PARENT) {
-    auto parent_s = task->parent_state;
+        auto parent_s = task->parent_state; // This is the state object for the current task.
 
-    // Compute advantages (instantaneous regrets) for the current node
-    std::vector<float> instant_regrets;
-    instant_regrets.reserve(parent_s->legal_actions.size());
-    for (float cfv : parent_s->counterfactual_values) {
-        instant_regrets.push_back(cfv - parent_s->node_value);
-    }
+        // Compute advantages (instantaneous regrets) for the current node
+        std::vector<float> instant_regrets;
+        instant_regrets.reserve(parent_s->legal_actions.size());
+        for (float cfv : parent_s->counterfactual_values) {
+            instant_regrets.push_back(cfv - parent_s->node_value);
+        }
 
-    // Store the computed advantage sample in memory
-    TrainingSampleAdvantage sample;
+        // Store the computed advantage sample in memory
+        TrainingSampleAdvantage sample;
         sample.infoset = { task->game_state.getCardTensors(task->game_state.getCurrentPlayer(), task->game_state.getCurrentRound()), task->game_state.getBetTensor() };
         sample.iteration = task->iter;
         sample.advantages = instant_regrets;
-        for (const auto& action : parent_s->legal_actions)
-        {
+        for (const auto& action : parent_s->legal_actions) {
             sample.legal_action_indices.push_back(static_cast<int>(action));
         }
-    add_advantage_sample(task->update_player, std::move(sample));
+        add_advantage_sample(task->update_player, std::move(sample));
 
-        // Report our node_value up to our own parent (if we have one)
-    if (task->parent_state
-        && task->parent_state->parent_task
-        && task->parent_state->parent_task->parent_state) {
-        // Get a reference to the grandparent's state object for clarity.
-        auto grandparent_s = task->parent_state->parent_task->parent_state;
+        // --- FIX: Correctly report the node_value up to the parent task ---
+        auto grandparent_s = parent_s->grandparent_state;
+        if (grandparent_s) {
+            // This node has a parent in the tree to report its value to.
+            float value_to_report_up = parent_s->node_value;
+            int my_action_index = parent_s->parent_action_index_in_grandparent;
 
-        // The value we are "returning" is the node_value we just calculated.
-        float value_to_report_up = parent_s->node_value;
+            std::lock_guard<std::mutex> lock(grandparent_s->mtx);
 
-        // Lock the grandparent's state to modify it safely.
-        std::lock_guard<std::mutex> lock(grandparent_s->mtx);
+            grandparent_s->counterfactual_values[my_action_index] = value_to_report_up;
+            grandparent_s->node_value += grandparent_s->strategy[my_action_index] * value_to_report_up;
 
-        // Store our result in the grandparent's data structures.
-        grandparent_s->counterfactual_values[task->action_index_in_parent] = value_to_report_up;
-        grandparent_s->node_value += grandparent_s->strategy[task->action_index_in_parent] * value_to_report_up;
-
-        // Decrement the grandparent's child counter.
-        // If we were the last child, the grandparent task is now complete and ready for processing.
-        if (grandparent_s->children_to_complete.fetch_sub(1) - 1 == 0) {
-            // The grandparent is now a completed parent. Re-queue it.
-            grandparent_s->parent_task->type = Task<GameType>::Type::PROCESS_PARENT;
-            submit_task(grandparent_s->parent_task);
+            if (grandparent_s->children_to_complete.fetch_sub(1) - 1 == 0) {
+                // The grandparent is now complete, so re-queue it for processing.
+                grandparent_s->parent_task->type = Task<GameType>::Type::PROCESS_PARENT;
+                submit_task(grandparent_s->parent_task);
+            }
+        } else {
+            // This node was the root of the traversal. Mark it as complete.
+            ++m_traversals_completed;
+            m_completion_cond.notify_all();
         }
-    } else {
-        // If there's no grandparent, this task was the root of the traversal. We are done.
-        ++m_traversals_completed;
-        m_completion_cond.notify_all();
+        return;
     }
-    return;
-}
+
 
     // ---- STATE 4: Resuming after GPU ----
     if (task->type == Task<GameType>::Type::RESUME_AFTER_GPU) {
@@ -192,6 +185,10 @@ void TaskManager<GameType>::process_task(std::shared_ptr<Task<GameType>> task, s
             // Traverser: explore all actions, create a parent state
             auto shared_task = std::make_shared<Task<GameType>>(std::move(*task));
             auto parent_s = std::make_shared<ParentState<GameType>>(shared_task, strategy, legal_actions);
+            // Preserve the link to the grandparent's state before overwriting ---
+            parent_s->grandparent_state = shared_task->parent_state;
+            parent_s->parent_action_index_in_grandparent = shared_task->action_index_in_parent;
+
             shared_task->parent_state = parent_s;
 
             for (size_t i = 0; i < legal_actions.size(); ++i) {

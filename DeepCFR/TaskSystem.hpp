@@ -39,6 +39,9 @@ struct ParentState {
     std::atomic<int> children_to_complete;
     float node_value = 0.0f;
 
+    std::shared_ptr<ParentState<GameType>> grandparent_state = nullptr;
+    int parent_action_index_in_grandparent = -1; // Which child was the parent_task?
+
     ParentState(std::shared_ptr<Task<GameType>> parent, const std::vector<float>& strat, const std::vector<typename GameType::Action>& actions)
         : parent_task(parent), strategy(strat), legal_actions(actions) {
         counterfactual_values.resize(actions.size(), 0.0f);
