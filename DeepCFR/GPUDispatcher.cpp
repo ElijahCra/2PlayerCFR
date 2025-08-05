@@ -54,13 +54,16 @@ void GPUDispatcher::process_batch(std::vector<std::unique_ptr<ForwardRequest>>& 
         for (const auto& req : batch) {
             card_type_list.push_back(req->cards[i]);
         }
-        batched_cards.push_back(torch::stack(card_type_list).to(m_device));
+        // FIX: Squeeze the dimension of size 1 that torch::stack adds.
+        // This changes the shape from [batch_size, 1, features] to [batch_size, features].
+        batched_cards.push_back(torch::stack(card_type_list).squeeze(1).to(m_device));
     }
 
     for (const auto& req : batch) {
         bet_list.push_back(req->bets);
     }
-    auto batched_bets = torch::stack(bet_list).to(m_device);
+    // FIX: Squeeze the dimension of size 1 for the bets tensor as well.
+    auto batched_bets = torch::stack(bet_list).squeeze(1).to(m_device);
 
     // Run inference on the batch
     torch::Tensor results;
@@ -74,3 +77,4 @@ void GPUDispatcher::process_batch(std::vector<std::unique_ptr<ForwardRequest>>& 
         batch[i]->promise.set_value(results.slice(0, i, i + 1));
     }
 }
+

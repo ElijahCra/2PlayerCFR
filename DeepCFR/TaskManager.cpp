@@ -120,32 +120,53 @@ void TaskManager<GameType>::process_task(std::shared_ptr<Task<GameType>> task, s
 
     // ---- STATE 3: Parent Node (Finished Children) ----
     if (task->type == Task<GameType>::Type::PROCESS_PARENT) {
-        auto parent_s = task->parent_state;
+    auto parent_s = task->parent_state;
 
-        // Compute advantages (instantaneous regrets)
-        std::vector<float> instant_regrets;
-        instant_regrets.reserve(parent_s->legal_actions.size());
-        for (float cfv : parent_s->counterfactual_values) {
-            instant_regrets.push_back(cfv - parent_s->node_value);
-        }
+    // Compute advantages (instantaneous regrets) for the current node
+    std::vector<float> instant_regrets;
+    instant_regrets.reserve(parent_s->legal_actions.size());
+    for (float cfv : parent_s->counterfactual_values) {
+        instant_regrets.push_back(cfv - parent_s->node_value);
+    }
 
-        // Store advantage sample in memory
-        TrainingSampleAdvantage sample;
+    // Store the computed advantage sample in memory
+    TrainingSampleAdvantage sample;
         sample.infoset = { task->game_state.getCardTensors(task->game_state.getCurrentPlayer(), task->game_state.getCurrentRound()), task->game_state.getBetTensor() };
         sample.iteration = task->iter;
         sample.advantages = instant_regrets;
-        // ... fill other sample fields ...
-        add_advantage_sample(task->update_player, std::move(sample));
+    add_advantage_sample(task->update_player, std::move(sample));
 
         // Report our node_value up to our own parent (if we have one)
-        if (task->parent_state->parent_task->parent_state) {
-            // ... similar logic to terminal node completion ...
-        } else {
-            m_traversals_completed++;
-            m_completion_cond.notify_all();
+    if (task->parent_state
+        && task->parent_state->parent_task
+        && task->parent_state->parent_task->parent_state) {
+        // Get a reference to the grandparent's state object for clarity.
+        auto grandparent_s = task->parent_state->parent_task->parent_state;
+
+        // The value we are "returning" is the node_value we just calculated.
+        float value_to_report_up = parent_s->node_value;
+
+        // Lock the grandparent's state to modify it safely.
+        std::lock_guard<std::mutex> lock(grandparent_s->mtx);
+
+        // Store our result in the grandparent's data structures.
+        grandparent_s->counterfactual_values[task->action_index_in_parent] = value_to_report_up;
+        grandparent_s->node_value += grandparent_s->strategy[task->action_index_in_parent] * value_to_report_up;
+
+        // Decrement the grandparent's child counter.
+        // If we were the last child, the grandparent task is now complete and ready for processing.
+        if (grandparent_s->children_to_complete.fetch_sub(1) - 1 == 0) {
+            // The grandparent is now a completed parent. Re-queue it.
+            grandparent_s->parent_task->type = Task<GameType>::Type::PROCESS_PARENT;
+            submit_task(grandparent_s->parent_task);
         }
-        return;
+    } else {
+        // If there's no grandparent, this task was the root of the traversal. We are done.
+        m_traversals_completed++;
+        m_completion_cond.notify_all();
     }
+    return;
+}
 
     // ---- STATE 4: Decision Node (may need GPU) ----
     int current_player = task->game_state.getCurrentPlayer();
