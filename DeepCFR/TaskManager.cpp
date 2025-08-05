@@ -172,40 +172,20 @@ void TaskManager<GameType>::process_task(std::shared_ptr<Task<GameType>> task, s
     return;
 }
 
-    // ---- STATE 4: Decision Node (may need GPU) ----
-    int current_player = task->game_state.getCurrentPlayer();
-
-    // Create a new task for the continuation logic
-    auto resume_task = std::make_unique<Task<GameType>>(*task);
-    resume_task->type = Task<GameType>::Type::RESUME_AFTER_GPU;
-    auto resume_task_ptr = resume_task.get(); // Get raw ptr before move
-
-    // Create and submit the request to the GPU
-    auto request = std::make_unique<ForwardRequest>();
-    request->player_index = current_player;
-    request->cards = task->game_state.getCardTensors(current_player, task->game_state.getCurrentRound());
-    request->bets = task->game_state.getBetTensor();
-    auto future = m_dispatcher.submit(std::move(request));
-
-    // **THE CONTINUATION**
-    // Spawn a lightweight waiter thread. This is the key to being non-blocking.
-    // This thread's only job is to wait for the future and queue the resume_task.
-    std::thread([this, f = std::move(future), r_task = std::move(resume_task)]() mutable {
-        r_task->gpu_result = f.get(); // This blocks the waiter thread, not the worker
-        this->submit_task(std::move(r_task));
-    }).detach();
-
-
-    // ---- STATE 5: Resuming after GPU ----
+    // ---- STATE 4: Resuming after GPU ----
     if (task->type == Task<GameType>::Type::RESUME_AFTER_GPU) {
         auto advantages_tensor = task->gpu_result->to(torch::kCPU);
         auto legal_actions = task->game_state.getActions();
+        auto current_player = task->game_state.getCurrentPlayer();
+
         std::vector<float> legal_advantages;
-        for (const auto& action : legal_actions)
-        {
-            legal_advantages.push_back(advantages_tensor[0][static_cast<int>(action)].template item<float>());
+        std::vector<int> legal_indices; // Needed for strategy sample
+        for (const auto& action : legal_actions) {
+            int action_idx = GameType::ActionMapping::getActionIndex(action);
+            legal_advantages.push_back(advantages_tensor[0][action_idx].template item<float>());
+            legal_indices.push_back(action_idx);
         }
-        // ... get legal advantages and compute strategy ...
+
         auto strategy = compute_strategy_from_advantages(legal_advantages);
 
         if (current_player == task->update_player) {
@@ -219,39 +199,61 @@ void TaskManager<GameType>::process_task(std::shared_ptr<Task<GameType>> task, s
                 child_game_state.transition(legal_actions[i]);
                 auto child_task = std::make_unique<Task<GameType>>(Task<GameType>{
                     .type = Task<GameType>::Type::TRAVERSE_NODE,
-                    .game_state = child_game_state, // 3. Use the new state
+                    .game_state = child_game_state,
                     .update_player = shared_task->update_player,
                     .iter = shared_task->iter,
                     .parent_state = parent_s,
                     .action_index_in_parent = static_cast<int>(i)
                 });
-
                 submit_task(std::move(child_task));
             }
         } else {
+            // Opponent: sample one action, store strategy
             TrainingSampleStrategy strat_sample;
             strat_sample.infoset = { task->game_state.getCardTensors(current_player, task->game_state.getCurrentRound()), task->game_state.getBetTensor() };
             strat_sample.iteration = task->iter;
             strat_sample.strategy = strategy;
-            strat_sample.weight = static_cast<float>(task->iter); // Or other weighting
-
-            // Get legal action indices for the strategy sample
-            strat_sample.legal_action_indices.reserve(legal_actions.size());
-            for(const auto& action : legal_actions) {
-                strat_sample.legal_action_indices.push_back(GameType::ActionMapping::getActionIndex(action));
-            }
-
+            strat_sample.legal_action_indices = legal_indices;
+            strat_sample.weight = static_cast<float>(task->iter);
             add_strategy_sample(std::move(strat_sample));
 
             std::discrete_distribution<> dist(strategy.begin(), strategy.end());
-            int action_idx = dist(local_rng);
+            int action_idx_in_legal = dist(local_rng);
 
-            auto next_task = std::make_unique<Task<GameType>>(*task); // copy parent info
-            next_task->game_state.transition(legal_actions[action_idx]);
+            auto next_task = std::make_unique<Task<GameType>>(*task);
+            next_task->type = Task<GameType>::Type::TRAVERSE_NODE; // Ensure next task is for traversal
+            next_task->gpu_result.reset(); // Clear the GPU result
+            next_task->game_state.transition(legal_actions[action_idx_in_legal]);
             submit_task(std::move(next_task));
         }
+        return; // Finish processing for this task
+    }
+
+
+    // ---- STATE 5: Decision Node (Needs GPU) ----
+    // This now only handles TRAVERSE_NODE for decision nodes
+    if (task->type == Task<GameType>::Type::TRAVERSE_NODE) {
+        int current_player = task->game_state.getCurrentPlayer();
+
+        // Create a task for the continuation logic
+        auto resume_task = std::make_shared<Task<GameType>>(*task);
+        resume_task->type = Task<GameType>::Type::RESUME_AFTER_GPU;
+
+        // Create and submit the request to the GPU
+        auto request = std::make_unique<ForwardRequest>();
+        request->player_index = current_player;
+        request->cards = task->game_state.getCardTensors(current_player, task->game_state.getCurrentRound());
+        request->bets = task->game_state.getBetTensor();
+        auto future = m_dispatcher.submit(std::move(request));
+
+        // The non-blocking waiter thread
+        std::thread([this, f = std::move(future), r_task = std::move(resume_task)]() mutable {
+            r_task->gpu_result = f.get(); // Blocks the waiter thread, not the worker
+            this->submit_task(std::move(r_task));
+        }).detach();
     }
 }
+
 
 
 // Explicit template instantiation for your game types need to be in the .cpp
