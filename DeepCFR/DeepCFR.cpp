@@ -199,7 +199,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
         sample.strategy = strategy;
         sample.weight = static_cast<float>(current_iter); // Linear weighting
 
-        add_to_strategy_memory(m_strategy_memory, sample, MEMORY_SIZE);
+        add_to_strategy_memory(m_strategy_memory, sample, MEMORY_SIZE, m_rng);
 
         // Sample action according to strategy
         std::discrete_distribution<> dist(strategy.begin(), strategy.end());
@@ -289,7 +289,7 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
         sample.strategy = strategy;
         sample.weight = static_cast<float>(current_iter); // Linear weighting
 
-        add_to_strategy_memory(local_strat_samples, sample, MEMORY_SIZE);
+        add_to_strategy_memory(local_strat_samples, sample, MEMORY_SIZE, m_rng);
 
         // Sample action according to strategy
         std::discrete_distribution<> dist(strategy.begin(), strategy.end());
@@ -474,48 +474,8 @@ void DeepRegretMinimizer<GameType>::train_strategy_network() {
         }
 }
 
-template<typename GameType>
-std::vector<float> DeepRegretMinimizer<GameType>::compute_strategy_from_advantages(const std::vector<float>& advantages) {
-    std::vector<float> strategy(advantages.size());
 
-    // Compute positive regrets
-    std::vector<float> positive_regrets(advantages.size());
-    float sum_positive = 0.0f;
 
-    for (size_t i = 0; i < advantages.size(); ++i) {
-        positive_regrets[i] = std::max(0.0f, advantages[i]);
-        sum_positive += positive_regrets[i];
-    }
-
-    if (sum_positive > 0) {
-        // Regret matching
-        for (size_t i = 0; i < advantages.size(); ++i) {
-            strategy[i] = positive_regrets[i] / sum_positive;
-        }
-    } else {
-        // Uniform strategy when all regrets are negative
-        float uniform_prob = 1.0f / advantages.size();
-        std::fill(strategy.begin(), strategy.end(), uniform_prob);
-    }
-
-    return strategy;
-}
-
-template<typename GameType>
-template<typename T>
-void DeepRegretMinimizer<GameType>::add_to_strategy_memory(std::vector<T>& memory, const T& sample, size_t max_size) {
-    if (memory.size() < max_size) {
-        memory.push_back(sample);
-    } else {
-        // Reservoir sampling
-        std::cout << "reservoir" << std::endl;
-        std::uniform_int_distribution<size_t> dist(0, memory.size());
-        size_t idx = dist(m_rng);
-        if (idx < max_size) {
-            memory[idx] = sample;
-        }
-    }
-}
 
 // Explicit template instantiation
 template class DeepRegretMinimizer<Preflop::Game>;

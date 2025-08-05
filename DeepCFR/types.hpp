@@ -8,6 +8,7 @@
 #include <future>
 #include <vector>
 #include "torch/torch.h"
+#include <random>
 
 // A struct to hold the components of an information set.
 // Tensors are kept on the CPU until batched for training.
@@ -95,4 +96,47 @@ private:
     static constexpr int SGD_ITERATIONS = 4000; // SGD iterations per training step
     static constexpr double GRADIENT_CLIP_NORM = 1.0;
     static constexpr int K_TRAVERSALS = 10000; // Number of traversals per iteration
+
+
+inline std::vector<float> compute_strategy_from_advantages(const std::vector<float>& advantages) {
+    std::vector<float> strategy(advantages.size());
+
+    // Compute positive regrets
+    std::vector<float> positive_regrets(advantages.size());
+    float sum_positive = 0.0f;
+
+    for (size_t i = 0; i < advantages.size(); ++i) {
+        positive_regrets[i] = std::max(0.0f, advantages[i]);
+        sum_positive += positive_regrets[i];
+    }
+
+    if (sum_positive > 0) {
+        // Regret matching
+        for (size_t i = 0; i < advantages.size(); ++i) {
+            strategy[i] = positive_regrets[i] / sum_positive;
+        }
+    } else {
+        // Uniform strategy when all regrets are negative
+        float uniform_prob = 1.0f / advantages.size();
+        std::fill(strategy.begin(), strategy.end(), uniform_prob);
+    }
+
+    return strategy;
+}
+
+
+template<typename T>
+void add_to_strategy_memory(std::vector<T>& memory, const T& sample, size_t max_size, std::mt19937& rng) {
+    if (memory.size() < max_size) {
+        memory.push_back(sample);
+    } else {
+        // Reservoir sampling
+        std::cout << "reservoir" << std::endl;
+        std::uniform_int_distribution<size_t> dist(0, memory.size());
+        size_t idx = dist(rng);
+        if (idx < max_size) {
+            memory[idx] = sample;
+        }
+    }
+}
 #endif //TYPES_HPP

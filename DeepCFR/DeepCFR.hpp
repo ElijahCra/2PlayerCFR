@@ -45,13 +45,6 @@ private:
     /// @brief Trains the strategy network using data from its replay buffer.
     void train_strategy_network();
 
-    /// @brief Compute strategy using regret matching
-    std::vector<float> compute_strategy_from_advantages(const std::vector<float>& advantages);
-
-    /// @brief Add sample to memory with reservoir sampling
-    template<typename T>
-    void add_to_strategy_memory(std::vector<T>& memory, const T& sample, size_t max_size);
-
     std::mt19937 m_rng;
     GameType m_game;
     torch::Device m_device;
