@@ -68,13 +68,8 @@ private:
     std::array<AdvantageMemoryBuffer<GameType>, 2> m_adv_memories;
     std::vector<TrainingSampleStrategy> m_strategy_memory;
 
-    // Training constants from the paper
-    static constexpr size_t BATCH_SIZE = 10000;
-    static constexpr size_t MEMORY_SIZE = 40000000; // 40 million
-    static constexpr float LEARNING_RATE = 0.001f;
-    static constexpr int SGD_ITERATIONS = 4000; // SGD iterations per training step
-    static constexpr double GRADIENT_CLIP_NORM = 1.0;
-    static constexpr int K_TRAVERSALS = 10000; // Number of traversals per iteration
+
+
 };
 
 #endif //DEEPCFR_HPP

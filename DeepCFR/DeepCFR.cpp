@@ -9,6 +9,7 @@
 #include <numeric>
 
 #include "DataLoader.hpp"
+#include "TaskManager.hpp"
 
 template<typename GameType>
 DeepRegretMinimizer<GameType>::DeepRegretMinimizer(uint32_t seed)
@@ -70,66 +71,56 @@ void DeepRegretMinimizer<GameType>::Train(uint32_t iterations) {
     // Final training of strategy network
     train_strategy_network();
 }
+
+
 template<typename GameType>
 void DeepRegretMinimizer<GameType>::TrainParallel(uint32_t iterations, const size_t num_threads)
 {
     for (uint32_t iter = 1; iter <= iterations; ++iter) {
+        std::cout << "Iteration " << iter << "/" << iterations << std::endl;
         for (int p = 0; p < GameType::PlayerNum; ++p) {
+            // 1. Move networks to GPU and setup the dispatcher
+            m_advantage_networks[0]->to(m_device);
+            m_advantage_networks[1]->to(m_device);
+            GPUDispatcher dispatcher(m_advantage_networks, m_device);
+            dispatcher.start();
 
-            std::vector<std::thread> traversal_threads;
+            // 2. Setup the TaskManager
+            TaskManager<GameType> task_manager(num_threads, dispatcher, m_adv_memories, m_strategy_memory, m_rng);
+            task_manager.start();
 
-            // A thread-safe way to collect results
-            std::array<std::vector<TrainingSampleAdvantage>,2> advantage_results;
-            std::vector<TrainingSampleStrategy> strategy_results;
-            std::mutex results_mutex;
-
-            int traversals_per_thread = K_TRAVERSALS / num_threads;
-
-            for (int i = 0; i < num_threads; ++i) {
-                traversal_threads.emplace_back([&]() {
-                    //thread local game, rng, and memory vecs
-                    std::mt19937 local_rng(std::random_device{}());
-                    GameType local_game(local_rng); // Use a thread-safe way to seed this
-                    // Each thread collects its own samples locally
-                    std::array<std::vector<TrainingSampleAdvantage>, 2> local_adv_samples;
-                    std::vector<TrainingSampleStrategy> local_strat_samples;
-
-                    for (int k = 0; k < traversals_per_thread; ++k) {
-                        // The traverse function needs to be adapted to store samples in the local vectors
-                        // instead of directly into the main class members m_adv_memories and m_strategy_memory.
-                        traverse_cfr_parallel(local_game, p, iter, 1.0f, local_adv_samples, local_strat_samples);
-                    }
-
-                    // --- Safely merge local results into the main results vectors ---
-                    std::lock_guard<std::mutex> lock(results_mutex);
-                    for (int j=0; j<local_adv_samples.size(); ++j) {
-                        advantage_results[j].insert(advantage_results[j].end(), local_adv_samples[j].begin(), local_adv_samples[j].end());
-                    }
-                    strategy_results.insert(strategy_results.end(), local_strat_samples.begin(), local_strat_samples.end());
+            // 3. Seed the initial tasks
+            for (int k = 0; k < K_TRAVERSALS; ++k) {
+                GameType game_for_task(m_rng);
+                auto root_task = std::make_unique<Task<GameType>>(Task<GameType>{
+                    .type = Task<GameType>::Type::TRAVERSE_NODE,
+                    .game_state = game_for_task, // Initialize game_state correctly
+                    .update_player = p,
+                    .iter = iter
+                // parent_state and action_index_in_parent are default-initialized to nullptr/0
                 });
+
+                task_manager.submit_task(std::move(root_task));
             }
 
-            // Wait for all threads to finish
-            for (auto& t : traversal_threads) {
-                t.join();
-            }
+            // 4. Wait for all traversals for this player to complete
+            task_manager.wait_for_completion(K_TRAVERSALS);
+            std::cout << "All traversals for player " << p << " complete." << std::endl;
 
-            // --- Now, add all the collected samples to the main memory ---
-            for (const auto& vec : advantage_results) {
-                for (const auto& sample : vec) {
-                    m_adv_memories[p].add_sample(sample, m_rng);
-                }
-            }
-            for (const auto& sample : strategy_results) {
-                add_to_strategy_memory(m_strategy_memory, sample, MEMORY_SIZE);
-            }
+            // 5. Clean up
+            task_manager.stop();
+            dispatcher.stop();
 
-            // The rest of the training proceeds as before...
-            m_game.reInitialize();
+            // Move networks to CPU for memory efficiency if needed, then train
+            m_advantage_networks[p]->to(m_device); // Ensure it's on device for training
             train_advantage_network(p);
         }
     }
+
+    // Final training of strategy network
+    train_strategy_network();
 }
+
 
 template<typename GameType>
 float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer) {

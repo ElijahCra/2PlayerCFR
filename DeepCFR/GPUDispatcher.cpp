@@ -1,0 +1,76 @@
+//
+// Created by elijah on 8/5/25.
+//
+
+#include "GPUDispatcher.hpp"
+
+void GPUDispatcher::run_loop() {
+    std::vector<std::unique_ptr<ForwardRequest>> p0_requests;
+    std::vector<std::unique_ptr<ForwardRequest>> p1_requests;
+
+    while (!m_stop_flag) {
+        // Wait for a request with a timeout
+        auto request_opt = m_queue.pop_with_timeout(MAX_WAIT_TIME);
+
+        if (request_opt.has_value()) {
+            auto& request = *request_opt;
+            if (request->player_index == 0) {
+                p0_requests.push_back(std::move(request));
+            } else {
+                p1_requests.push_back(std::move(request));
+            }
+        }
+
+        // Process a batch if it's full or if we timed out (request_opt is null) and the batch isn't empty
+        if (p0_requests.size() >= MAX_BATCH_SIZE || (!request_opt.has_value() && !p0_requests.empty())) {
+            process_batch(p0_requests, m_advantage_networks[0]);
+            p0_requests.clear();
+        }
+        if (p1_requests.size() >= MAX_BATCH_SIZE || (!request_opt.has_value() && !p1_requests.empty())) {
+            process_batch(p1_requests, m_advantage_networks[1]);
+            p1_requests.clear();
+        }
+    }
+    // Process any remaining requests after stop is called
+    if (!p0_requests.empty()) process_batch(p0_requests, m_advantage_networks[0]);
+    if (!p1_requests.empty()) process_batch(p1_requests, m_advantage_networks[1]);
+}
+
+void GPUDispatcher::process_batch(std::vector<std::unique_ptr<ForwardRequest>>& batch, DeepCFRModel& network) {
+    if (batch.empty()) return;
+
+    size_t batch_size = batch.size();
+    int num_card_types = batch[0]->cards.size();
+
+    // Batch the tensors
+    std::vector<torch::Tensor> batched_cards;
+    std::vector<torch::Tensor> bet_list;
+    batched_cards.reserve(num_card_types);
+    bet_list.reserve(batch_size);
+
+    for (int i = 0; i < num_card_types; ++i) {
+        std::vector<torch::Tensor> card_type_list;
+        card_type_list.reserve(batch_size);
+        for (const auto& req : batch) {
+            card_type_list.push_back(req->cards[i]);
+        }
+        batched_cards.push_back(torch::stack(card_type_list).to(m_device));
+    }
+
+    for (const auto& req : batch) {
+        bet_list.push_back(req->bets);
+    }
+    auto batched_bets = torch::stack(bet_list).to(m_device);
+
+    // Run inference on the batch
+    torch::Tensor results;
+    {
+        torch::NoGradGuard no_grad;
+        results = network->forward(batched_cards, batched_bets);
+    }
+
+    // Fulfill promises with the results
+    for (size_t i = 0; i < batch_size; ++i) {
+        batch[i]->promise.set_value(results.slice(0, i, i + 1));
+    }
+}
