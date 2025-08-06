@@ -119,6 +119,7 @@ void DeepRegretMinimizer<GameType>::TrainParallel(uint32_t iterations, const siz
             m_advantage_networks[p]->to(m_device); // Ensure it's on device for training
             train_advantage_network(p);
         }
+        std::cout <<"Strat Memory Size: " << m_strategy_memory.size() << std::endl;
     }
 
     // Final training of strategy network
