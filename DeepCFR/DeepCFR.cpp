@@ -186,7 +186,6 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
         // Store in memory with Linear CFR weighting (keep tensors on CPU for memory efficiency)
         TrainingSampleAdvantage sample;
         sample.infoset = {cards_cpu, bets_cpu};
-        sample.iteration = current_iter;
         sample.legal_action_indices = legal_indices;
         sample.advantages = instant_regrets;
         sample.weight = static_cast<float>(current_iter); // Linear weighting
@@ -198,7 +197,6 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
         // Opponent: sample single action and store strategy
         TrainingSampleStrategy sample;
         sample.infoset = {cards_cpu,bets_cpu};  // Store original CPU tensors
-        sample.iteration = current_iter;
         sample.legal_action_indices = legal_indices;
         sample.strategy = strategy;
         sample.weight = static_cast<float>(current_iter); // Linear weighting
@@ -277,7 +275,6 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
             card = card.to(m_device);
         }
         sample.infoset = {card_tensors_gpu, game.getBetTensor().to(m_device)};
-        sample.iteration = current_iter;
         sample.legal_action_indices = legal_indices;
         sample.advantages = instant_regrets;
         sample.weight = static_cast<float>(current_iter); // Linear weighting
@@ -289,7 +286,6 @@ float DeepRegretMinimizer<GameType>::traverse_cfr_parallel(const GameType &game,
         // Opponent: sample single action and store strategy
         TrainingSampleStrategy sample;
         sample.infoset = {cards, game.getBetTensor()};  // Store original CPU tensors
-        sample.iteration = current_iter;
         sample.strategy = strategy;
         sample.weight = static_cast<float>(current_iter); // Linear weighting
 

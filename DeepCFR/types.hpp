@@ -24,7 +24,6 @@ struct InfoSet
 // A struct for storing samples in the advantage replay buffer.
 struct TrainingSampleAdvantage {
     InfoSet infoset;
-    int iteration;
     std::vector<float> advantages;  // r_tilde(I, a) for each legal action
     std::vector<int> legal_action_indices;
     float weight;                   // Weight for Linear CFR (typically the iteration number)
@@ -34,7 +33,6 @@ struct TrainingSampleAdvantage {
 struct TrainingSampleStrategy
 {
     InfoSet infoset;
-    int iteration;
     std::vector<float> strategy;
     std::vector<int> legal_action_indices;
     float weight;

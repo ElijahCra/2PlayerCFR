@@ -165,8 +165,8 @@ void TaskManager<GameType>::process_task(std::shared_ptr<Task<GameType>> task, s
         // Store the computed advantage sample in memory
         TrainingSampleAdvantage sample;
         sample.infoset = { task->game_state.getCardTensors(task->game_state.getCurrentPlayer(), task->game_state.getCurrentRound()), task->game_state.getBetTensor() };
-        sample.iteration = task->iter;
         sample.advantages = instant_regrets;
+        sample.weight = static_cast<float>(task->iter);
         for (const auto& action : parent_s->legal_actions) {
             sample.legal_action_indices.push_back(static_cast<int>(action));
         }
@@ -240,7 +240,6 @@ void TaskManager<GameType>::process_task(std::shared_ptr<Task<GameType>> task, s
             // Opponent: sample one action, store strategy
             TrainingSampleStrategy strat_sample;
             strat_sample.infoset = { task->game_state.getCardTensors(current_player, task->game_state.getCurrentRound()), task->game_state.getBetTensor() };
-            strat_sample.iteration = task->iter;
             strat_sample.strategy = strategy;
             strat_sample.legal_action_indices = legal_indices;
             strat_sample.weight = static_cast<float>(task->iter);
