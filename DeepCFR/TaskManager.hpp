@@ -34,6 +34,7 @@ public:
 
 private:
     void worker_loop();
+    void continuation_loop();
     void process_task(std::shared_ptr<Task<GameType>> task, std::mt19937& local_rng);
 
     // Helper function for adding to memory buffers safely
@@ -43,6 +44,8 @@ private:
     size_t m_num_threads;
     std::vector<std::thread> m_workers;
     ThreadSafeQueue<std::shared_ptr<Task<GameType>>> m_ready_queue;
+    ThreadSafeQueue<std::pair<std::future<torch::Tensor>, std::shared_ptr<Task<GameType>>>> m_pending_futures_queue;
+    std::thread m_continuation_thread;
 
     std::atomic<bool> m_stop_flag{false};
     std::atomic<int> m_traversals_completed{0};

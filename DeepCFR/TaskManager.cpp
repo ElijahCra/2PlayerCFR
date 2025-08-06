@@ -30,21 +30,54 @@ void TaskManager<GameType>::start() {
     for (size_t i = 0; i < m_num_threads; ++i) {
         m_workers.emplace_back(&TaskManager<GameType>::worker_loop, this);
     }
+    m_continuation_thread = std::thread(&TaskManager<GameType>::continuation_loop, this);
 }
 
 template<typename GameType>
 void TaskManager<GameType>::stop() {
     if (m_stop_flag.exchange(true)) return;
 
-    // Add empty tasks to unblock any waiting worker threads
-    for(size_t i=0; i<m_workers.size(); ++i) {
+    // Unblock workers
+    for(size_t i=0; i < m_workers.size(); ++i) {
         m_ready_queue.push(nullptr);
     }
 
+    // Unblock the continuation thread by pushing a sentinel value
+    // (A default-constructed future and a nullptr task)
+    m_pending_futures_queue.push({});
+
+    // Join all threads
     for (auto& worker : m_workers) {
         if (worker.joinable()) {
             worker.join();
         }
+    }
+    // Join the continuation thread
+    if (m_continuation_thread.joinable()) {
+        m_continuation_thread.join();
+    }
+}
+
+template<typename GameType>
+void TaskManager<GameType>::continuation_loop() {
+    while (!m_stop_flag) {
+        // This call blocks and returns the std::pair directly.
+        auto future_task_pair = m_pending_futures_queue.pop();
+
+        // Use a structured binding to unpack the pair.
+        auto& [future, task] = future_task_pair;
+
+        // The sentinel value to stop the loop is a null task pointer.
+        // This is the correct way to check for the stop signal.
+        if (!task) {
+            break;
+        }
+
+        // Block *this* thread until the GPU result is ready.
+        task->gpu_result = future.get();
+
+        // Re-submit the task with the GPU result to the main work queue.
+        this->submit_task(std::move(task));
     }
 }
 
@@ -139,7 +172,6 @@ void TaskManager<GameType>::process_task(std::shared_ptr<Task<GameType>> task, s
         }
         add_advantage_sample(task->update_player, std::move(sample));
 
-        // --- FIX: Correctly report the node_value up to the parent task ---
         auto grandparent_s = parent_s->grandparent_state;
         if (grandparent_s) {
             // This node has a parent in the tree to report its value to.
@@ -223,7 +255,7 @@ void TaskManager<GameType>::process_task(std::shared_ptr<Task<GameType>> task, s
             next_task->game_state.transition(legal_actions[action_idx_in_legal]);
             submit_task(std::move(next_task));
         }
-        return; // Finish processing for this task
+        return;
     }
 
 
@@ -243,11 +275,7 @@ void TaskManager<GameType>::process_task(std::shared_ptr<Task<GameType>> task, s
         request->bets = task->game_state.getBetTensor();
         auto future = m_dispatcher.submit(std::move(request));
 
-        // The non-blocking waiter thread
-        std::thread([this, f = std::move(future), r_task = std::move(resume_task)]() mutable {
-            r_task->gpu_result = f.get(); // Blocks the waiter thread, not the worker
-            this->submit_task(std::move(r_task));
-        }).detach();
+        m_pending_futures_queue.push({std::move(future), std::move(resume_task)});
     }
 }
 

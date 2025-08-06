@@ -78,7 +78,9 @@ void DeepRegretMinimizer<GameType>::TrainParallel(uint32_t iterations, const siz
 {
     for (int iter = 1; iter <= iterations; ++iter) {
         std::cout << "Iteration " << iter << "/" << iterations << std::endl;
+
         for (int p = 0; p < GameType::PlayerNum; ++p) {
+            auto t1 = std::chrono::high_resolution_clock::now();
             // 1. Move networks to GPU and setup the dispatcher
             m_advantage_networks[0]->to(m_device);
             m_advantage_networks[1]->to(m_device);
@@ -105,7 +107,9 @@ void DeepRegretMinimizer<GameType>::TrainParallel(uint32_t iterations, const siz
 
             // 4. Wait for all traversals for this player to complete
             task_manager.wait_for_completion(K_TRAVERSALS);
-            std::cout << "All traversals for player " << p << " complete." << std::endl;
+            auto t2 = std::chrono::high_resolution_clock::now();
+            auto ms_int = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+            std::cout << "All traversals for player " << p << " completed in : "<< ms_int << std::endl;
 
             // 5. Clean up
             task_manager.stop();
