@@ -76,7 +76,7 @@ void DeepRegretMinimizer<GameType>::Train(uint32_t iterations) {
 template<typename GameType>
 void DeepRegretMinimizer<GameType>::TrainParallel(uint32_t iterations, const size_t num_threads)
 {
-    for (uint32_t iter = 1; iter <= iterations; ++iter) {
+    for (int iter = 1; iter <= iterations; ++iter) {
         std::cout << "Iteration " << iter << "/" << iterations << std::endl;
         for (int p = 0; p < GameType::PlayerNum; ++p) {
             // 1. Move networks to GPU and setup the dispatcher
