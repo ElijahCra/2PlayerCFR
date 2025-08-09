@@ -81,6 +81,7 @@ void DeepRegretMinimizer<GameType>::TrainParallel(uint32_t iterations, const siz
 
         for (int p = 0; p < GameType::PlayerNum; ++p) {
             auto t1 = std::chrono::high_resolution_clock::now();
+            size_t startSamples = m_adv_memories[p].size();
             // 1. Move networks to GPU and setup the dispatcher
             m_advantage_networks[0]->to(m_device);
             m_advantage_networks[1]->to(m_device);
@@ -109,7 +110,8 @@ void DeepRegretMinimizer<GameType>::TrainParallel(uint32_t iterations, const siz
             task_manager.wait_for_completion(K_TRAVERSALS);
             auto t2 = std::chrono::high_resolution_clock::now();
             auto ms_int = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
-            std::cout << "All traversals for player " << p << " completed in : "<< ms_int << std::endl;
+            auto samplesAdded = (m_adv_memories[p].size()-startSamples);
+            std::cout << "All traversals for player " << p << " completed in : "<< ms_int <<" Samples Added: "<< samplesAdded <<" Decision Nodes / ms: "<< samplesAdded/ms_int.count() <<std::endl;
 
             // 5. Clean up
             task_manager.stop();
