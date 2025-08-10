@@ -8,8 +8,9 @@
 #include <algorithm>
 #include <numeric>
 
+#include "future_support.hpp"
+#include "CoroutineAwaitables.hpp"
 #include "DataLoader.hpp"
-#include "TaskManager.hpp"
 
 template<typename GameType>
 DeepRegretMinimizer<GameType>::DeepRegretMinimizer(uint32_t seed)
@@ -74,60 +75,64 @@ void DeepRegretMinimizer<GameType>::Train(uint32_t iterations) {
 
 
 template<typename GameType>
-void DeepRegretMinimizer<GameType>::TrainParallel(uint32_t iterations, const size_t num_threads)
-{
-    for (int iter = 1; iter <= iterations; ++iter) {
-        std::cout << "Iteration " << iter << "/" << iterations << std::endl;
+void DeepRegretMinimizer<GameType>::TrainParallel(uint32_t iterations,const size_t num_threads) {
+    // You can remove TaskManager.hpp and TaskSystem.hpp from your includes.
+    // Ensure you include ThreadPool.hpp.
+
+    for (int iter = 1; iter <= K_TRAVERSALS; ++iter) {
+        std::cout << "Iteration " << iter << "/" << K_TRAVERSALS << std::endl;
 
         for (int p = 0; p < GameType::PlayerNum; ++p) {
             auto t1 = std::chrono::high_resolution_clock::now();
             size_t startSamples = m_adv_memories[p].size();
+
             // 1. Move networks to GPU and setup the dispatcher
             m_advantage_networks[0]->to(m_device);
             m_advantage_networks[1]->to(m_device);
             GPUDispatcher dispatcher(m_advantage_networks, m_device);
             dispatcher.start();
 
-            // 2. Setup the TaskManager
-            TaskManager<GameType> task_manager(num_threads, dispatcher, m_adv_memories, m_strategy_memory, m_rng);
-            task_manager.start();
+            // 2. Setup the ThreadPool
+            ThreadPool thread_pool(num_threads);
 
-            // 3. Seed the initial tasks
+            // 3. Seed the initial traversals
+            std::vector<std::future<float>> traversal_futures;
             for (int k = 0; k < K_TRAVERSALS; ++k) {
-                GameType game_for_task(m_rng);
-                auto root_task = std::make_unique<Task<GameType>>(Task<GameType>{
-                    .type = Task<GameType>::Type::TRAVERSE_NODE,
-                    .game_state = game_for_task, // Initialize game_state correctly
-                    .update_player = p,
-                    .iter = iter
-                // parent_state and action_index_in_parent are default-initialized to nullptr/0
-                });
+                // Each traversal needs its own RNG and initial game state.
+                std::mt19937 local_rng(m_rng()); // Seed from the main RNG
+                GameType game_for_task(local_rng);
 
-                task_manager.submit_task(std::move(root_task));
+                traversal_futures.push_back(
+                    // Use the thread pool to start the coroutine
+                    thread_pool.enqueue([this, game_for_task, p, iter, &thread_pool, &dispatcher, &local_rng]() mutable {
+                        return this->traverse_cfr_coro(std::move(game_for_task), p, iter, thread_pool, dispatcher, local_rng).get();
+                    })
+                );
             }
 
-            // 4. Wait for all traversals for this player to complete
-            task_manager.wait_for_completion(K_TRAVERSALS);
+            // 4. Wait for all root traversals for this player to complete
+            for(auto& fut : traversal_futures) {
+                fut.wait(); // Block on each future until it's done
+            }
+
             auto t2 = std::chrono::high_resolution_clock::now();
             auto ms_int = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
-            auto samplesAdded = (m_adv_memories[p].size()-startSamples);
-            std::cout << "All traversals for player " << p << " completed in : "<< ms_int <<" Samples Added: "<< samplesAdded <<" Decision Nodes / ms: "<< samplesAdded/ms_int.count() <<std::endl;
+            auto samplesAdded = (m_adv_memories[p].size() - startSamples);
+            std::cout << "All traversals for player " << p << " completed in : " << ms_int.count() << "ms. Samples Added: " << samplesAdded << std::endl;
 
-            // 5. Clean up
-            task_manager.stop();
+            // 5. Clean up dispatcher
             dispatcher.stop();
 
-            // Move networks to CPU for memory efficiency if needed, then train
-            m_advantage_networks[p]->to(m_device); // Ensure it's on device for training
+            // 6. Train the network (no change here)
+            m_advantage_networks[p]->to(m_device);
             train_advantage_network(p);
         }
-        std::cout <<"Strat Memory Size: " << m_strategy_memory.size() << std::endl;
+        std::cout << "Strat Memory Size: " << m_strategy_memory.size() << std::endl;
     }
 
     // Final training of strategy network
     train_strategy_network();
 }
-
 
 template<typename GameType>
 float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer) {
@@ -215,6 +220,116 @@ float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int upda
     }
 }
 
+template<typename GameType>
+std::future<float> DeepRegretMinimizer<GameType>::traverse_cfr_coro(GameType game, int updatePlayer, int current_iter,ThreadPool& thread_pool, GPUDispatcher& dispatcher, std::mt19937& rng)
+{
+    // ---- STATE 1: Terminal Node ----
+    if (game.getType() == "terminal") {
+        co_return game.getUtility(updatePlayer);
+    }
+
+    // ---- STATE 2: Chance Node ----
+    if (game.getType() == "chance") {
+        game.transition(GameType::Action::Chance);
+        // "Recurse" into the coroutine. The `co_await` unwraps the future.
+        co_return co_await traverse_cfr_coro(std::move(game), updatePlayer, current_iter, thread_pool, dispatcher, rng);
+    }
+
+    // ---- STATE 3: Decision Node ----
+    int currentPlayer = game.getCurrentPlayer();
+    auto legal_actions = game.getActions();
+    std::vector<int> legal_indices;
+    legal_indices.reserve(legal_actions.size());
+    for (const auto& action : legal_actions) {
+        legal_indices.push_back(GameType::ActionMapping::getActionIndex(action));
+    }
+
+    // Get advantages from the network. This is our first suspension point.
+    // The coroutine pauses here until the GPU result is available.
+    auto advantages_tensor = co_await await_gpu_inference(
+        dispatcher,
+        currentPlayer,
+        game.getCardTensors(currentPlayer, game.getCurrentRound()),
+        game.getBetTensor()
+    );
+    advantages_tensor = advantages_tensor.to(torch::kCPU);
+
+    std::vector<float> legal_advantages;
+    legal_advantages.reserve(legal_actions.size());
+    for (int idx : legal_indices) {
+        legal_advantages.push_back(advantages_tensor[0][idx].template item<float>());
+    }
+
+    // Compute strategy from advantages
+    auto strategy = compute_strategy_from_advantages(legal_advantages);
+
+    if (currentPlayer == updatePlayer) {
+        // --- Traverser: Explore all actions ---
+
+        // Launch all child traversals asynchronously.
+        std::vector<std::future<float>> child_futures;
+        child_futures.reserve(legal_actions.size());
+        for (const auto& action : legal_actions) {
+            GameType next_game(game);
+            next_game.transition(action);
+            child_futures.push_back(
+                thread_pool.enqueue([this, next_game, updatePlayer, current_iter, &thread_pool, &dispatcher, &rng]() mutable {
+                    // This lambda needs to call the coroutine and get its result.
+                    // Since thread_pool.enqueue expects a callable that returns a value, not a future,
+                    // we must block here with .get(). The overall process remains async.
+                    return this->traverse_cfr_coro(std::move(next_game), updatePlayer, current_iter, thread_pool, dispatcher, rng).get();
+                })
+            );
+        }
+
+        // Wait for all child traversals to complete. This is our second suspension point.
+        std::vector<float> counterfactual_values = co_await await_all(std::move(child_futures));
+
+        // Now that children are done, compute node value and regrets.
+        float nodeValue = 0.0f;
+        for (size_t i = 0; i < strategy.size(); ++i) {
+            nodeValue += strategy[i] * counterfactual_values[i];
+        }
+
+        std::vector<float> instant_regrets;
+        instant_regrets.reserve(legal_actions.size());
+        for (float cfv : counterfactual_values) {
+            instant_regrets.push_back(cfv - nodeValue);
+        }
+
+        // Store in memory. (Note: This part needs to be thread-safe if multiple
+        // coroutines write to memory concurrently. A simple mutex will do).
+        TrainingSampleAdvantage sample;
+        sample.infoset = {game.getCardTensors(currentPlayer, game.getCurrentRound()), game.getBetTensor()};
+        sample.legal_action_indices = legal_indices;
+        sample.advantages = instant_regrets;
+        sample.weight = static_cast<float>(current_iter);
+
+        // Assuming m_adv_memories is thread-safe or protected by a mutex
+        m_adv_memories[updatePlayer].add_sample(sample, rng);
+
+        co_return nodeValue;
+
+    } else {
+        // --- Opponent: Sample a single action ---
+        TrainingSampleStrategy sample;
+        sample.infoset = {game.getCardTensors(currentPlayer, game.getCurrentRound()), game.getBetTensor()};
+        sample.legal_action_indices = legal_indices;
+        sample.strategy = strategy;
+        sample.weight = static_cast<float>(current_iter);
+
+        // This function needs to be thread-safe
+        add_to_strategy_memory(m_strategy_memory, sample, MEMORY_SIZE, rng);
+
+        std::discrete_distribution<> dist(strategy.begin(), strategy.end());
+        int action_idx = dist(rng);
+
+        game.transition(legal_actions[action_idx]);
+
+        // Tail-recurse into the coroutine
+        co_return co_await traverse_cfr_coro(std::move(game), updatePlayer, current_iter, thread_pool, dispatcher, rng);
+    }
+}
 
 template<typename GameType>
 void DeepRegretMinimizer<GameType>::train_advantage_network(int player) {

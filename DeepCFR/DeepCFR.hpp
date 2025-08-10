@@ -17,6 +17,8 @@
 #include "../Game/Utility/Utility.hpp"
 #include "types.hpp"
 #include "AdvantageMemoryBuffer.hpp"
+#include "GPUDispatcher.hpp"
+#include "ThreadPool.hpp"
 
 template<typename GameType>
 class DeepRegretMinimizer {
@@ -38,6 +40,7 @@ private:
     /// @brief The recursive CFR traversal function.
     float traverse_cfr(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer);
 
+    std::future<float> traverse_cfr_coro(GameType game, int updatePlayer, int current_iter, ThreadPool& thread_pool, GPUDispatcher& dispatcher, std::mt19937& rng);
     /// @brief Trains the advantage network from scratch using data from its replay buffer.
     void train_advantage_network(int player);
 
