@@ -38,7 +38,6 @@ private:
     /// @brief The recursive CFR traversal function.
     float traverse_cfr(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer);
 
-    float traverse_cfr_parallel(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer, std::array<std::vector<TrainingSampleAdvantage>,2>& local_adv_samples, std::vector<TrainingSampleStrategy>& local_strat_samples);
     /// @brief Trains the advantage network from scratch using data from its replay buffer.
     void train_advantage_network(int player);
 
