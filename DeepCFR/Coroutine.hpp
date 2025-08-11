@@ -1,9 +1,6 @@
-//
-// Created by Elijah Crain on 8/10/25.
-//
-
-#ifndef COROUTINE_HPP
-#define COROUTINE_HPP
+// CoRoutineDeepCFR.hpp
+#ifndef COROUTINE_DEEPCFR_HPP
+#define COROUTINE_DEEPCFR_HPP
 
 #include <coroutine>
 #include <optional>
@@ -18,11 +15,15 @@
 #include <vector>
 #include <chrono>
 #include <functional>
+#include <random>
+#include <numeric>
+#include <algorithm>
 
-#include "AdvantageMemoryBuffer.hpp"
 #include "torch/torch.h"
 #include "types.hpp"
 #include "Net.hpp"
+#include "AdvantageMemoryBuffer.hpp"
+#include "DataLoader.hpp"
 
 // Forward declarations
 template<typename GameType> class InferenceBatcher;
@@ -256,15 +257,15 @@ private:
 // Traversal state for coroutine
 template<typename GameType>
 struct TraversalState {
-    GameType game;
-    int update_player;
-    int current_iter;
-    float prob_update_player;
-    float result;
+    std::unique_ptr<GameType> game;  // Use unique_ptr to allow default construction
+    int update_player = 0;
+    int current_iter = 0;
+    float prob_update_player = 1.0f;
+    float result = 0.0f;
 
     // For collecting samples
-    std::array<std::vector<TrainingSampleAdvantage>, 2>* adv_samples;
-    std::vector<TrainingSampleStrategy>* strat_samples;
+    std::array<std::vector<TrainingSampleAdvantage>, 2>* adv_samples = nullptr;
+    std::vector<TrainingSampleStrategy>* strat_samples = nullptr;
 };
 
 // The coroutine promise type
@@ -272,6 +273,9 @@ template<typename GameType>
 struct TraversalPromise {
     TraversalState<GameType> state;
     std::exception_ptr exception;
+
+    // Default constructor
+    TraversalPromise() = default;
 
     TraversalTask<GameType> get_return_object();
     std::suspend_never initial_suspend() { return {}; }
@@ -510,14 +514,16 @@ private:
         std::array<std::vector<TrainingSampleAdvantage>, 2>& all_adv_samples,
         std::vector<TrainingSampleStrategy>& all_strat_samples) {
 
+        // Create game instance with RNG
+        GameType game(m_rng);
         return traverse_cfr_coroutine_impl(
-            GameType(m_rng), batcher, update_player, current_iter, prob_update_player,
+            std::move(game), batcher, update_player, current_iter, prob_update_player,
             local_adv, local_strat, samples_mutex, all_adv_samples, all_strat_samples
         );
     }
 
     TraversalTask<GameType> traverse_cfr_coroutine_impl(
-        GameType game,
+        GameType&& game,
         InferenceBatcher<GameType>& batcher,
         int update_player,
         int current_iter,
@@ -535,14 +541,11 @@ private:
 
         // Chance node
         if (game.getType() == "chance") {
-            GameType next_game(game);
-            next_game.transition(GameType::Action::Chance);
-            auto subtask = traverse_cfr_coroutine_impl(
-                next_game, batcher, update_player, current_iter, prob_update_player,
+            game.transition(GameType::Action::Chance);
+            co_return co_await traverse_cfr_coroutine_impl(
+                std::move(game), batcher, update_player, current_iter, prob_update_player,
                 local_adv, local_strat, samples_mutex, all_adv_samples, all_strat_samples
             );
-            float result = subtask.get_result();
-            co_return result;
         }
 
         int current_player = game.getCurrentPlayer();
@@ -574,21 +577,29 @@ private:
             // Traverser: explore all actions
             std::vector<float> counterfactual_values(legal_actions.size());
 
-            // Launch all child traversals
-            std::vector<TraversalTask<GameType>> child_tasks;
+            // Launch all child traversals in parallel
+            std::vector<std::future<float>> futures;
             for (size_t a = 0; a < legal_actions.size(); ++a) {
                 GameType next_game(game);
                 next_game.transition(legal_actions[a]);
-                child_tasks.push_back(traverse_cfr_coroutine_impl(
-                    next_game, batcher, update_player, current_iter,
-                    prob_update_player * strategy[a],
-                    local_adv, local_strat, samples_mutex, all_adv_samples, all_strat_samples
-                ));
+
+                futures.push_back(std::async(std::launch::async, [this, next_game = std::move(next_game),
+                                                                  &batcher, update_player, current_iter,
+                                                                  prob_update_player, &strategy, a,
+                                                                  local_adv, local_strat, &samples_mutex,
+                                                                  &all_adv_samples, &all_strat_samples]() mutable {
+                    auto task = traverse_cfr_coroutine_impl(
+                        std::move(next_game), batcher, update_player, current_iter,
+                        prob_update_player * strategy[a],
+                        local_adv, local_strat, samples_mutex, all_adv_samples, all_strat_samples
+                    );
+                    return task.get_result();
+                }));
             }
 
             // Collect results
             for (size_t a = 0; a < legal_actions.size(); ++a) {
-                counterfactual_values[a] = child_tasks[a].get_result();
+                counterfactual_values[a] = futures[a].get();
                 node_value += strategy[a] * counterfactual_values[a];
             }
 
@@ -630,15 +641,12 @@ private:
             // Sample action
             std::discrete_distribution<> dist(strategy.begin(), strategy.end());
             int action_idx = dist(m_rng);
-            GameType next_game(game);
-            next_game.transition(legal_actions[action_idx]);
+            game.transition(legal_actions[action_idx]);
 
-            auto subtask = traverse_cfr_coroutine_impl(
-                next_game, batcher, update_player, current_iter, prob_update_player,
+            co_return co_await traverse_cfr_coroutine_impl(
+                std::move(game), batcher, update_player, current_iter, prob_update_player,
                 local_adv, local_strat, samples_mutex, all_adv_samples, all_strat_samples
             );
-            float result = subtask.get_result();
-            co_return result;
         }
     }
 
@@ -679,13 +687,172 @@ private:
     }
 
     void train_advantage_network(int player) {
-        // Same implementation as original
-        // ... (copy from original DeepRegretMinimizer)
+        // Don't train if the memory buffer is smaller than one batch.
+        if (m_adv_memories[player].size() < BATCH_SIZE) {
+            std::cout << "Player " << player << " advantage network training skipped: not enough samples." << std::endl;
+            return;
+        }
+
+        auto t1 = std::chrono::high_resolution_clock::now();
+
+        // Reinitialize network and optimizer to train from scratch.
+        m_advantage_networks[player] = DeepCFRModel(GameType::NUM_CARD_TYPES, GameType::NUM_BET_FEATURES, GameType::MAX_ACTIONS);
+        m_advantage_networks[player]->to(m_device);
+        m_advantage_optimizers[player] = torch::optim::Adam(m_advantage_networks[player]->parameters(), LEARNING_RATE);
+        m_advantage_networks[player]->train();
+
+        // Determine how many samples and batches to train on.
+        size_t total_samples_to_train = std::min(BATCH_SIZE * SGD_ITERATIONS, m_adv_memories[player].size());
+        int total_batches = total_samples_to_train / BATCH_SIZE;
+
+        // Instantiate and start the asynchronous data loader.
+        DataLoader<GameType> data_loader(m_adv_memories[player], BATCH_SIZE, total_batches, m_device, m_rng);
+        data_loader.start();
+
+        float total_loss = 0.0f;
+
+        // The main training loop.
+        for (int i = 0; i < total_batches; ++i) {
+            // Get a pre-fetched, pre-processed batch from the worker thread.
+            auto batch = data_loader.get_batch();
+            if (!batch.is_valid) {
+                break; // End of the data stream from the loader.
+            }
+
+            // Forward and Backward Pass
+            auto predictions = m_advantage_networks[player]->forward(batch.cards, batch.bets);
+            auto squared_error = (predictions - batch.targets).pow(2);
+            auto weighted_error = squared_error * batch.masks * batch.weights;
+            auto loss = weighted_error.sum() / ((batch.masks * batch.weights).sum() + 1e-9);
+
+            m_advantage_optimizers[player].zero_grad();
+            loss.backward();
+            m_advantage_networks[player]->clip_gradients(GRADIENT_CLIP_NORM);
+            m_advantage_optimizers[player].step();
+            total_loss += loss.template item<float>();
+        }
+
+        auto t2 = std::chrono::high_resolution_clock::now();
+        auto ms_int = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+        long long ms_count = ms_int.count();
+        if (ms_count == 0) ms_count = 1;
+
+        std::cout << "Player " << player << " advantage network training for " << total_samples_to_train
+                  << " samples, total loss: " << total_loss
+                  << " loss/sample " << total_loss / total_samples_to_train
+                  << " samples/ms: " << total_samples_to_train / ms_count
+                  << " iter runtime " << ms_int.count() << "ms" << std::endl;
     }
 
     void train_strategy_network() {
-        // Same implementation as original
-        // ... (copy from original DeepRegretMinimizer)
+        if (m_strategy_memory.empty()) return;
+
+        m_strategy_network->train();
+
+        // Prep batches
+        size_t total_samples = std::min(BATCH_SIZE * SGD_ITERATIONS, m_strategy_memory.size());
+        std::vector<std::vector<torch::Tensor>> all_cards_cpu(total_samples);
+        std::vector<torch::Tensor> all_bets_cpu(total_samples);
+        std::vector<std::vector<float>> all_targets_cpu(total_samples);
+        std::vector<std::vector<float>> all_masks_cpu(total_samples);
+        std::vector<float> all_weights_cpu(total_samples);
+
+        std::vector<size_t> all_indices(total_samples);
+        std::iota(all_indices.begin(), all_indices.end(), 0);
+        std::shuffle(all_indices.begin(), all_indices.end(), m_rng);
+
+        for (size_t i = 0; i < total_samples; ++i) {
+            const auto& sample = m_strategy_memory[all_indices[i]];
+            all_cards_cpu[i] = sample.infoset.getCardTensors();
+            all_bets_cpu[i] = sample.infoset.getBetTensor();
+            all_weights_cpu[i] = sample.weight;
+
+            // Prepare targets and masks
+            std::vector<float> targets(GameType::MAX_ACTIONS, 0.0f);
+            std::vector<float> masks(GameType::MAX_ACTIONS, 0.0f);
+
+            for (size_t j = 0; j < sample.legal_action_indices.size(); ++j) {
+                int action_idx = sample.legal_action_indices[j];
+                targets[action_idx] = sample.strategy[j];
+                masks[action_idx] = 1.0f;
+            }
+
+            all_targets_cpu[i] = targets;
+            all_masks_cpu[i] = masks;
+        }
+
+        // Bulk GPU transfer using torch::stack
+        std::vector<torch::Tensor> all_cards_batched(GameType::NUM_CARD_TYPES);
+        for (int card_type = 0; card_type < GameType::NUM_CARD_TYPES; ++card_type) {
+            std::vector<torch::Tensor> cards_for_type;
+            cards_for_type.reserve(total_samples);
+            for (size_t i = 0; i < total_samples; ++i) {
+                cards_for_type.push_back(all_cards_cpu[i][card_type]);
+            }
+            all_cards_batched[card_type] = torch::stack(cards_for_type).squeeze(1).to(m_device);
+        }
+
+        auto all_bets_batched = torch::stack(all_bets_cpu).squeeze(1).to(m_device);
+        auto all_weights_batched = torch::from_blob(all_weights_cpu.data(), {static_cast<long>(total_samples), 1}).clone().to(m_device);
+
+        // Convert targets and masks to tensors
+        torch::Tensor all_targets_batched = torch::zeros({static_cast<long>(total_samples), GameType::MAX_ACTIONS}, m_device);
+        torch::Tensor all_masks_batched = torch::zeros({static_cast<long>(total_samples), GameType::MAX_ACTIONS}, m_device);
+
+        for (size_t i = 0; i < total_samples; ++i) {
+            for (int j = 0; j < GameType::MAX_ACTIONS; ++j) {
+                all_targets_batched[i][j] = all_targets_cpu[i][j];
+                all_masks_batched[i][j] = all_masks_cpu[i][j];
+            }
+        }
+
+        // Training loop
+        for (int iter = 0; iter < SGD_ITERATIONS; ++iter) {
+            auto t1 = std::chrono::high_resolution_clock::now();
+            size_t batch_start = iter * BATCH_SIZE;
+            size_t batch_end = std::min(batch_start + BATCH_SIZE, total_samples);
+
+            // Skip empty batches
+            if (batch_start >= total_samples || batch_end <= batch_start) {
+                continue;
+            }
+
+            // Create batch tensors
+            std::vector<torch::Tensor> batch_cards;
+            for (int i = 0; i < GameType::NUM_CARD_TYPES; ++i) {
+                batch_cards.push_back(all_cards_batched[i].slice(0, batch_start, batch_end));
+            }
+            auto batch_bets = all_bets_batched.slice(0, batch_start, batch_end);
+            auto batch_targets = all_targets_batched.slice(0, batch_start, batch_end);
+            auto batch_masks = all_masks_batched.slice(0, batch_start, batch_end);
+            auto batch_weights = all_weights_batched.slice(0, batch_start, batch_end);
+
+            // Get raw logits from the network
+            auto logits = m_strategy_network->forward(batch_cards, batch_bets);
+
+            // Mask illegal actions before calculating loss
+            auto illegal_action_mask = (batch_masks == 0);
+            logits = logits.masked_fill_(illegal_action_mask, -1e9);
+
+            // Calculate cross-entropy loss for soft targets
+            auto log_probabilities = torch::log_softmax(logits, -1);
+            auto loss_per_element = -(batch_targets * log_probabilities);
+            auto weighted_loss_per_element = loss_per_element * batch_masks * batch_weights;
+            auto masked_loss = weighted_loss_per_element.sum() / ((batch_masks * batch_weights).sum() + 1e-9);
+
+            // Backprop
+            m_strategy_optimizer.zero_grad();
+            masked_loss.backward();
+            m_strategy_network->clip_gradients(GRADIENT_CLIP_NORM);
+            m_strategy_optimizer.step();
+
+            auto t2 = std::chrono::high_resolution_clock::now();
+            auto ms_int = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+
+            std::cout << "Strategy network training iter " << iter
+                      << ", loss: " << masked_loss.template item<float>()
+                      << " time: " << ms_int.count() << "ms" << std::endl;
+        }
     }
 
     // Member variables
@@ -707,4 +874,4 @@ private:
     static constexpr int K_TRAVERSALS = 10000;
 };
 
-#endif //COROUTINE_HPP
+#endif // COROUTINE_DEEPCFR_HPP
