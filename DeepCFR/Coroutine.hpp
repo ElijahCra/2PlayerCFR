@@ -313,8 +313,29 @@ struct TraversalTask {
         return *this;
     }
 
+    // Make TraversalTask awaitable
+    bool await_ready() const noexcept {
+        return h.done();
+    }
+
+    void await_suspend(std::coroutine_handle<> awaiting) {
+        // The awaiting coroutine will be resumed when this task completes
+        // For simplicity, we'll just run to completion
+        while (!h.done()) {
+            h.resume();
+        }
+        awaiting.resume();
+    }
+
+    float await_resume() {
+        if (h.promise().exception) {
+            std::rethrow_exception(h.promise().exception);
+        }
+        return h.promise().state.result;
+    }
+
     float get_result() {
-        if (!h.done()) {
+        while (!h.done()) {
             h.resume();
         }
         if (h.promise().exception) {
@@ -332,7 +353,43 @@ TraversalTask<GameType> TraversalPromise<GameType>::get_return_object() {
     return TraversalTask<GameType>{std::coroutine_handle<TraversalPromise>::from_promise(*this)};
 }
 
-// Task scheduler for managing coroutines
+// Awaitable wrapper for parallel tasks
+template<typename GameType>
+struct ParallelTasksAwaitable {
+    std::vector<std::shared_ptr<TraversalTask<GameType>>> tasks;
+    std::vector<float> results;
+    std::atomic<size_t> completed{0};
+    std::coroutine_handle<> waiting_handle;
+
+    bool await_ready() const noexcept {
+        return completed.load() == tasks.size();
+    }
+
+    void await_suspend(std::coroutine_handle<> h) {
+        waiting_handle = h;
+        results.resize(tasks.size());
+
+        // Start all tasks
+        for (size_t i = 0; i < tasks.size(); ++i) {
+            std::thread([this, i]() {
+                results[i] = tasks[i]->get_result();
+                if (++completed == tasks.size()) {
+                    waiting_handle.resume();
+                }
+            }).detach();
+        }
+    }
+
+    std::vector<float> await_resume() {
+        return results;
+    }
+};
+
+// Helper to create parallel tasks awaitable
+template<typename GameType>
+ParallelTasksAwaitable<GameType> when_all(std::vector<std::shared_ptr<TraversalTask<GameType>>>&& tasks) {
+    return ParallelTasksAwaitable<GameType>{std::move(tasks)};
+}
 template<typename GameType>
 class TaskScheduler {
 public:
@@ -542,10 +599,11 @@ private:
         // Chance node
         if (game.getType() == "chance") {
             game.transition(GameType::Action::Chance);
-            co_return co_await traverse_cfr_coroutine_impl(
+            float result = co_await traverse_cfr_coroutine_impl(
                 std::move(game), batcher, update_player, current_iter, prob_update_player,
                 local_adv, local_strat, samples_mutex, all_adv_samples, all_strat_samples
             );
+            co_return result;
         }
 
         int current_player = game.getCurrentPlayer();
@@ -574,32 +632,29 @@ private:
         float node_value = 0.0f;
 
         if (current_player == update_player) {
-            // Traverser: explore all actions
-            std::vector<float> counterfactual_values(legal_actions.size());
+            // Traverser: explore all actions in parallel
+            std::vector<std::shared_ptr<TraversalTask<GameType>>> child_tasks;
 
-            // Launch all child traversals in parallel
-            std::vector<std::future<float>> futures;
             for (size_t a = 0; a < legal_actions.size(); ++a) {
                 GameType next_game(game);
                 next_game.transition(legal_actions[a]);
 
-                futures.push_back(std::async(std::launch::async, [this, next_game = std::move(next_game),
-                                                                  &batcher, update_player, current_iter,
-                                                                  prob_update_player, &strategy, a,
-                                                                  local_adv, local_strat, &samples_mutex,
-                                                                  &all_adv_samples, &all_strat_samples]() mutable {
-                    auto task = traverse_cfr_coroutine_impl(
+                // Create child task
+                auto task = std::make_shared<TraversalTask<GameType>>(
+                    traverse_cfr_coroutine_impl(
                         std::move(next_game), batcher, update_player, current_iter,
                         prob_update_player * strategy[a],
                         local_adv, local_strat, samples_mutex, all_adv_samples, all_strat_samples
-                    );
-                    return task.get_result();
-                }));
+                    )
+                );
+                child_tasks.push_back(task);
             }
 
-            // Collect results
+            // Wait for all child tasks to complete in parallel
+            auto counterfactual_values = co_await when_all(std::move(child_tasks));
+
+            // Calculate node value
             for (size_t a = 0; a < legal_actions.size(); ++a) {
-                counterfactual_values[a] = futures[a].get();
                 node_value += strategy[a] * counterfactual_values[a];
             }
 
@@ -643,10 +698,11 @@ private:
             int action_idx = dist(m_rng);
             game.transition(legal_actions[action_idx]);
 
-            co_return co_await traverse_cfr_coroutine_impl(
+            float result = co_await traverse_cfr_coroutine_impl(
                 std::move(game), batcher, update_player, current_iter, prob_update_player,
                 local_adv, local_strat, samples_mutex, all_adv_samples, all_strat_samples
             );
+            co_return result;
         }
     }
 
