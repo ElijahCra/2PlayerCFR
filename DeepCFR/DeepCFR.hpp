@@ -31,14 +31,15 @@ public:
 
     /// @brief Main training loop.
     /// @param iterations The total number of game traversals to perform.
-    void Train(uint32_t iterations);
+    void Train(uint32_t iterations, bool coro);
 
-    void TrainParallel(uint32_t iterations, size_t num_threads = std::thread::hardware_concurrency());
+
 protected:
     /// @brief The recursive CFR traversal function.
     float traverse_cfr(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer);
 
-    float traverse_cfr_parallel(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer, std::array<std::vector<TrainingSampleAdvantage>,2>& local_adv_samples, std::vector<TrainingSampleStrategy>& local_strat_samples);
+    float traverse_cfr_coro(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer);
+
     /// @brief Trains the advantage network from scratch using data from its replay buffer.
     void train_advantage_network(int player);
 
