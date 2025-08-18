@@ -67,6 +67,8 @@ private:
         std::vector<int> legal_indices;
         std::vector<torch::Tensor> cards_tensor;
         torch::Tensor bets_tensor;
+
+        explicit CoroutineContext(const GameType& initial_game) : game(initial_game) {}
     };
 
     void run_coroutine_traversals(int player, int iteration, size_t max_concurrent) {
@@ -76,9 +78,7 @@ private:
 
         // Start initial batch of traversals
         for (size_t i = 0; i < std::min(max_concurrent, static_cast<size_t>(target_traversals)); ++i) {
-            auto ctx = std::make_unique<CoroutineContext>();
-            GameType next_game(m_game);
-            ctx->game = next_game;
+            auto ctx = std::make_unique<CoroutineContext>(GameType(m_game));
             ctx->update_player = player;
             ctx->current_iter = iteration;
             ctx->prob_update_player = 1.0f;
@@ -103,8 +103,7 @@ private:
 
                         // Start new traversal if needed
                         if (active_contexts.size() + completed_traversals < target_traversals) {
-                            auto new_ctx = std::make_unique<CoroutineContext>();
-                            new_ctx->game = GameType(m_rng);
+                            auto new_ctx = std::make_unique<CoroutineContext>(GameType(m_rng));
                             new_ctx->update_player = player;
                             new_ctx->current_iter = iteration;
                             new_ctx->prob_update_player = 1.0f;
@@ -124,8 +123,7 @@ private:
 
                         // Start new traversal if needed
                         if (active_contexts.size() + completed_traversals < target_traversals) {
-                            auto new_ctx = std::make_unique<CoroutineContext>();
-                            new_ctx->game = GameType(m_rng);
+                            auto new_ctx = std::make_unique<CoroutineContext>(GameType(m_rng));
                             new_ctx->update_player = player;
                             new_ctx->current_iter = iteration;
                             new_ctx->prob_update_player = 1.0f;
