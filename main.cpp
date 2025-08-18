@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "DeepCFRCoroutine.hpp"
 #include "CFR/MultiThreadedTrainer.hpp"
 #include "CFR/RegretMinimizer.hpp"
 #include "DeepCFR/DeepCFR.hpp"
@@ -32,12 +33,17 @@ int main() {
 
     std::cout << "Starting Deep CFR Training..." << std::endl;
 
-    // You can choose which game to train on, Preflop or Texas
-    DeepRegretMinimizer<Preflop::Game> deep_cfr_minimizer;
+    // // You can choose which game to train on, Preflop or Texas
+    // DeepRegretMinimizer<Preflop::Game> deep_cfr_minimizer;
+    //
+    // // Train for a specified number of iterations
+    // // Note: Deep CFR requires many more iterations than tabular CFR to converge.
+    // deep_cfr_minimizer.Train(100000);
+        uint32_t seed = std::random_device()();
 
-    // Train for a specified number of iterations
-    // Note: Deep CFR requires many more iterations than tabular CFR to converge.
-    deep_cfr_minimizer.Train(100000);
+
+    DeepCFRCoroutine<Preflop::Game> cfr_trainer(seed);
+    cfr_trainer.TrainWithCoroutines(100000);
 
     std::cout << "Training complete." << std::endl;
 }

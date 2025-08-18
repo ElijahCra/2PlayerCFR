@@ -5,6 +5,8 @@ add_library(DeepCFR STATIC
         DataLoader.hpp
         AdvantageMemoryBuffer.hpp
         GPUDispatcher.cpp
+        DeepCFRCoroutine.hpp
+        CoroutineTraversal.hpp
 )
 if(UNIX AND NOT APPLE)
     set(CUDAToolkit_ROOT "/opt/cuda")

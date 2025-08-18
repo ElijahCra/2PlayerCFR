@@ -129,7 +129,7 @@ namespace Preflop
   uint8_t raiseNum{};
 
   ///@brief rng engine, mersienne twister
-  std::mt19937 &RNG;
+  std::mt19937 RNG;
 
   int winner = -1;
 
