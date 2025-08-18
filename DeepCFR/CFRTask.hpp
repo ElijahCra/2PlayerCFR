@@ -21,24 +21,29 @@ struct CFRTask {
         {
             return std::suspend_never{};// eagerly run coroutine body
         }
+
         auto final_suspend() noexcept
         {
             return std::suspend_always{};
         }
+
         void unhandled_exception()
         {
             std::abort();
         }
+
         void return_value(float value)
         {
             returned_value = value;
         }
+
         auto yield_value(float value)
         {
             yielded_value = value;
             return std::suspend_always{};
         }
     };
+
     std::coroutine_handle<promise_type> handle;
     ~CFRTask()
     {
@@ -46,20 +51,22 @@ struct CFRTask {
             handle.destroy();
         }
     }
-    float get_returned_value() const
+
+    [[nodiscard]] float get_returned_value() const
     {
         return handle.promise().returned_value;
     }
-    float get_yielded_value() const
+
+    [[nodiscard]] float get_yielded_value() const
     {
         return handle.promise().yielded_value;
     }
-    bool resume()
+
+    [[nodiscard]] bool resume() const
     {
         handle.resume();
         return handle.done();
     }
-
 };
 
 #endif //INC_2PLAYERCFR_CFRTASK_HPP
