@@ -375,6 +375,71 @@ void DeepRegretMinimizer<GameType>::add_to_strategy_memory(std::vector<T>& memor
     }
 }
 
+
+// This would be a new member function in your DeepRegretMinimizer class
+template<typename GameType>
+CoroutineTask<float> DeepRegretMinimizer<GameType>::traverse_cfr_coro(
+    const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer, GPUDispatcher& dispatcher)
+{
+    if (game.getType() == "terminal") {
+        co_return game.getUtility(updatePlayer);
+    }
+
+    if (game.getType() == "chance") {
+        GameType next_game(game);
+        next_game.transition(GameType::Action::Chance);
+        co_return co_await traverse_cfr_coro(next_game, updatePlayer, current_iter, probUpdatePlayer, dispatcher);
+    }
+
+    int currentPlayer = game.getCurrentPlayer();
+    auto legal_actions = game.getActions();
+    std::vector<int> legal_indices;
+    for (auto action : legal_actions) {
+        legal_indices.push_back(GameType::ActionMapping::getActionIndex(action));
+    }
+
+    // --- THIS IS THE KEY CHANGE ---
+    auto cards_cpu = game.getCardTensors(game.getCurrentPlayer(), game.getCurrentRound());
+    auto bets_cpu = game.getBetTensor();
+
+    // Asynchronously await the GPU result without blocking the thread
+    co_await GpuAwaitable(dispatcher, cards_cpu, bets_cpu, currentPlayer);
+
+    // The result is now in our promise, put there by the dispatcher
+    auto advantages_tensor = std::coroutine_handle<typename CoroutineTask<float>::promise_type>::from_promise(
+        co_await std::experimental::this_coroutine::promise
+    ).promise().m_gpu_result;
+
+    std::vector<float> legal_advantages;
+    for (int idx : legal_indices) {
+        legal_advantages.push_back(advantages_tensor[0][idx].template item<float>());
+    }
+
+    auto strategy = compute_strategy_from_advantages(legal_advantages);
+    float nodeValue = 0.0f;
+
+    if (currentPlayer == updatePlayer) {
+        std::vector<float> counterfactualValue(legal_actions.size());
+        for (size_t a = 0; a < legal_actions.size(); ++a) {
+            GameType next_game(game);
+            next_game.transition(legal_actions[a]);
+            // Await the recursive call
+            counterfactualValue[a] = co_await traverse_cfr_coro(next_game, updatePlayer, current_iter, probUpdatePlayer * strategy[a], dispatcher);
+            nodeValue += strategy[a] * counterfactualValue[a];
+        }
+        // ... (rest of logic for storing regrets is the same) ...
+        co_return nodeValue;
+    } else {
+        // ... (logic for opponent is mostly the same) ...
+        std::discrete_distribution<> dist(strategy.begin(), strategy.end());
+        int action_idx = dist(m_rng);
+        GameType next_game(game);
+        next_game.transition(legal_actions[action_idx]);
+        // Await the recursive call
+        co_return co_await traverse_cfr_coro(next_game, updatePlayer, current_iter, probUpdatePlayer, dispatcher);
+    }
+}
+
 // Explicit template instantiation
 template class DeepRegretMinimizer<Preflop::Game>;
 template class DeepRegretMinimizer<Texas::Game>;

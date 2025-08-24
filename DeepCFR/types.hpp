@@ -5,6 +5,7 @@
 #ifndef TYPES_HPP
 #define TYPES_HPP
 
+#include <coroutine>
 #include <vector>
 #include "torch/torch.h"
 
@@ -37,11 +38,14 @@ struct TrainingSampleStrategy
     std::vector<int> legal_action_indices;
     float weight;
 };
+// This is the only change needed in this file.
+// The promise is no longer needed as the coroutine itself is the continuation.
+
 struct ForwardRequest {
-    int player_index;                   // Which advantage network to use (0 or 1)
-    std::vector<torch::Tensor> cards;   // Card tensors (on CPU)
-    torch::Tensor bets;                 // Bet tensor (on CPU)
-    std::promise<torch::Tensor> promise;// Promise to fulfill with the GPU result
+    int player_index;
+    std::vector<torch::Tensor> cards;
+    torch::Tensor bets;
+    std::coroutine_handle<> handle_to_resume; // Replaces std::promise
 };
 
 

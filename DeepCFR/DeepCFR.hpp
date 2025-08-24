@@ -17,6 +17,8 @@
 #include "../Game/Utility/Utility.hpp"
 #include "types.hpp"
 #include "AdvantageMemoryBuffer.hpp"
+#include "CoroutineTask.hpp"
+#include "GPUDispatcher.hpp"
 
 template<typename GameType>
 class DeepRegretMinimizer {
@@ -34,6 +36,9 @@ public:
     void Train(uint32_t iterations);
 
     void TrainParallel(uint32_t iterations, size_t num_threads = std::thread::hardware_concurrency());
+
+    CoroutineTask<float> traverse_cfr_coro(
+    const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer, GPUDispatcher& dispatcher);
 private:
     /// @brief The recursive CFR traversal function.
     float traverse_cfr(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer);

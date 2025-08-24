@@ -10,7 +10,7 @@ void GPUDispatcher::run_loop() {
 
     while (!m_stop_flag) {
         // Wait for a request with a timeout
-        auto request_opt = m_queue.pop_with_timeout(MAX_WAIT_TIME);
+        auto request_opt = m_input_queue.pop_with_timeout(MAX_WAIT_TIME);
 
         if (request_opt.has_value()) {
             auto& request = *request_opt;
@@ -72,8 +72,14 @@ void GPUDispatcher::process_batch(std::vector<std::unique_ptr<ForwardRequest>>& 
         results = network->forward(batched_cards, batched_bets);
     }
 
-    // Fulfill promises with the results
-    for (size_t i = 0; i < batch_size; ++i) {
-        batch[i]->promise.set_value(results.slice(0, i, i + 1));
+    for (size_t i = 0; i < batch.size(); ++i) {
+        auto handle = batch[i]->handle_to_resume;
+        if (handle) {
+            // Place the result directly into the coroutine's promise object [cite: 30]
+            handle.promise().m_gpu_result = results.slice(0, i, i + 1).to(torch::kCPU);
+
+            // Push the handle to the results queue for the main thread to resume
+            m_results_queue.push(handle);
+        }
     }
 }
