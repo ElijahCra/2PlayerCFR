@@ -140,6 +140,7 @@ private:
         if (batch.empty()) return;
 
         size_t batch_size = batch.size();
+        //std::cout << "batch size: " << batch_size << std::endl;
         int num_card_types = batch[0]->cards.size();
 
         // Prepare batched tensors
@@ -409,6 +410,7 @@ private:
 
             // Start new traversals if capacity available
             while (started < num_traversals && active_tasks.size() < MAX_CONCURRENT) {
+                if (started % 200 == 0) std::cout << started << std::endl;
                 GameType game(m_rng);
                 auto task = std::make_unique<TraversalTask<GameType>>(
                     traverse_cfr_coro(game, player, iteration, 1.0f)
