@@ -65,7 +65,12 @@ template<typename GameType>
 class GPUBatchProcessor {
 public:
     GPUBatchProcessor(std::array<DeepCFRModel, 2>& networks, torch::Device device)
-        : m_networks(networks), m_device(device), m_stop(false) {}
+        : m_networks(networks), m_device(device), m_stop(false)
+    {
+        for (auto network : m_networks){
+            network->to(m_device);
+        }
+    }
 
     ~GPUBatchProcessor() {
         stop();
@@ -287,6 +292,7 @@ public:
         : m_gpu_processor(networks, device),
           m_rng(seed),
           m_networks(networks) {
+
         m_gpu_processor.start();
     }
 
