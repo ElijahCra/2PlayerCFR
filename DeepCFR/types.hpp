@@ -5,6 +5,7 @@
 #ifndef TYPES_HPP
 #define TYPES_HPP
 
+#include <future>
 #include <vector>
 #include "torch/torch.h"
 

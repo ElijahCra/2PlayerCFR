@@ -375,6 +375,8 @@ void DeepRegretMinimizer<GameType>::add_to_strategy_memory(std::vector<T>& memor
     }
 }
 
+
+
 // Explicit template instantiation
 template class DeepRegretMinimizer<Preflop::Game>;
 template class DeepRegretMinimizer<Texas::Game>;

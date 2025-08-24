@@ -17,6 +17,7 @@
 #include "../Game/Utility/Utility.hpp"
 #include "types.hpp"
 #include "AdvantageMemoryBuffer.hpp"
+#include "CoroutineTraversal.hpp"
 
 template<typename GameType>
 class DeepRegretMinimizer {
@@ -33,7 +34,22 @@ public:
     /// @param iterations The total number of game traversals to perform.
     void Train(uint32_t iterations);
 
-    void TrainParallel(uint32_t iterations, size_t num_threads = std::thread::hardware_concurrency());
+    void TrainCoro(uint32_t iterations)
+
+    {
+        TraversalScheduler<GameType> m_scheduler(m_advantage_networks, m_device, std::random_device()());
+        // Use coroutine-based scheduler for traversals
+        m_scheduler.train(iterations, K_TRAVERSALS);
+
+        // After all traversals, train networks as before
+        for (int p = 0; p < GameType::PlayerNum; ++p) {
+            train_advantage_network(p);
+        }
+
+        train_strategy_network();
+    }
+
+
 private:
     /// @brief The recursive CFR traversal function.
     float traverse_cfr(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer);
