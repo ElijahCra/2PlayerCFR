@@ -16,13 +16,13 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <iostream>
 #include <torch/torch.h>
 #include "Net.hpp"
 #include "types.hpp"
 
 // Forward declarations
 template<typename GameType> class TraversalScheduler;
-template<typename GameType> class TraversalTask;
 
 // GPU request with coroutine integration
 template<typename GameType>
@@ -33,10 +33,9 @@ struct GPURequest {
     torch::Tensor result;                  // Filled when computation complete
     std::atomic<bool> ready{false};        // Use atomic for thread safety
     int player_id = -1;                    // Track which player this is for
-    int session_id = -1;                   // Track which training session
 };
 
-// Awaitable for GPU results
+// Simple awaitable for GPU results
 template<typename GameType>
 class GPUAwaitable {
 public:
@@ -44,21 +43,16 @@ public:
         : request(req) {}
 
     bool await_ready() const noexcept {
-        return request->ready.load();  // Don't suspend if result already available
+        return request->ready.load();
     }
 
     bool await_suspend(std::coroutine_handle<> h) noexcept {
-        // Store handle for later resumption
         request->continuation = h;
-
-        // Double-check if result became ready while we were storing the handle
-        // Return false to resume immediately if ready, true to stay suspended
+        // Return false to resume immediately if ready, true to suspend
         return !request->ready.load();
     }
 
     torch::Tensor await_resume() noexcept {
-        // Clear the continuation to prevent double-resume
-        request->continuation = nullptr;
         return request->result;
     }
 
@@ -66,77 +60,12 @@ private:
     std::shared_ptr<GPURequest<GameType>> request;
 };
 
-// Task type for coroutine traversals
-template<typename GameType>
-class TraversalTask {
-public:
-    struct promise_type {
-        TraversalScheduler<GameType>* scheduler = nullptr;
-        float result_value = 0.0f;
-        std::exception_ptr exception;
-
-        TraversalTask get_return_object() {
-            return TraversalTask{
-                std::coroutine_handle<promise_type>::from_promise(*this)
-            };
-        }
-
-        std::suspend_always initial_suspend() noexcept { return {}; }
-        std::suspend_always final_suspend() noexcept { return {}; }
-
-        void return_value(float value) { result_value = value; }
-        void unhandled_exception() { exception = std::current_exception(); }
-    };
-
-    using handle_type = std::coroutine_handle<promise_type>;
-
-    TraversalTask(handle_type h) : coro_handle(h) {}
-
-    ~TraversalTask() {
-        if (coro_handle)
-            coro_handle.destroy();
-    }
-
-    // Move-only
-    TraversalTask(TraversalTask&& other) noexcept
-        : coro_handle(std::exchange(other.coro_handle, {})) {}
-
-    TraversalTask& operator=(TraversalTask&& other) noexcept {
-        if (this != &other) {
-            if (coro_handle)
-                coro_handle.destroy();
-            coro_handle = std::exchange(other.coro_handle, {});
-        }
-        return *this;
-    }
-
-    float get_result() {
-        if (!coro_handle.done())
-            coro_handle.resume();
-
-        if (coro_handle.promise().exception)
-            std::rethrow_exception(coro_handle.promise().exception);
-
-        return coro_handle.promise().result_value;
-    }
-
-    handle_type handle() const { return coro_handle; }
-
-private:
-    handle_type coro_handle;
-};
-
 // GPU Batch Processor - runs on separate thread
 template<typename GameType>
 class GPUBatchProcessor {
 public:
     GPUBatchProcessor(std::array<DeepCFRModel, 2>& networks, torch::Device device)
-        : m_networks(networks), m_device(device), m_stop(false)
-    {
-        for (auto network : networks) {
-            network->to(m_device);
-        }
-    }
+        : m_networks(networks), m_device(device), m_stop(false) {}
 
     ~GPUBatchProcessor() {
         stop();
@@ -168,11 +97,6 @@ public:
         return ready;
     }
 
-    void clear_pending_for_player(int player) {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        m_pending[player].clear();
-    }
-
 private:
     void process_loop() {
         while (!m_stop) {
@@ -185,9 +109,13 @@ private:
 
             // Process batches for each player
             for (int p = 0; p < 2; ++p) {
-                if (!m_pending[p].empty()) {
+                if (!m_pending[p].empty() &&
+                    (m_pending[p].size() >= MIN_BATCH_SIZE ||
+                     std::chrono::steady_clock::now() - m_last_batch_time > MAX_BATCH_WAIT)) {
+
                     auto batch = std::move(m_pending[p]);
                     m_pending[p].clear();
+                    m_last_batch_time = std::chrono::steady_clock::now();
                     lock.unlock();
 
                     process_batch(batch, p);
@@ -236,9 +164,12 @@ private:
         // Store results and mark as ready
         for (size_t i = 0; i < batch_size; ++i) {
             batch[i]->result = results.slice(0, i, i + 1);
-            batch[i]->ready.store(true);  // Use atomic store
+            batch[i]->ready.store(true);
         }
     }
+
+    static constexpr size_t MIN_BATCH_SIZE = 32;
+    static constexpr auto MAX_BATCH_WAIT = std::chrono::milliseconds(5);
 
     std::array<DeepCFRModel, 2>& m_networks;
     torch::Device m_device;
@@ -250,6 +181,100 @@ private:
     std::condition_variable m_cv;
     std::array<std::vector<std::shared_ptr<GPURequest<GameType>>>, 2> m_pending;
     std::vector<std::shared_ptr<GPURequest<GameType>>> m_completed;
+    std::chrono::steady_clock::time_point m_last_batch_time;
+};
+
+// Simple coroutine task for traversal
+template<typename GameType>
+struct TraversalPromise;
+
+template<typename GameType>
+class TraversalTask {
+public:
+    using promise_type = TraversalPromise<GameType>;
+    using handle_type = std::coroutine_handle<promise_type>;
+
+    TraversalTask(handle_type h) : m_handle(h) {}
+
+    ~TraversalTask() {
+        if (m_handle)
+            m_handle.destroy();
+    }
+
+    // Move only
+    TraversalTask(TraversalTask&& other) noexcept
+        : m_handle(std::exchange(other.m_handle, {})) {}
+
+    TraversalTask& operator=(TraversalTask&& other) noexcept {
+        if (this != &other) {
+            if (m_handle)
+                m_handle.destroy();
+            m_handle = std::exchange(other.m_handle, {});
+        }
+        return *this;
+    }
+
+    // Simple awaitable interface for co_await
+    bool await_ready() { return m_handle.done(); }
+
+    std::coroutine_handle<> await_suspend(std::coroutine_handle<> awaiting) {
+        m_handle.promise().m_continuation = awaiting;
+        return m_handle;  // Symmetric transfer to child task
+    }
+
+    float await_resume() {
+        return m_handle.promise().m_value;
+    }
+
+    void resume() {
+        if (m_handle && !m_handle.done())
+            m_handle.resume();
+    }
+
+    bool done() const {
+        return !m_handle || m_handle.done();
+    }
+
+    float get_result() {
+        if (!done()) {
+            m_handle.resume();
+        }
+        return m_handle.promise().m_value;
+    }
+
+private:
+    handle_type m_handle;
+};
+
+template<typename GameType>
+struct TraversalPromise {
+    float m_value = 0.0f;
+    std::coroutine_handle<> m_continuation;
+
+    TraversalTask<GameType> get_return_object() {
+        return TraversalTask<GameType>{
+            std::coroutine_handle<TraversalPromise>::from_promise(*this)
+        };
+    }
+
+    std::suspend_always initial_suspend() noexcept { return {}; }
+
+    auto final_suspend() noexcept {
+        struct final_awaiter {
+            std::coroutine_handle<> m_cont;
+            bool await_ready() noexcept { return false; }
+            std::coroutine_handle<> await_suspend(std::coroutine_handle<>) noexcept {
+                if (m_cont)
+                    return m_cont;  // Symmetric transfer to parent
+                return std::noop_coroutine();
+            }
+            void await_resume() noexcept {}
+        };
+        return final_awaiter{m_continuation};
+    }
+
+    void return_value(float v) { m_value = v; }
+    void unhandled_exception() { std::terminate(); }
 };
 
 // Main scheduler for managing coroutine traversals
@@ -265,94 +290,79 @@ public:
         m_gpu_processor.start();
     }
 
-    // Coroutine traversal function
-    TraversalTask<GameType> traverse_cfr_coro(const GameType& game,
+    // Simplified coroutine traversal
+    TraversalTask<GameType> traverse_cfr_coro(GameType game,
                                               int update_player,
                                               int iteration,
-                                              float prob_update_player,
-                                              int session_id = -1) {
+                                              float prob_update_player) {
         // Terminal node
         if (game.getType() == "terminal") {
-            co_return game.getUtility(update_player);
+            float utility = game.getUtility(update_player);
+            co_return utility;
         }
 
         // Chance node
         if (game.getType() == "chance") {
-            GameType next_game(game);
-            next_game.transition(GameType::Action::Chance);
-            auto task = traverse_cfr_coro(next_game, update_player, iteration, prob_update_player, session_id);
-            float result = task.get_result();
+            game.transition(GameType::Action::Chance);
+            float result = co_await traverse_cfr_coro(game, update_player, iteration, prob_update_player);
             co_return result;
         }
 
+        // Decision node - prepare and submit GPU request
         int current_player = game.getCurrentPlayer();
         auto legal_actions = game.getActions();
-        std::vector<int> legal_indices;
-        for (auto action : legal_actions) {
-            legal_indices.push_back(GameType::ActionMapping::getActionIndex(action));
-        }
 
-        // Prepare GPU request
         auto gpu_request = std::make_shared<GPURequest<GameType>>();
         gpu_request->cards = game.getCardTensors(current_player, game.getCurrentRound());
         gpu_request->bets = game.getBetTensor();
         gpu_request->player_id = current_player;
-        gpu_request->session_id = session_id;
 
-        // Submit to GPU and suspend
         m_gpu_processor.submit(gpu_request, current_player);
 
-        // Await GPU result - this suspends the coroutine
+        // Suspend until GPU result is ready
         torch::Tensor advantages_tensor = co_await GPUAwaitable<GameType>(gpu_request);
 
-        // Extract legal advantages
+        // Extract legal advantages and compute strategy
         std::vector<float> legal_advantages;
-        for (int idx : legal_indices) {
+        std::vector<int> legal_indices;
+        for (auto action : legal_actions) {
+            int idx = GameType::ActionMapping::getActionIndex(action);
+            legal_indices.push_back(idx);
             legal_advantages.push_back(advantages_tensor[0][idx].template item<float>());
         }
 
-        // Compute strategy
         auto strategy = compute_strategy_from_advantages(legal_advantages);
-
         float node_value = 0.0f;
 
         if (current_player == update_player) {
             // Traverser: explore all actions
-            std::vector<float> counterfactual_values(legal_actions.size());
-
             for (size_t a = 0; a < legal_actions.size(); ++a) {
                 GameType next_game(game);
                 next_game.transition(legal_actions[a]);
 
-                auto task = traverse_cfr_coro(next_game, update_player,
-                                             iteration, prob_update_player * strategy[a], session_id);
-                counterfactual_values[a] = task.get_result();
-                node_value += strategy[a] * counterfactual_values[a];
+                float cf_value = co_await traverse_cfr_coro(
+                    next_game, update_player, iteration,
+                    prob_update_player * strategy[a]
+                );
+                node_value += strategy[a] * cf_value;
             }
-
-            // Store advantages in memory
-            store_advantages(gpu_request->cards, gpu_request->bets,
-                           legal_indices, counterfactual_values,
-                           node_value, iteration, update_player);
         } else {
             // Opponent: sample single action
-            store_strategy(gpu_request->cards, gpu_request->bets,
-                         legal_indices, strategy, iteration);
-
             std::discrete_distribution<> dist(strategy.begin(), strategy.end());
             int action_idx = dist(m_rng);
+
             GameType next_game(game);
             next_game.transition(legal_actions[action_idx]);
 
-            auto task = traverse_cfr_coro(next_game, update_player,
-                                         iteration, prob_update_player, session_id);
-            node_value = task.get_result();
+            node_value = co_await traverse_cfr_coro(
+                next_game, update_player, iteration, prob_update_player
+            );
         }
 
         co_return node_value;
     }
 
-    // Main training loop
+    // Main training loop with work-stealing
     void train(uint32_t iterations, int traversals_per_iteration) {
         for (uint32_t iter = 1; iter <= iterations; ++iter) {
             std::cout << "Iteration " << iter << "/" << iterations << std::endl;
@@ -365,137 +375,85 @@ public:
 
 private:
     void run_traversals_for_player(int player, int iteration, int num_traversals) {
-        // Generate unique session ID for this batch of traversals
-        static std::atomic<int> session_counter{0};
-        int session_id = session_counter.fetch_add(1);
-
-        // Use shared_ptr to manage traversal lifetime
-        std::vector<std::shared_ptr<TraversalTask<GameType>>> active_traversals;
-        std::unordered_map<void*, std::shared_ptr<TraversalTask<GameType>>> handle_to_task;
-
+        std::deque<std::unique_ptr<TraversalTask<GameType>>> active_tasks;
         int completed = 0;
         int started = 0;
 
         auto start_time = std::chrono::high_resolution_clock::now();
 
         while (completed < num_traversals) {
-            // Check for ready GPU results and resume corresponding coroutines
+            // Process GPU completions
             auto ready_requests = m_gpu_processor.get_ready_requests();
             for (auto& req : ready_requests) {
-                // Only process requests from this session
-                if (req->session_id != session_id) {
-                    continue;
-                }
-
-                // Check if continuation is valid and not null
-                if (req->continuation && req->continuation.address()) {
-                    // Store the handle temporarily
-                    auto handle = req->continuation;
-
-                    // Clear the continuation to avoid double-resume
-                    req->continuation = nullptr;
-
-                    // Find the task that owns this continuation
-                    auto it = handle_to_task.find(handle.address());
-                    if (it != handle_to_task.end() && !handle.done()) {
-                        // Resume the coroutine
-                        handle.resume();
-
-                        // Check if completed after resume
-                        if (handle.done()) {
-                            completed++;
-                            // Remove from active traversals
-                            active_traversals.erase(
-                                std::remove(active_traversals.begin(), active_traversals.end(), it->second),
-                                active_traversals.end()
-                            );
-                            handle_to_task.erase(it);
-                        }
-                    }
+                if (req->continuation && !req->continuation.done()) {
+                    req->continuation.resume();
                 }
             }
 
-            // Start new traversals if we haven't started enough
-            if (started < num_traversals && active_traversals.size() < MAX_CONCURRENT) {
+            // Check for completed tasks
+            auto it = active_tasks.begin();
+            while (it != active_tasks.end()) {
+                if ((*it)->done()) {
+                    completed++;
+                    it = active_tasks.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+
+            // Start new traversals if capacity available
+            while (started < num_traversals && active_tasks.size() < MAX_CONCURRENT) {
                 GameType game(m_rng);
-                auto task = std::make_shared<TraversalTask<GameType>>(
-                    traverse_cfr_coro(game, player, iteration, 1.0f, session_id)
+                auto task = std::make_unique<TraversalTask<GameType>>(
+                    traverse_cfr_coro(game, player, iteration, 1.0f)
                 );
 
-                active_traversals.push_back(task);
-                handle_to_task[task->handle().address()] = task;
+                task->resume();  // Start the coroutine
 
-                // Initial resume to start the traversal
-                if (!task->handle().done()) {
-                    task->handle().resume();
-                    if (task->handle().done()) {
-                        completed++;
-                        active_traversals.pop_back();
-                        handle_to_task.erase(task->handle().address());
-                    }
+                if (!task->done()) {
+                    active_tasks.push_back(std::move(task));
+                } else {
+                    completed++;
                 }
                 started++;
             }
 
-            // Small yield to prevent busy-waiting
-            if (ready_requests.empty() && started >= num_traversals) {
+            // Yield if no work available
+            if (ready_requests.empty() && active_tasks.size() == MAX_CONCURRENT) {
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
             }
         }
 
-        // Wait for any remaining GPU requests for this session to complete
-        // This ensures we don't leak requests between iterations
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-
-        auto end_time = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::high_resolution_clock::now() - start_time
+        );
         std::cout << "Player " << player << " completed " << num_traversals
                   << " traversals in " << duration.count() << "ms" << std::endl;
     }
 
     std::vector<float> compute_strategy_from_advantages(const std::vector<float>& advantages) {
         std::vector<float> strategy(advantages.size());
-        std::vector<float> positive_regrets(advantages.size());
         float sum_positive = 0.0f;
 
         for (size_t i = 0; i < advantages.size(); ++i) {
-            positive_regrets[i] = std::max(0.0f, advantages[i]);
-            sum_positive += positive_regrets[i];
+            float positive = std::max(0.0f, advantages[i]);
+            strategy[i] = positive;
+            sum_positive += positive;
         }
 
         if (sum_positive > 0) {
-            for (size_t i = 0; i < advantages.size(); ++i) {
-                strategy[i] = positive_regrets[i] / sum_positive;
+            for (auto& s : strategy) {
+                s /= sum_positive;
             }
         } else {
-            float uniform_prob = 1.0f / advantages.size();
-            std::fill(strategy.begin(), strategy.end(), uniform_prob);
+            float uniform = 1.0f / advantages.size();
+            std::fill(strategy.begin(), strategy.end(), uniform);
         }
 
         return strategy;
     }
 
-    void store_advantages(const std::vector<torch::Tensor>& cards,
-                         const torch::Tensor& bets,
-                         const std::vector<int>& legal_indices,
-                         const std::vector<float>& counterfactual_values,
-                         float node_value,
-                         int iteration,
-                         int player) {
-        // Implementation would store in advantage memory buffer
-        // Similar to original code's m_adv_memories[player].add_sample()
-    }
-
-    void store_strategy(const std::vector<torch::Tensor>& cards,
-                       const torch::Tensor& bets,
-                       const std::vector<int>& legal_indices,
-                       const std::vector<float>& strategy,
-                       int iteration) {
-        // Implementation would store in strategy memory buffer
-        // Similar to original code's m_strategy_memory
-    }
-
-    static constexpr int MAX_CONCURRENT = 100;  // Max concurrent traversals
+    static constexpr int MAX_CONCURRENT = 100;
 
     GPUBatchProcessor<GameType> m_gpu_processor;
     std::mt19937 m_rng;
