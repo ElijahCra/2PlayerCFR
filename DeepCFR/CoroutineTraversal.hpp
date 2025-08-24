@@ -4,11 +4,18 @@
 #include <coroutine>
 #include <memory>
 #include <queue>
+#include <deque>
 #include <future>
 #include <optional>
 #include <vector>
 #include <chrono>
 #include <random>
+#include <atomic>
+#include <unordered_map>
+#include <algorithm>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 #include <torch/torch.h>
 #include "Net.hpp"
 #include "types.hpp"
@@ -24,7 +31,9 @@ struct GPURequest {
     torch::Tensor bets;
     std::coroutine_handle<> continuation;  // Coroutine to resume when ready
     torch::Tensor result;                  // Filled when computation complete
-    bool ready = false;
+    std::atomic<bool> ready{false};        // Use atomic for thread safety
+    int player_id = -1;                    // Track which player this is for
+    int session_id = -1;                   // Track which training session
 };
 
 // Awaitable for GPU results
@@ -35,14 +44,21 @@ public:
         : request(req) {}
 
     bool await_ready() const noexcept {
-        return request->ready;  // Don't suspend if result already available
+        return request->ready.load();  // Don't suspend if result already available
     }
 
-    void await_suspend(std::coroutine_handle<> h) noexcept {
-        request->continuation = h;  // Store handle for later resumption
+    bool await_suspend(std::coroutine_handle<> h) noexcept {
+        // Store handle for later resumption
+        request->continuation = h;
+
+        // Double-check if result became ready while we were storing the handle
+        // Return false to resume immediately if ready, true to stay suspended
+        return !request->ready.load();
     }
 
     torch::Tensor await_resume() noexcept {
+        // Clear the continuation to prevent double-resume
+        request->continuation = nullptr;
         return request->result;
     }
 
@@ -117,7 +133,7 @@ public:
     GPUBatchProcessor(std::array<DeepCFRModel, 2>& networks, torch::Device device)
         : m_networks(networks), m_device(device), m_stop(false)
     {
-        for (auto network :m_networks) {
+        for (auto network : networks) {
             network->to(m_device);
         }
     }
@@ -150,6 +166,11 @@ public:
         std::vector<std::shared_ptr<GPURequest<GameType>>> ready;
         ready.swap(m_completed);
         return ready;
+    }
+
+    void clear_pending_for_player(int player) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_pending[player].clear();
     }
 
 private:
@@ -212,10 +233,10 @@ private:
             results = m_networks[player]->forward(batched_cards, batched_bets);
         }
 
-        // Store results
+        // Store results and mark as ready
         for (size_t i = 0; i < batch_size; ++i) {
             batch[i]->result = results.slice(0, i, i + 1);
-            batch[i]->ready = true;
+            batch[i]->ready.store(true);  // Use atomic store
         }
     }
 
@@ -248,7 +269,8 @@ public:
     TraversalTask<GameType> traverse_cfr_coro(const GameType& game,
                                               int update_player,
                                               int iteration,
-                                              float prob_update_player) {
+                                              float prob_update_player,
+                                              int session_id = -1) {
         // Terminal node
         if (game.getType() == "terminal") {
             co_return game.getUtility(update_player);
@@ -258,7 +280,7 @@ public:
         if (game.getType() == "chance") {
             GameType next_game(game);
             next_game.transition(GameType::Action::Chance);
-            auto task = traverse_cfr_coro(next_game, update_player, iteration, prob_update_player);
+            auto task = traverse_cfr_coro(next_game, update_player, iteration, prob_update_player, session_id);
             float result = task.get_result();
             co_return result;
         }
@@ -274,6 +296,8 @@ public:
         auto gpu_request = std::make_shared<GPURequest<GameType>>();
         gpu_request->cards = game.getCardTensors(current_player, game.getCurrentRound());
         gpu_request->bets = game.getBetTensor();
+        gpu_request->player_id = current_player;
+        gpu_request->session_id = session_id;
 
         // Submit to GPU and suspend
         m_gpu_processor.submit(gpu_request, current_player);
@@ -301,7 +325,7 @@ public:
                 next_game.transition(legal_actions[a]);
 
                 auto task = traverse_cfr_coro(next_game, update_player,
-                                             iteration, prob_update_player * strategy[a]);
+                                             iteration, prob_update_player * strategy[a], session_id);
                 counterfactual_values[a] = task.get_result();
                 node_value += strategy[a] * counterfactual_values[a];
             }
@@ -321,7 +345,7 @@ public:
             next_game.transition(legal_actions[action_idx]);
 
             auto task = traverse_cfr_coro(next_game, update_player,
-                                         iteration, prob_update_player);
+                                         iteration, prob_update_player, session_id);
             node_value = task.get_result();
         }
 
@@ -341,8 +365,14 @@ public:
 
 private:
     void run_traversals_for_player(int player, int iteration, int num_traversals) {
-        std::vector<TraversalTask<GameType>> active_traversals;
-        std::queue<std::coroutine_handle<>> suspended_handles;
+        // Generate unique session ID for this batch of traversals
+        static std::atomic<int> session_counter{0};
+        int session_id = session_counter.fetch_add(1);
+
+        // Use shared_ptr to manage traversal lifetime
+        std::vector<std::shared_ptr<TraversalTask<GameType>>> active_traversals;
+        std::unordered_map<void*, std::shared_ptr<TraversalTask<GameType>>> handle_to_task;
+
         int completed = 0;
         int started = 0;
 
@@ -352,35 +382,59 @@ private:
             // Check for ready GPU results and resume corresponding coroutines
             auto ready_requests = m_gpu_processor.get_ready_requests();
             for (auto& req : ready_requests) {
-                if (req->continuation) {
-                    req->continuation.resume();
+                // Only process requests from this session
+                if (req->session_id != session_id) {
+                    continue;
+                }
+
+                // Check if continuation is valid and not null
+                if (req->continuation && req->continuation.address()) {
+                    // Store the handle temporarily
+                    auto handle = req->continuation;
+
+                    // Clear the continuation to avoid double-resume
+                    req->continuation = nullptr;
+
+                    // Find the task that owns this continuation
+                    auto it = handle_to_task.find(handle.address());
+                    if (it != handle_to_task.end() && !handle.done()) {
+                        // Resume the coroutine
+                        handle.resume();
+
+                        // Check if completed after resume
+                        if (handle.done()) {
+                            completed++;
+                            // Remove from active traversals
+                            active_traversals.erase(
+                                std::remove(active_traversals.begin(), active_traversals.end(), it->second),
+                                active_traversals.end()
+                            );
+                            handle_to_task.erase(it);
+                        }
+                    }
                 }
             }
 
             // Start new traversals if we haven't started enough
-            if (started < num_traversals && suspended_handles.size() < MAX_CONCURRENT) {
+            if (started < num_traversals && active_traversals.size() < MAX_CONCURRENT) {
                 GameType game(m_rng);
-                active_traversals.push_back(
-                    traverse_cfr_coro(game, player, iteration, 1.0f)
+                auto task = std::make_shared<TraversalTask<GameType>>(
+                    traverse_cfr_coro(game, player, iteration, 1.0f, session_id)
                 );
 
+                active_traversals.push_back(task);
+                handle_to_task[task->handle().address()] = task;
+
                 // Initial resume to start the traversal
-                auto& task = active_traversals.back();
-                if (!task.handle().done()) {
-                    task.handle().resume();
+                if (!task->handle().done()) {
+                    task->handle().resume();
+                    if (task->handle().done()) {
+                        completed++;
+                        active_traversals.pop_back();
+                        handle_to_task.erase(task->handle().address());
+                    }
                 }
                 started++;
-            }
-
-            // Check for completed traversals
-            auto it = active_traversals.begin();
-            while (it != active_traversals.end()) {
-                if (it->handle().done()) {
-                    completed++;
-                    it = active_traversals.erase(it);
-                } else {
-                    ++it;
-                }
             }
 
             // Small yield to prevent busy-waiting
@@ -388,6 +442,10 @@ private:
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
             }
         }
+
+        // Wait for any remaining GPU requests for this session to complete
+        // This ensures we don't leak requests between iterations
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
         auto end_time = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
