@@ -37,7 +37,7 @@ int main() {
 
     // Train for a specified number of iterations
     // Note: Deep CFR requires many more iterations than tabular CFR to converge.
-    deep_cfr_minimizer.TrainCoro(100000);
+    deep_cfr_minimizer.TrainCoro(1);
 
     std::cout << "Training complete." << std::endl;
 }

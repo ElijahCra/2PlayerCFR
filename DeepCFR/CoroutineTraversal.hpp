@@ -338,12 +338,18 @@ struct TraversalPromise {
     auto final_suspend() noexcept {
         struct final_awaiter {
             std::coroutine_handle<> m_cont;
+
             bool await_ready() noexcept { return false; }
+
             std::coroutine_handle<> await_suspend(std::coroutine_handle<>) noexcept {
                 if (m_cont)
-                    return m_cont;  // Symmetric transfer to parent
+                    return m_cont;  // Correctly resume the parent
+
+                // For top-level tasks, suspend and wait for the main loop to destroy us.
+                // This prevents the double-free.
                 return std::noop_coroutine();
             }
+
             void await_resume() noexcept {}
         };
         return final_awaiter{m_continuation};
