@@ -83,6 +83,9 @@ private:
     std::array<AdvantageMemoryBuffer<GameType>, 2> m_adv_memories;
     std::vector<TrainingSampleStrategy> m_strategy_memory;
 
+    uint32_t m_nodes_touched{};
+    uint32_t m_gpu_nodes_touched{};
+
     // Training constants from the paper
     static constexpr size_t BATCH_SIZE = 10000;
     static constexpr size_t MEMORY_SIZE = 40000000; // 40 million

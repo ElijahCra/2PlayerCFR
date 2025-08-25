@@ -46,6 +46,7 @@ void DeepRegretMinimizer<GameType>::Train(uint32_t iterations) {
 
         // Alternate between players (external sampling)
         for (int p = 0; p < GameType::PlayerNum; ++p) {
+            auto gpu_nodes_begin = m_gpu_nodes_touched;
             m_advantage_networks[0]->to(torch::kCPU);
             m_advantage_networks[1]->to(torch::kCPU);
             auto t1 = std::chrono::high_resolution_clock::now();
@@ -59,7 +60,7 @@ void DeepRegretMinimizer<GameType>::Train(uint32_t iterations) {
 
             auto t2 = std::chrono::high_resolution_clock::now();
             auto ms_int = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
-            std::cout << "Training for player: "<<p<<" time: " << ms_int << std::endl;
+            std::cout << "Training for player: "<<p<<" time: " << ms_int << " GPU Nodes/ms: "<< (m_gpu_nodes_touched-gpu_nodes_begin)/ms_int.count() << std::endl;
             // Train advantage network from scratch for this player
             m_advantage_networks[p]->to(m_device);
 
@@ -75,15 +76,19 @@ template<typename GameType>
 float DeepRegretMinimizer<GameType>::traverse_cfr(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer) {
     // Terminal node
     if (game.getType() == "terminal") {
+        ++m_nodes_touched;
         return game.getUtility(updatePlayer);
     }
 
     // Chance node
     if (game.getType() == "chance") {
+        ++m_nodes_touched;
         GameType next_game(game);
         next_game.transition(GameType::Action::Chance);
         return traverse_cfr(next_game, updatePlayer, current_iter, probUpdatePlayer);
     }
+
+    ++m_nodes_touched; ++m_gpu_nodes_touched;
 
     int currentPlayer = game.getCurrentPlayer();
     //auto infoset = game.getInfoSet(currentPlayer);

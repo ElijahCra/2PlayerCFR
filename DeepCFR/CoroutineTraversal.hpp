@@ -21,6 +21,11 @@
 #include "Net.hpp"
 #include "types.hpp"
 
+static constexpr int MAX_CONCURRENT = 12000;
+static constexpr auto POLL_SLEEP = std::chrono::microseconds(100);
+static constexpr size_t MIN_BATCH_SIZE = 128;
+static constexpr auto MAX_BATCH_WAIT = std::chrono::microseconds(500);
+
 // Forward declarations
 template<typename GameType> class TraversalScheduler;
 
@@ -53,6 +58,7 @@ public:
     }
 
     torch::Tensor await_resume() noexcept {
+        request->continuation = nullptr;
         return request->result;
     }
 
@@ -108,15 +114,13 @@ private:
             std::unique_lock<std::mutex> lock(m_mutex);
 
             // Wait for work or timeout for batching
-            m_cv.wait_for(lock, std::chrono::milliseconds(5), [this] {
+            m_cv.wait_for(lock, POLL_SLEEP, [this] {
                 return m_stop || has_pending_work();
             });
 
             // Process batches for each player
             for (int p = 0; p < 2; ++p) {
-                if (!m_pending[p].empty() &&
-                    (m_pending[p].size() >= MIN_BATCH_SIZE ||
-                     std::chrono::steady_clock::now() - m_last_batch_time > MAX_BATCH_WAIT)) {
+                if (!m_pending[p].empty() && (m_pending[p].size() >= MIN_BATCH_SIZE || std::chrono::steady_clock::now() - m_last_batch_time > MAX_BATCH_WAIT)) {
 
                     auto batch = std::move(m_pending[p]);
                     m_pending[p].clear();
@@ -140,42 +144,52 @@ private:
         if (batch.empty()) return;
 
         size_t batch_size = batch.size();
-        //std::cout << "batch size: " << batch_size << std::endl;
+        std::cout<<"batch size: "<<batch_size<<std::endl;
         int num_card_types = batch[0]->cards.size();
 
-        // Prepare batched tensors
-        std::vector<torch::Tensor> batched_cards;
-        std::vector<torch::Tensor> bet_list;
-
-        for (int i = 0; i < num_card_types; ++i) {
-            std::vector<torch::Tensor> card_type_list;
-            for (const auto& req : batch) {
-                card_type_list.push_back(req->cards[i]);
-            }
-            batched_cards.push_back(torch::stack(card_type_list).squeeze(1).to(m_device));
-        }
+        // --- 1. Collect tensors from all requests ---
+        std::vector<std::vector<torch::Tensor>> card_tensors_by_type(num_card_types);
+        std::vector<torch::Tensor> bet_tensors;
+        bet_tensors.reserve(batch_size);
 
         for (const auto& req : batch) {
-            bet_list.push_back(req->bets);
+            for (int i = 0; i < num_card_types; ++i) {
+                card_tensors_by_type[i].push_back(req->cards[i]);
+            }
+            bet_tensors.push_back(req->bets);
         }
-        auto batched_bets = torch::stack(bet_list).squeeze(1).to(m_device);
 
-        // Run inference
+        // --- 2. Batch them on the CPU using torch::cat ---
+        std::vector<torch::Tensor> batched_cards;
+        for (int i = 0; i < num_card_types; ++i) {
+            batched_cards.push_back(torch::cat(card_tensors_by_type[i], 0));
+        }
+        auto batched_bets = torch::cat(bet_tensors, 0);
+
+        // --- 3. Move the completed batches to GPU in one go ---
+        for(auto& t : batched_cards) {
+            t = t.to(m_device);
+        }
+        batched_bets = batched_bets.to(m_device);
+
+        // --- 4. Run inference ---
         torch::Tensor results;
         {
             torch::NoGradGuard no_grad;
             results = m_networks[player]->forward(batched_cards, batched_bets);
         }
 
-        // Store results and mark as ready
+        // --- 5. Move results back to CPU at once ---
+        auto results_cpu = results.to(torch::kCPU);
+
+        // --- 6. Distribute results ---
         for (size_t i = 0; i < batch_size; ++i) {
-            batch[i]->result = results.slice(0, i, i + 1);
+            batch[i]->result = results_cpu.slice(0, i, i + 1).clone();
             batch[i]->ready.store(true);
         }
     }
 
-    static constexpr size_t MIN_BATCH_SIZE = 32;
-    static constexpr auto MAX_BATCH_WAIT = std::chrono::milliseconds(5);
+
 
     std::array<DeepCFRModel, 2>& m_networks;
     torch::Device m_device;
@@ -304,16 +318,21 @@ public:
                                               float prob_update_player) {
         // Terminal node
         if (game.getType() == "terminal") {
+            ++m_nodes_touched;
             float utility = game.getUtility(update_player);
             co_return utility;
         }
 
         // Chance node
         if (game.getType() == "chance") {
+            ++m_nodes_touched;
             game.transition(GameType::Action::Chance);
             float result = co_await traverse_cfr_coro(game, update_player, iteration, prob_update_player);
             co_return result;
         }
+
+        ++m_nodes_touched;
+        ++m_gpu_nodes_touched;
 
         // Decision node - prepare and submit GPU request
         int current_player = game.getCurrentPlayer();
@@ -383,6 +402,8 @@ public:
 private:
     void run_traversals_for_player(int player, int iteration, int num_traversals) {
         std::deque<std::unique_ptr<TraversalTask<GameType>>> active_tasks;
+        uint32_t nodes_begin = m_nodes_touched;
+        uint32_t gpu_nodes_begin = m_gpu_nodes_touched;
         int completed = 0;
         int started = 0;
 
@@ -410,7 +431,7 @@ private:
 
             // Start new traversals if capacity available
             while (started < num_traversals && active_tasks.size() < MAX_CONCURRENT) {
-                if (started % 200 == 0) std::cout << started << std::endl;
+                if (started % 2000 == 0) std::cout << started << std::endl;
                 GameType game(m_rng);
                 auto task = std::make_unique<TraversalTask<GameType>>(
                     traverse_cfr_coro(game, player, iteration, 1.0f)
@@ -435,8 +456,7 @@ private:
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::high_resolution_clock::now() - start_time
         );
-        std::cout << "Player " << player << " completed " << num_traversals
-                  << " traversals in " << duration.count() << "ms" << std::endl;
+        std::cout << "Player " << player << " completed " << num_traversals << " traversals in " << duration << "  GPU Nodes/ms: " << (m_gpu_nodes_touched-gpu_nodes_begin)/duration.count() <<std::endl;
     }
 
     std::vector<float> compute_strategy_from_advantages(const std::vector<float>& advantages) {
@@ -461,11 +481,13 @@ private:
         return strategy;
     }
 
-    static constexpr int MAX_CONCURRENT = 100;
+
 
     GPUBatchProcessor<GameType> m_gpu_processor;
     std::mt19937 m_rng;
     std::array<DeepCFRModel, 2>& m_networks;
+    uint32_t m_nodes_touched{};
+    uint32_t m_gpu_nodes_touched{};
 };
 
 #endif // COROUTINE_TRAVERSAL_HPP
