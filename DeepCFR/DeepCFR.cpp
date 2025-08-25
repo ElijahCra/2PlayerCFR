@@ -60,7 +60,7 @@ void DeepRegretMinimizer<GameType>::Train(uint32_t iterations) {
 
             auto t2 = std::chrono::high_resolution_clock::now();
             auto ms_int = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
-            std::cout << "Training for player: "<<p<<" time: " << ms_int << " GPU Nodes/ms: "<< (m_gpu_nodes_touched-gpu_nodes_begin)/ms_int.count() << std::endl;
+            std::cout << "Training for player: "<<p<<" time: " << ms_int << " GPU Nodes/ms: "<< (m_gpu_nodes_touched-gpu_nodes_begin)/(ms_int.count()>0?ms_int.count() : 1) << std::endl;
             // Train advantage network from scratch for this player
             m_advantage_networks[p]->to(m_device);
 

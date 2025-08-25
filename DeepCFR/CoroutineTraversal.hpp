@@ -37,6 +37,12 @@ struct GPURequest {
     torch::Tensor result;                  // Filled when computation complete
     std::atomic<bool> ready{false};        // Use atomic for thread safety
     int player_id = -1;                    // Track which player this is for
+    ~GPURequest() {
+        // Explicitly clean up tensors
+        cards.clear();
+        bets.reset();
+        result.reset();
+    }
 };
 
 // Simple awaitable for GPU results
@@ -93,7 +99,7 @@ public:
     GPUBatchProcessor(std::array<DeepCFRModel, 2>& networks, torch::Device device)
         : m_networks(networks), m_device(device), m_stop(false)
     {
-        for (auto network : m_networks){
+        for (auto& network : m_networks){
             network->to(m_device);
         }
         m_last_batch_time = std::chrono::steady_clock::now();
@@ -109,6 +115,7 @@ public:
 
     void stop() {
         m_stop = true;
+        torch::cuda::synchronize();
         m_cv.notify_all();
         if (m_thread.joinable())
             m_thread.join();
@@ -171,7 +178,7 @@ private:
 
         size_t batch_size = batch.size();
 
-        std::cout << "batch size: " << batch_size << std::endl;
+        //std::cout << "batch size: " << batch_size << std::endl;
         int num_card_types = batch[0].first->cards.size();
 
         // --- 1. Collect tensors from all requests ---
@@ -222,13 +229,15 @@ private:
 
         // --- 5. Move results back to CPU at once ---
         auto results_cpu = results.to(torch::kCPU);
+        torch::cuda::synchronize();  // Force CUDA to complete the transfer
 
         // Free GPU tensors immediately
         for(auto& t : batched_cards) {
-            t = torch::Tensor{};
+            t.reset();  // More thorough than assignment
         }
-        batched_bets = torch::Tensor{};
-        results = torch::Tensor{};
+
+        batched_bets.reset();
+        results.reset();
 
         // --- 6. Distribute results ---
         for (size_t i = 0; i < batch_size; ++i) {
@@ -263,9 +272,10 @@ public:
     using promise_type = TraversalPromise<GameType>;
     using handle_type = std::coroutine_handle<promise_type>;
 
-    TraversalTask(handle_type h) : m_handle(h) {}
+    explicit TraversalTask(handle_type h) : m_handle(h) {}
 
     ~TraversalTask() {
+        //std::cout<<"TraversalTask::~TraversalTask()"<<std::endl;
         if (m_handle) {
             m_handle.destroy();
             m_handle = nullptr;
@@ -493,7 +503,7 @@ private:
 
             // Start new traversals if capacity available
             while (started < num_traversals && active_tasks.size() < MAX_CONCURRENT) {
-                if (started % 2000 == 0) std::cout << started << std::endl;
+                //if (started % 2000 == 0) std::cout << started << std::endl;
                 GameType game(m_rng);
                 auto task = std::make_unique<TraversalTask<GameType>>(
                     traverse_cfr_coro(game, player, iteration, 1.0f)

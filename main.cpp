@@ -34,10 +34,11 @@ int main() {
 
     // You can choose which game to train on, Preflop or Texas
     DeepRegretMinimizer<Preflop::Game> deep_cfr_minimizer;
+    std::cout << "reget minimizer created" << std::endl;
 
     // Train for a specified number of iterations
     // Note: Deep CFR requires many more iterations than tabular CFR to converge.
-    deep_cfr_minimizer.TrainCoro(1);
+    deep_cfr_minimizer.TrainCoro(10000);
 
     std::cout << "Training complete." << std::endl;
 }

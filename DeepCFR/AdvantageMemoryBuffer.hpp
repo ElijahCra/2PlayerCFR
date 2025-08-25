@@ -22,7 +22,7 @@ public:
         // Pre-allocate tensors for each card type (e.g., hole, flop, etc.)
         for(int i = 0; i < GameType::NUM_CARD_TYPES; ++i) {
             auto card_shape = GameType::getCardShape(i);
-            m_card_tensors.push_back(torch::empty({(long)capacity, card_shape}, torch::kInt64));
+            m_card_tensors.push_back(torch::empty({static_cast<long>(capacity), card_shape}, torch::kInt64));
         }
 
         // Pre-allocate tensors for bets, targets, masks, and weights.
