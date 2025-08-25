@@ -34,55 +34,58 @@ template<typename GameType>
 struct GPURequest {
     std::vector<torch::Tensor> cards;
     torch::Tensor bets;
-    std::coroutine_handle<> continuation;  // Coroutine to resume when ready
     torch::Tensor result;                  // Filled when computation complete
     std::atomic<bool> ready{false};        // Use atomic for thread safety
     int player_id = -1;                    // Track which player this is for
-
-    // Add destructor to ensure cleanup
-    ~GPURequest() {
-        // Clear continuation handle to avoid dangling references
-        continuation = nullptr;
-        // Release tensor memory explicitly
-        cards.clear();
-        bets = torch::Tensor{};
-        result = torch::Tensor{};
-    }
 };
 
 // Simple awaitable for GPU results
+// template<typename GameType>
+// class GPUAwaitable {
+// public:
+//     GPUAwaitable(std::shared_ptr<GPURequest<GameType>> req)
+//             : request_weak(req) {} // Store a weak_ptr instead
+//
+//     bool await_ready() const noexcept {
+//         if (auto req = request_weak.lock()) {
+//             return req->ready.load();
+//         }
+//         return true; // If request is gone, we are "ready"
+//     }
+//
+//     bool await_suspend(std::coroutine_handle<> h) noexcept {
+//         if (auto req = request_weak.lock()) {
+//             req->continuation = h;
+//             return !req->ready.load();
+//         }
+//         return false; // Don't suspend if request is gone
+//     }
+//
+//     torch::Tensor await_resume() noexcept {
+//         if (auto req = request_weak.lock()) {
+//             return req->result;
+//         }
+//         return torch::Tensor{}; // Return empty tensor if request expired
+//     }
+//
+// private:
+//     std::weak_ptr<GPURequest<GameType>> request_weak;
+// };
 template<typename GameType>
-class GPUAwaitable {
-public:
-    GPUAwaitable(std::shared_ptr<GPURequest<GameType>> req)
-            : request_weak(req) {} // Store a weak_ptr instead
+struct GpuAwaiter {
+    TraversalScheduler<GameType> * scheduler;
+    std::shared_ptr<GPURequest<GameType>> request;
 
-    bool await_ready() const noexcept {
-        if (auto req = request_weak.lock()) {
-            return req->ready.load();
-        }
-        return true; // If request is gone, we are "ready"
+    bool await_ready() const { return false; } // Always suspend
+
+    void await_suspend(std::coroutine_handle<> h) const {
+        scheduler->m_gpu_processor.submit(request, h);
     }
 
-    bool await_suspend(std::coroutine_handle<> h) noexcept {
-        if (auto req = request_weak.lock()) {
-            req->continuation = h;
-            return !req->ready.load();
-        }
-        return false; // Don't suspend if request is gone
+    torch::Tensor await_resume() const {
+        return request->result;
     }
-
-    torch::Tensor await_resume() noexcept {
-        if (auto req = request_weak.lock()) {
-            return req->result;
-        }
-        return torch::Tensor{}; // Return empty tensor if request expired
-    }
-
-private:
-    std::weak_ptr<GPURequest<GameType>> request_weak;
 };
-
 // GPU Batch Processor - runs on separate thread
 template<typename GameType>
 class GPUBatchProcessor {
@@ -111,17 +114,17 @@ public:
             m_thread.join();
     }
 
-    void submit(std::shared_ptr<GPURequest<GameType>> request, int player) {
+    void submit(std::shared_ptr<GPURequest<GameType>> request, std::coroutine_handle<> handle) {
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            m_pending[player].push_back(request);
+            m_pending[request->player_id].push_back({request, handle});
         }
         m_cv.notify_one();
     }
 
-    std::vector<std::shared_ptr<GPURequest<GameType>>> get_ready_requests() {
+    std::vector<std::pair<std::shared_ptr<GPURequest<GameType>>, std::coroutine_handle<>>> get_ready_requests() {
         std::lock_guard<std::mutex> lock(m_mutex);
-        std::vector<std::shared_ptr<GPURequest<GameType>>> ready{};
+        std::vector<std::pair<std::shared_ptr<GPURequest<GameType>>, std::coroutine_handle<>>> ready{};
         ready.swap(m_completed);
         return ready;
     }
@@ -163,19 +166,21 @@ private:
         return !m_pending[0].empty() || !m_pending[1].empty();
     }
 
-    void process_batch(std::vector<std::shared_ptr<GPURequest<GameType>>>& batch, int player) {
+    void process_batch(std::vector<std::pair<std::shared_ptr<GPURequest<GameType>>, std::coroutine_handle<>>>& batch, int player) {
         if (batch.empty()) return;
 
         size_t batch_size = batch.size();
+
         std::cout << "batch size: " << batch_size << std::endl;
-        int num_card_types = batch[0]->cards.size();
+        int num_card_types = batch[0].first->cards.size();
 
         // --- 1. Collect tensors from all requests ---
        std::vector<std::vector<torch::Tensor>> card_tensors_by_type(num_card_types);
        std::vector<torch::Tensor> bet_tensors;
        bet_tensors.reserve(batch_size);
 
-       for (const auto& req : batch) {
+        for (const auto& pair : batch) {
+           const auto& req = pair.first;
            for (int i = 0; i < num_card_types; ++i) {
                card_tensors_by_type[i].push_back(req->cards[i]);
            }
@@ -227,9 +232,8 @@ private:
 
         // --- 6. Distribute results ---
         for (size_t i = 0; i < batch_size; ++i) {
-            auto slice = results_cpu.slice(0, i, i + 1);
-            batch[i]->result = torch::empty_like(slice).copy_(slice);
-            batch[i]->ready.store(true);
+            batch[i].first->result = results_cpu.slice(0, i, i + 1).clone(); // Or the empty_like().copy_() version
+            batch[i].first->ready.store(true);
         }
 
         // Clear the results tensor
@@ -244,8 +248,8 @@ private:
 
     std::mutex m_mutex;
     std::condition_variable m_cv;
-    std::array<std::vector<std::shared_ptr<GPURequest<GameType>>>, 2> m_pending;
-    std::vector<std::shared_ptr<GPURequest<GameType>>> m_completed;
+    std::array<std::vector<std::pair<std::shared_ptr<GPURequest<GameType>>, std::coroutine_handle<>>>, 2> m_pending;
+    std::vector<std::pair<std::shared_ptr<GPURequest<GameType>>, std::coroutine_handle<>>> m_completed;
     std::chrono::steady_clock::time_point m_last_batch_time;
 };
 
@@ -395,11 +399,7 @@ public:
         gpu_request->bets = game.getBetTensor();
         gpu_request->player_id = current_player;
 
-        m_gpu_processor.submit(gpu_request, current_player);
-
-        // Suspend until GPU result is ready - GPUAwaitable will clean up the request
-        torch::Tensor advantages_tensor = co_await GPUAwaitable<GameType>(gpu_request);
-
+        torch::Tensor advantages_tensor = co_await GpuAwaiter{this, gpu_request};
         // Extract legal advantages and compute strategy
         std::vector<float> legal_advantages;
         std::vector<int> legal_indices;
@@ -453,6 +453,7 @@ public:
             }
         }
     }
+    GPUBatchProcessor<GameType> m_gpu_processor;
 
 private:
     void run_traversals_for_player(int player, int iteration, int num_traversals) {
@@ -467,9 +468,9 @@ private:
         while (completed < num_traversals) {
             // Process GPU completions
             auto ready_requests = m_gpu_processor.get_ready_requests();
-            for (auto& req : ready_requests) {
-                if (req->continuation && !req->continuation.done()) {
-                    req->continuation.resume();
+            for (auto& [req, handle] : ready_requests) { // Use structured binding
+                if (handle && !handle.done()) {
+                    handle.resume();
                 }
             }
 
@@ -541,7 +542,7 @@ private:
 
 
 
-    GPUBatchProcessor<GameType> m_gpu_processor;
+
     std::mt19937 m_rng;
     std::array<DeepCFRModel, 2>& m_networks;
     uint32_t m_nodes_touched{};
