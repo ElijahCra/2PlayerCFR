@@ -38,6 +38,16 @@ struct GPURequest {
     torch::Tensor result;                  // Filled when computation complete
     std::atomic<bool> ready{false};        // Use atomic for thread safety
     int player_id = -1;                    // Track which player this is for
+
+    // Add destructor to ensure cleanup
+    ~GPURequest() {
+        // Clear continuation handle to avoid dangling references
+        continuation = nullptr;
+        // Release tensor memory explicitly
+        cards.clear();
+        bets = torch::Tensor{};
+        result = torch::Tensor{};
+    }
 };
 
 // Simple awaitable for GPU results
@@ -58,8 +68,10 @@ public:
     }
 
     torch::Tensor await_resume() noexcept {
-        request->continuation = nullptr;
-        return request->result;
+        auto result = request->result;
+        // Clear the request reference to allow cleanup
+        request.reset();
+        return result;
     }
 
 private:
@@ -76,6 +88,7 @@ public:
         for (auto network : m_networks){
             network->to(m_device);
         }
+        m_last_batch_time = std::chrono::steady_clock::now();
     }
 
     ~GPUBatchProcessor() {
@@ -103,7 +116,7 @@ public:
 
     std::vector<std::shared_ptr<GPURequest<GameType>>> get_ready_requests() {
         std::lock_guard<std::mutex> lock(m_mutex);
-        std::vector<std::shared_ptr<GPURequest<GameType>>> ready;
+        std::vector<std::shared_ptr<GPURequest<GameType>>> ready{};
         ready.swap(m_completed);
         return ready;
     }
@@ -144,7 +157,7 @@ private:
         if (batch.empty()) return;
 
         size_t batch_size = batch.size();
-        std::cout<<"batch size: "<<batch_size<<std::endl;
+        std::cout << "batch size: " << batch_size << std::endl;
         int num_card_types = batch[0]->cards.size();
 
         // --- 1. Collect tensors from all requests ---
@@ -161,10 +174,18 @@ private:
 
         // --- 2. Batch them on the CPU using torch::cat ---
         std::vector<torch::Tensor> batched_cards;
+        batched_cards.reserve(num_card_types);
         for (int i = 0; i < num_card_types; ++i) {
             batched_cards.push_back(torch::cat(card_tensors_by_type[i], 0));
+            // Clear intermediate vectors to free memory
+            card_tensors_by_type[i].clear();
+            card_tensors_by_type[i].shrink_to_fit();
         }
         auto batched_bets = torch::cat(bet_tensors, 0);
+
+        // Clear intermediate vectors
+        bet_tensors.clear();
+        bet_tensors.shrink_to_fit();
 
         // --- 3. Move the completed batches to GPU in one go ---
         for(auto& t : batched_cards) {
@@ -182,14 +203,22 @@ private:
         // --- 5. Move results back to CPU at once ---
         auto results_cpu = results.to(torch::kCPU);
 
+        // Free GPU tensors immediately
+        for(auto& t : batched_cards) {
+            t = torch::Tensor{};
+        }
+        batched_bets = torch::Tensor{};
+        results = torch::Tensor{};
+
         // --- 6. Distribute results ---
         for (size_t i = 0; i < batch_size; ++i) {
-            batch[i]->result = results_cpu.slice(0, i, i + 1).clone();
+            batch[i]->result = results_cpu.slice(0, i, i + 1).clone(); // Clone to avoid reference issues
             batch[i]->ready.store(true);
         }
+
+        // Clear the results tensor
+        results_cpu = torch::Tensor{};
     }
-
-
 
     std::array<DeepCFRModel, 2>& m_networks;
     torch::Device m_device;
@@ -217,8 +246,10 @@ public:
     TraversalTask(handle_type h) : m_handle(h) {}
 
     ~TraversalTask() {
-        if (m_handle)
+        if (m_handle) {
             m_handle.destroy();
+            m_handle = nullptr;
+        }
     }
 
     // Move only
@@ -227,12 +258,17 @@ public:
 
     TraversalTask& operator=(TraversalTask&& other) noexcept {
         if (this != &other) {
-            if (m_handle)
+            if (m_handle) {
                 m_handle.destroy();
+            }
             m_handle = std::exchange(other.m_handle, {});
         }
         return *this;
     }
+
+    // Disable copy
+    TraversalTask(const TraversalTask&) = delete;
+    TraversalTask& operator=(const TraversalTask&) = delete;
 
     // Simple awaitable interface for co_await
     bool await_ready() { return m_handle.done(); }
@@ -345,12 +381,15 @@ public:
 
         m_gpu_processor.submit(gpu_request, current_player);
 
-        // Suspend until GPU result is ready
+        // Suspend until GPU result is ready - GPUAwaitable will clean up the request
         torch::Tensor advantages_tensor = co_await GPUAwaitable<GameType>(gpu_request);
 
         // Extract legal advantages and compute strategy
         std::vector<float> legal_advantages;
         std::vector<int> legal_indices;
+        legal_advantages.reserve(legal_actions.size());
+        legal_indices.reserve(legal_actions.size());
+
         for (auto action : legal_actions) {
             int idx = GameType::ActionMapping::getActionIndex(action);
             legal_indices.push_back(idx);
@@ -456,7 +495,10 @@ private:
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::high_resolution_clock::now() - start_time
         );
-        std::cout << "Player " << player << " completed " << num_traversals << " traversals in " << duration << "  GPU Nodes/ms: " << (m_gpu_nodes_touched-gpu_nodes_begin)/duration.count() <<std::endl;
+        std::cout << "Player " << player << " completed " << num_traversals
+                  << " traversals in " << duration
+                  << " GPU Nodes/ms: " << (m_gpu_nodes_touched - gpu_nodes_begin) / duration.count()
+                  << std::endl;
     }
 
     std::vector<float> compute_strategy_from_advantages(const std::vector<float>& advantages) {
