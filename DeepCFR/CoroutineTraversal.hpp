@@ -55,27 +55,32 @@ template<typename GameType>
 class GPUAwaitable {
 public:
     GPUAwaitable(std::shared_ptr<GPURequest<GameType>> req)
-        : request(req) {}
+            : request_weak(req) {} // Store a weak_ptr instead
 
     bool await_ready() const noexcept {
-        return request->ready.load();
+        if (auto req = request_weak.lock()) {
+            return req->ready.load();
+        }
+        return true; // If request is gone, we are "ready"
     }
 
     bool await_suspend(std::coroutine_handle<> h) noexcept {
-        request->continuation = h;
-        // Return false to resume immediately if ready, true to suspend
-        return !request->ready.load();
+        if (auto req = request_weak.lock()) {
+            req->continuation = h;
+            return !req->ready.load();
+        }
+        return false; // Don't suspend if request is gone
     }
 
     torch::Tensor await_resume() noexcept {
-        auto result = request->result;
-        // Clear the request reference to allow cleanup
-        request.reset();
-        return result;
+        if (auto req = request_weak.lock()) {
+            return req->result;
+        }
+        return torch::Tensor{}; // Return empty tensor if request expired
     }
 
 private:
-    std::shared_ptr<GPURequest<GameType>> request;
+    std::weak_ptr<GPURequest<GameType>> request_weak;
 };
 
 // GPU Batch Processor - runs on separate thread
@@ -143,7 +148,12 @@ private:
                     process_batch(batch, p);
 
                     lock.lock();
-                    m_completed.insert(m_completed.end(), batch.begin(), batch.end());
+                    m_completed.insert(
+                        m_completed.end(),
+                        std::make_move_iterator(batch.begin()),
+                        std::make_move_iterator(batch.end())
+                    );
+                    batch.clear();
                 }
             }
         }
@@ -161,15 +171,20 @@ private:
         int num_card_types = batch[0]->cards.size();
 
         // --- 1. Collect tensors from all requests ---
-        std::vector<std::vector<torch::Tensor>> card_tensors_by_type(num_card_types);
-        std::vector<torch::Tensor> bet_tensors;
-        bet_tensors.reserve(batch_size);
+       std::vector<std::vector<torch::Tensor>> card_tensors_by_type(num_card_types);
+       std::vector<torch::Tensor> bet_tensors;
+       bet_tensors.reserve(batch_size);
 
-        for (const auto& req : batch) {
-            for (int i = 0; i < num_card_types; ++i) {
-                card_tensors_by_type[i].push_back(req->cards[i]);
-            }
-            bet_tensors.push_back(req->bets);
+       for (const auto& req : batch) {
+           for (int i = 0; i < num_card_types; ++i) {
+               card_tensors_by_type[i].push_back(req->cards[i]);
+           }
+           bet_tensors.push_back(req->bets);
+
+           // FIX: Clear the tensors in the request to free memory early
+           req->cards.clear();
+           req->cards.shrink_to_fit();
+           req->bets = torch::Tensor{};
         }
 
         // --- 2. Batch them on the CPU using torch::cat ---
@@ -212,7 +227,8 @@ private:
 
         // --- 6. Distribute results ---
         for (size_t i = 0; i < batch_size; ++i) {
-            batch[i]->result = results_cpu.slice(0, i, i + 1).clone(); // Clone to avoid reference issues
+            auto slice = results_cpu.slice(0, i, i + 1);
+            batch[i]->result = torch::empty_like(slice).copy_(slice);
             batch[i]->ready.store(true);
         }
 
