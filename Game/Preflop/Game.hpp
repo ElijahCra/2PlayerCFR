@@ -29,6 +29,9 @@ namespace Preflop
     ///Constructor
     explicit Game(std::mt19937 &engine); // try another rng? boost or xorshift
     
+    ///Copy constructor
+    Game(const Game& other);
+    
     ///Modifier
     void transition(Action action);
     void reInitialize();
@@ -145,7 +148,7 @@ namespace Preflop
 
   float averageUtilitySum{};
 
-  std::array<std::vector<torch::Tensor>,2> m_cardTensors;
+  std::array<std::array<torch::Tensor,4>,2> m_cardTensors;
   torch::Tensor betTensor;
 
   std::string type = "chance";

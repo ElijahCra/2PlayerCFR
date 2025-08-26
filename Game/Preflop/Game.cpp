@@ -32,6 +32,40 @@ Game::Game(std::mt19937 &engine) :
   currentState->enter(*this, Action::Chance);
 }
 
+Game::Game(const Game& other) :
+    RNG(other.RNG),
+    bettingSequence(other.bettingSequence),
+    currentBettingPosition(other.currentBettingPosition),
+    playableCards(other.playableCards),
+    raiseNum(other.raiseNum),
+    winner(other.winner),
+    currentRound(other.currentRound),
+    prevAction(other.prevAction),
+    playerStacks(other.playerStacks),
+    cards(other.cards),
+    averageUtility(other.averageUtility),
+    averageUtilitySum(other.averageUtilitySum),
+    type(other.type),
+    infoSet(other.infoSet),
+    utilities(other.utilities),
+    currentState(other.currentState),
+    availActions(other.availActions)
+{
+    // Deep copy the tensor arrays
+    for (int p = 0; p < 2; ++p) {
+        for (int i = 0; i < 4; ++i) {
+            if (other.m_cardTensors[p][i].defined()) {
+                m_cardTensors[p][i] = other.m_cardTensors[p][i].clone();
+            }
+        }
+    }
+    
+    // Clone the bet tensor
+    if (other.betTensor.defined()) {
+        betTensor = other.betTensor.clone();
+    }
+}
+
 void Game::setState(GameState &newState, Action action) {
   currentState->exit(*this, action); //
   currentState = &newState;
@@ -155,13 +189,12 @@ std::string Game::getType() const noexcept{
 
 void Game::initCardTensors(std::span<uint8_t, 9> cards)
 {
-    m_cardTensors[0].clear();
-    m_cardTensors[1].clear();
     for (int p=0; p<2;++p) { //2 players
-        m_cardTensors[p].push_back(torch::from_blob(cards.data()+(2*p),{1,2}, torch::kUInt8).to(torch::kInt)); // each player's hole cards
-        m_cardTensors[p].push_back(torch::from_blob(cards.data()+4,{1,3}, torch::kUInt8).to(torch::kInt)); // flop
-        m_cardTensors[p].push_back(torch::from_blob(cards.data()+7,{1,1}, torch::kUInt8).to(torch::kInt)); // turn
-        m_cardTensors[p].push_back(torch::from_blob(cards.data()+8,{1,1}, torch::kUInt8).to(torch::kInt)); // river
+        // Create tensors that own their own memory rather than referencing external data
+        m_cardTensors[p][0] = torch::from_blob(cards.data()+(2*p),{1,2}, torch::kUInt8).clone().to(torch::kInt);
+        m_cardTensors[p][1] = torch::from_blob(cards.data()+4,{1,3}, torch::kUInt8).clone().to(torch::kInt);
+        m_cardTensors[p][2] = torch::from_blob(cards.data()+7,{1,1}, torch::kUInt8).clone().to(torch::kInt);
+        m_cardTensors[p][3] = torch::from_blob(cards.data()+8,{1,1}, torch::kUInt8).clone().to(torch::kInt);
     }
     // std::cout << m_cardTensors[0].size() << std::endl;
     // std::cout << m_cardTensors[0][0].sizes() << std::endl;
