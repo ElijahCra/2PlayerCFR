@@ -4,6 +4,13 @@ project(2PlayerCFR LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# Set global compile definition for Linux OS detection
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    add_compile_definitions(IS_LINUX_OS=1)
+else()
+    add_compile_definitions(IS_LINUX_OS=0)
+endif()
+
 add_subdirectory(CFR)
 add_subdirectory(Game)
 #add_subdirectory(Test)

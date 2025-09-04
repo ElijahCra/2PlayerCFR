@@ -115,7 +115,7 @@ public:
 
     void stop() {
         m_stop = true;
-        if (TARGET_OS_LINUX) torch::cuda::synchronize();
+        if (IS_LINUX_OS) torch::cuda::synchronize();
         m_cv.notify_all();
         if (m_thread.joinable())
             m_thread.join();
@@ -229,7 +229,7 @@ private:
 
         // --- 5. Move results back to CPU at once ---
         auto results_cpu = results.to(torch::kCPU);
-        if (TARGET_OS_LINUX) torch::cuda::synchronize();  // Force CUDA to complete the transfer
+        if (IS_LINUX_OS) torch::cuda::synchronize();  // Force CUDA to complete the transfer
 
         // Free GPU tensors immediately
         for(auto& t : batched_cards) {
