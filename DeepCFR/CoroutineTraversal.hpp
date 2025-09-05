@@ -144,7 +144,6 @@ private:
         if (batch.empty()) return;
 
         size_t batch_size = batch.size();
-        std::cout<<"batch size: "<<batch_size<<std::endl;
         int num_card_types = batch[0]->cards.size();
 
         // --- 1. Collect tensors from all requests ---
@@ -306,9 +305,11 @@ public:
                       uint32_t seed = std::random_device()())
         : m_gpu_processor(networks, device),
           m_rng(seed),
-          m_networks(networks) {
+          m_networks(networks),
+          m_storage_config(createStorageConfig()){
 
         m_gpu_processor.start();
+
     }
 
     // Simplified coroutine traversal
@@ -431,7 +432,6 @@ private:
 
             // Start new traversals if capacity available
             while (started < num_traversals && active_tasks.size() < MAX_CONCURRENT) {
-                if (started % 2000 == 0) std::cout << started << std::endl;
                 GameType game(m_rng);
                 auto task = std::make_unique<TraversalTask<GameType>>(
                     traverse_cfr_coro(game, player, iteration, 1.0f)
@@ -475,7 +475,7 @@ private:
             }
         } else {
             float uniform = 1.0f / advantages.size();
-            std::fill(strategy.begin(), strategy.end(), uniform);
+            std::ranges::fill(strategy, uniform);
         }
 
         return strategy;
