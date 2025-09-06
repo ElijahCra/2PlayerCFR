@@ -396,17 +396,3 @@ private:
     // RocksDB
     std::unique_ptr<rocksdb::DB> m_db;
 };
-
- static typename HybridAdvantageStorage<GameType>::Config createStorageConfig() {
-        typename HybridAdvantageStorage<GameType>::Config config;
-        config.in_memory_capacity = 2000000;  // 2M in memory
-        config.flush_batch_size = 50000;      // Flush every 50k samples
-        config.max_db_size = 100000000;       // 100M max on disk
-        config.flush_interval = std::chrono::milliseconds(10000);  // Flush every 10s
-        config.num_flush_threads = 4;         // 4 background flush threads
-        config.db_path = "./deep_cfr_advantage_db";
-        return config;
-    }
-
-    typename HybridAdvantageStorage<GameType>::Config m_storage_config;
-    std::array<std::unique_ptr<HybridAdvantageStorage<GameType>>, 2> m_hybrid_storage;
