@@ -7,6 +7,7 @@ add_library(DeepCFR STATIC
         GPUDispatcher.cpp
         CoroutineTraversal.hpp
         HybridAdvantageStorage.hpp
+        TrainingSampleSerializer.cpp
 )
 if(UNIX AND NOT APPLE)
     set(CUDAToolkit_ROOT "/opt/cuda")

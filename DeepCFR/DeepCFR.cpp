@@ -17,7 +17,8 @@ DeepRegretMinimizer<GameType>::DeepRegretMinimizer(uint32_t seed)
       m_device(torch::cuda::is_available() ? torch::kCUDA : torch::mps::is_available() ? torch::kMPS : torch::kCPU),
       m_strategy_network(GameType::NUM_CARD_TYPES, GameType::NUM_BET_FEATURES, GameType::MAX_ACTIONS),
       m_strategy_optimizer({m_strategy_network->parameters()}, torch::optim::AdamOptions(LEARNING_RATE)),
-      m_adv_memories{AdvantageMemoryBuffer<GameType>(MEMORY_SIZE), AdvantageMemoryBuffer<GameType>(MEMORY_SIZE)}
+      m_adv_memories{AdvantageMemoryBuffer<GameType>(MEMORY_SIZE), AdvantageMemoryBuffer<GameType>(MEMORY_SIZE)},
+      m_gpu_processor(m_advantage_networks,m_device)
 {
     std::cout << "Using device: " << (m_device.is_cuda() ? "CUDA" : torch::mps::is_available() ? "METAL" : "CPU") << std::endl;
     
@@ -379,6 +380,300 @@ void DeepRegretMinimizer<GameType>::add_to_strategy_memory(std::vector<T>& memor
         }
     }
 }
+
+
+    template<typename GameType>
+    TraversalTask<GameType> DeepRegretMinimizer<GameType>::traverse_cfr_coro(GameType game,
+                                              int update_player,
+                                              int iteration,
+                                              float prob_update_player) {
+        // Terminal node
+        if (game.getType() == "terminal") {
+            ++m_nodes_touched;
+            float utility = game.getUtility(update_player);
+            co_return utility;
+        }
+
+        // Chance node
+        if (game.getType() == "chance") {
+            ++m_nodes_touched;
+            game.transition(GameType::Action::Chance);
+            float result = co_await traverse_cfr_coro(game, update_player, iteration, prob_update_player);
+            co_return result;
+        }
+
+        ++m_nodes_touched;
+        ++m_gpu_nodes_touched;
+
+        // Decision node - prepare and submit GPU request
+        int current_player = game.getCurrentPlayer();
+        auto legal_actions = game.getActions();
+
+        auto gpu_request = std::make_shared<GPURequest<GameType>>();
+        gpu_request->cards = game.getCardTensors(current_player, game.getCurrentRound());
+        gpu_request->bets = game.getBetTensor();
+        gpu_request->player_id = current_player;
+
+        m_gpu_processor.submit(gpu_request, current_player);
+
+        // Suspend until GPU result is ready
+        torch::Tensor advantages_tensor = co_await GPUAwaitable<GameType>(gpu_request);
+
+        // Extract legal advantages and compute strategy
+        std::vector<float> legal_advantages;
+        std::vector<int> legal_indices;
+        for (auto action : legal_actions) {
+            int idx = GameType::ActionMapping::getActionIndex(action);
+            legal_indices.push_back(idx);
+            legal_advantages.push_back(advantages_tensor[0][idx].template item<float>());
+        }
+
+        auto strategy = compute_strategy_from_advantages(legal_advantages);
+        float node_value = 0.0f;
+
+        if (current_player == update_player) {
+            // Traverser: explore all actions
+            std::vector<float> counterfactual_values(legal_actions.size());
+
+            for (size_t a = 0; a < legal_actions.size(); ++a) {
+                GameType next_game(game);
+                next_game.transition(legal_actions[a]);
+
+                counterfactual_values[a] = co_await traverse_cfr_coro(
+                    next_game, update_player, iteration,
+                    prob_update_player * strategy[a]
+                );
+                node_value += strategy[a] * counterfactual_values[a];
+            }
+
+            // Compute advantages (instantaneous regrets)
+            std::vector<float> instant_regrets(legal_actions.size());
+            for (size_t a = 0; a < legal_actions.size(); ++a) {
+                instant_regrets[a] = counterfactual_values[a] - node_value;
+            }
+
+            // Store in hybrid storage (thread-safe)
+            TrainingSampleAdvantage sample;
+            sample.infoset = {gpu_request->cards, gpu_request->bets};
+            sample.iteration = iteration;
+            sample.legal_action_indices = legal_indices;
+            sample.advantages = instant_regrets;
+            sample.weight = static_cast<float>(iteration);
+
+            // Thread-safe add to storage
+            std::mt19937 local_rng(std::random_device{}());
+            m_hybrid_storage[update_player]->add_sample(sample, local_rng);
+
+        } else {
+            // Opponent: sample single action
+            std::discrete_distribution<> dist(strategy.begin(), strategy.end());
+            int action_idx = dist(this->m_rng);
+
+            GameType next_game(game);
+            next_game.transition(legal_actions[action_idx]);
+
+            node_value = co_await traverse_cfr_coro(
+                next_game, update_player, iteration, prob_update_player
+            );
+        }
+        co_return node_value;
+    }
+
+    // Main training loop with work-stealing
+template<typename GameType>
+void DeepRegretMinimizer<GameType>::TrainCoro(uint32_t iterations) {
+        for (uint32_t iter = 1; iter <= iterations; ++iter) {
+            std::cout << "Iteration " << iter << "/" << iterations << std::endl;
+
+            for (int p = 0; p < GameType::PlayerNum; ++p) {
+                auto gpu_nodes_begin = m_gpu_nodes_touched;
+                auto t1 = std::chrono::high_resolution_clock::now();
+
+                run_traversals_for_player(p, iter, K_TRAVERSALS);
+
+                 auto t2 = std::chrono::high_resolution_clock::now();
+                auto ms_int = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
+                std::cout << "Training for player: "<<p<<" time: " << ms_int << " GPU Nodes/ms: "<< (m_gpu_nodes_touched-gpu_nodes_begin)/ms_int.count() << std::endl;
+                // Periodic flush to disk
+                if (iter % 10 == 0) {
+                    m_hybrid_storage[p]->force_flush();
+                }
+
+                // Log storage statistics
+                std::cout << "Player " << p << " storage - Memory: "
+                         << m_hybrid_storage[p]->in_memory_size()
+                         << ", Disk: " << m_hybrid_storage[p]->disk_size()
+                         << std::endl;
+            }
+            train_from_hybrid_storage();
+        }
+        //train_strategy
+
+
+        // Final flush
+        for (int p = 0; p < GameType::PlayerNum; ++p) {
+            m_hybrid_storage[p]->force_flush();
+        }
+    }
+
+
+
+    template <typename GameType>
+    void DeepRegretMinimizer<GameType>::train_from_hybrid_storage()
+{
+    for (int player =0; player < GameType::PlayerNum; ++player)
+    {
+        auto storage = get_storage(player);
+
+        if (storage->in_memory_size() < this->BATCH_SIZE) {
+            std::cout << "Player " << player << " training skipped: insufficient samples" << std::endl;
+            return;
+        }
+
+        // Reinitialize network
+        m_advantage_networks[player] = DeepCFRModel(
+            GameType::NUM_CARD_TYPES,
+            GameType::NUM_BET_FEATURES,
+            GameType::MAX_ACTIONS
+        );
+        m_advantage_networks[player]->to(m_device);
+        m_advantage_optimizers[player] = torch::optim::Adam(
+            m_advantage_networks[player]->parameters(),
+            LEARNING_RATE
+        );
+
+        m_advantage_networks[player]->train();
+
+        // Training loop using batches from storage
+        const int num_epochs = 5;
+        std::mt19937 local_rng(std::random_device{}());
+
+        for (int epoch = 0; epoch < num_epochs; ++epoch) {
+            for (int batch_idx = 0; batch_idx < SGD_ITERATIONS; ++batch_idx) {
+                // Get batch from hybrid storage
+                auto batch = storage->get_batch(BATCH_SIZE, local_rng);
+
+                if (batch.batch_size == 0) break;
+
+                // Move to device
+                for (auto& card_tensor : batch.cards) {
+                    card_tensor = card_tensor.to(m_device);
+                }
+                batch.bets = batch.bets.to(m_device);
+                batch.targets = batch.targets.to(m_device);
+                batch.masks = batch.masks.to(m_device);
+                batch.weights = batch.weights.to(m_device);
+
+                // Forward pass
+                auto predictions = m_advantage_networks[player]->forward(
+                    batch.cards, batch.bets
+                );
+
+                // Compute loss
+                auto squared_error = (predictions - batch.targets).pow(2);
+                auto weighted_error = squared_error * batch.masks * batch.weights;
+                auto loss = weighted_error.sum() / ((batch.masks * batch.weights).sum() + 1e-9);
+
+                // Backward pass
+                m_advantage_optimizers[player].zero_grad();
+                loss.backward();
+                m_advantage_networks[player]->clip_gradients(GRADIENT_CLIP_NORM);
+                m_advantage_optimizers[player].step();
+
+                if (batch_idx % 100 == 0) {
+                    std::cout << "Player " << player << " Epoch " << epoch
+                             << " Batch " << batch_idx
+                             << " Loss: " << loss.template item<float>() << std::endl;
+                }
+            }
+        }
+    }
+}
+
+    template <typename GameType>
+    void DeepRegretMinimizer<GameType>::run_traversals_for_player(int player, int iteration, int num_traversals) {
+        std::deque<std::unique_ptr<TraversalTask<GameType>>> active_tasks;
+        int completed = 0;
+        int started = 0;
+
+        // Thread pool for parallel traversals
+        const int max_concurrent = std::min(MAX_CONCURRENT, num_traversals);
+
+        auto start_time = std::chrono::high_resolution_clock::now();
+
+        while (completed < num_traversals) {
+            // Process GPU completions
+            auto ready_requests = this->m_gpu_processor.get_ready_requests();
+            for (auto& req : ready_requests) {
+                if (req->continuation && !req->continuation.done()) {
+                    req->continuation.resume();
+                }
+            }
+
+            // Check for completed tasks
+            auto it = active_tasks.begin();
+            while (it != active_tasks.end()) {
+                if ((*it)->done()) {
+                    completed++;
+                    it = active_tasks.erase(it);
+                } else {
+                    ++it;
+                }
+            }
+
+            // Start new traversals
+            while (started < num_traversals && active_tasks.size() < max_concurrent) {
+                GameType game(this->m_rng);
+                auto task = std::make_unique<TraversalTask<GameType>>(
+                    traverse_cfr_coro(game, player, iteration, 1.0f)
+                );
+
+                task->resume();
+
+                if (!task->done()) {
+                    active_tasks.push_back(std::move(task));
+                } else {
+                    completed++;
+                }
+                started++;
+            }
+
+            // Brief yield if no work
+            if (ready_requests.empty() && active_tasks.size() == max_concurrent) {
+                std::this_thread::sleep_for(std::chrono::microseconds(10));
+            }
+        }
+
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::high_resolution_clock::now() - start_time
+        );
+
+        std::cout << "Player " << player << " completed " << num_traversals
+                  << " traversals in " << duration.count() << "ms" << std::endl;
+    }
+
+    std::vector<float> compute_strategy_from_advantages(const std::vector<float>& advantages) {
+        std::vector<float> strategy(advantages.size());
+        float sum_positive = 0.0f;
+
+        for (size_t i = 0; i < advantages.size(); ++i) {
+            float positive = std::max(0.0f, advantages[i]);
+            strategy[i] = positive;
+            sum_positive += positive;
+        }
+
+        if (sum_positive > 0) {
+            for (auto& s : strategy) {
+                s /= sum_positive;
+            }
+        } else {
+            float uniform = 1.0f / advantages.size();
+            std::ranges::fill(strategy, uniform);
+        }
+
+        return strategy;
+    }
+
 
 
 

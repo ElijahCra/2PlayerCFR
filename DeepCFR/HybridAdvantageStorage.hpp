@@ -17,46 +17,10 @@
 #include <rocksdb/db.h>
 #include <rocksdb/options.h>
 #include <rocksdb/write_batch.h>
+
+#include "TrainingSampleSerializer.hpp"
 #include "torch/torch.h"
 #include "types.hpp"
-
-// Serializer for TrainingSampleAdvantage
-class AdvantageSerializer {
-public:
-    static std::string serialize(const TrainingSampleAdvantage& sample) {
-        torch::save(sample.infoset.getCardTensors(), "temp_cards.pt");
-        torch::save(sample.infoset.getBetTensor(), "temp_bets.pt");
-
-        // For simplicity, using a text format. In production, use protobuf or similar
-        std::stringstream ss;
-        ss << sample.iteration << "|";
-        ss << sample.weight << "|";
-
-        // Serialize legal actions
-        ss << sample.legal_action_indices.size() << "|";
-        for (int idx : sample.legal_action_indices) {
-            ss << idx << ",";
-        }
-        ss << "|";
-
-        // Serialize advantages
-        for (float adv : sample.advantages) {
-            ss << adv << ",";
-        }
-
-        // In production, you'd serialize tensors more efficiently
-        // For now, we'll store tensor dimensions and data
-
-        return ss.str();
-    }
-
-    static TrainingSampleAdvantage deserialize(const std::string& data) {
-        // Simplified deserialization - implement based on your needs
-        TrainingSampleAdvantage sample;
-        // Parse the string format
-        return sample;
-    }
-};
 
 template<typename GameType>
 class HybridAdvantageStorage {
@@ -169,7 +133,7 @@ public:
         std::shared_lock<std::shared_mutex> lock(m_memory_mutex);
 
         BatchData batch;
-        batch.batch_size = std::min(batch_size, m_in_memory_size);
+        batch.batch_size = std::min(batch_size, m_in_memory_size.load(std::memory_order_relaxed));
 
         if (batch.batch_size == 0) {
             return batch;  // Empty batch
@@ -336,7 +300,7 @@ private:
             std::string key = std::to_string(m_total_samples_seen++) + "_" +
                             std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
 
-            std::string serialized = AdvantageSerializer::serialize(sample);
+            std::string serialized = TrainingSampleSerializer::serialize(sample);
             batch.Put(key, serialized);
         }
 
@@ -388,7 +352,7 @@ private:
     size_t m_next_idx = 0;
 
     // Flush queue and control
-    std::deque<TrainingSampleAdvantage> m_flush_queue;
+    std::vector<TrainingSampleAdvantage> m_flush_queue;
     std::vector<std::thread> m_flush_threads;
     std::atomic<bool> m_stop_flushing;
     std::atomic<bool> m_force_flush{false};
@@ -396,3 +360,4 @@ private:
     // RocksDB
     std::unique_ptr<rocksdb::DB> m_db;
 };
+#endif //HYBRIDADVANTAGESTORAGE_HPP
