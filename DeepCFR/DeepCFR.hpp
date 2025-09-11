@@ -42,6 +42,7 @@ private:
     float traverse_cfr(const GameType& game, int updatePlayer, int current_iter, float probUpdatePlayer);
 
     TraversalTask<GameType> traverse_cfr_coro(GameType game, int update_player, int iteration, float prob_update_player);
+    void initCoro();
 
     void run_traversals_for_player(int player, int iteration, int num_traversals);
     /// @brief Trains the advantage network from scratch using data from its replay buffer.

@@ -69,7 +69,7 @@ public:
 
     // Thread-safe add sample
     void add_sample(const TrainingSampleAdvantage& sample, std::mt19937& rng) {
-        std::unique_lock<std::shared_mutex> lock(m_memory_mutex);
+        std::unique_lock lock(m_memory_mutex);
 
         size_t index_to_write;
         bool should_flush = false;
@@ -77,7 +77,7 @@ public:
         if (m_in_memory_size < m_config.in_memory_capacity) {
             // Still filling the in-memory buffer
             index_to_write = m_next_idx++;
-            m_in_memory_size++;
+            ++m_in_memory_size;
 
             if (m_in_memory_size % m_config.flush_batch_size == 0) {
                 should_flush = true;
@@ -93,7 +93,7 @@ public:
             } else {
                 // This sample goes directly to the flush queue
                 m_flush_queue.push_back(sample);
-                m_total_samples_seen++;
+                ++m_total_samples_seen;
 
                 if (m_flush_queue.size() >= m_config.flush_batch_size) {
                     should_flush = true;
@@ -107,7 +107,7 @@ public:
             }
         }
 
-        m_total_samples_seen++;
+        ++m_total_samples_seen;
 
         // Write to in-memory tensors
         writeSampleToMemory(sample, index_to_write);
@@ -341,9 +341,9 @@ private:
     torch::Tensor m_weights;
 
     // Thread safety
-    mutable std::shared_mutex m_memory_mutex;  // For in-memory buffer
-    std::mutex m_flush_mutex;                  // For flush queue
-    std::condition_variable m_flush_cv;
+    mutable std::shared_mutex m_memory_mutex{};  // For in-memory buffer
+    std::mutex m_flush_mutex{};                  // For flush queue
+    std::condition_variable m_flush_cv{};
 
     // State tracking
     std::atomic<size_t> m_in_memory_size;

@@ -18,7 +18,8 @@ DeepRegretMinimizer<GameType>::DeepRegretMinimizer(uint32_t seed)
       m_strategy_network(GameType::NUM_CARD_TYPES, GameType::NUM_BET_FEATURES, GameType::MAX_ACTIONS),
       m_strategy_optimizer({m_strategy_network->parameters()}, torch::optim::AdamOptions(LEARNING_RATE)),
       m_adv_memories{AdvantageMemoryBuffer<GameType>(MEMORY_SIZE), AdvantageMemoryBuffer<GameType>(MEMORY_SIZE)},
-      m_gpu_processor(m_advantage_networks,m_device)
+      m_gpu_processor(m_device)
+
 {
     std::cout << "Using device: " << (m_device.is_cuda() ? "CUDA" : torch::mps::is_available() ? "METAL" : "CPU") << std::endl;
     
@@ -28,7 +29,7 @@ DeepRegretMinimizer<GameType>::DeepRegretMinimizer(uint32_t seed)
     m_strategy_network->to(m_device);
 
     // Initialize advantage networks and optimizers for each player
-    for (int i = 0; i < 2; ++i)
+    for (int i = 0; i < GameType::PlayerNum; ++i)
     {
         m_advantage_networks[i] = DeepCFRModel(GameType::NUM_CARD_TYPES, GameType::NUM_BET_FEATURES,
                                                GameType::MAX_ACTIONS);
@@ -37,6 +38,7 @@ DeepRegretMinimizer<GameType>::DeepRegretMinimizer(uint32_t seed)
         // Reserve memory for replay buffers
         //m_adv_memories[i].reserve(MEMORY_SIZE);
     }
+    m_gpu_processor.init(&m_advantage_networks);
     m_strategy_memory.reserve(MEMORY_SIZE);
 }
 
@@ -478,10 +480,20 @@ void DeepRegretMinimizer<GameType>::add_to_strategy_memory(std::vector<T>& memor
         }
         co_return node_value;
     }
+template<typename GameType>
+void DeepRegretMinimizer<GameType>::initCoro()
+{
+    m_gpu_processor.start();
+    for (int i=0; i<GameType::PlayerNum; ++i) {
+        m_hybrid_storage[i] = std::make_unique<HybridAdvantageStorage<GameType>>();
+    }
 
+}
     // Main training loop with work-stealing
 template<typename GameType>
 void DeepRegretMinimizer<GameType>::TrainCoro(uint32_t iterations) {
+        initCoro();
+
         for (uint32_t iter = 1; iter <= iterations; ++iter) {
             std::cout << "Iteration " << iter << "/" << iterations << std::endl;
 

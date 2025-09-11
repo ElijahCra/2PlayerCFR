@@ -65,10 +65,16 @@ private:
 template<typename GameType>
 class GPUBatchProcessor {
 public:
-    GPUBatchProcessor(std::array<DeepCFRModel, 2>& networks, torch::Device device)
-        : m_networks(networks), m_device(device), m_stop(false)
+
+    GPUBatchProcessor(torch::Device device) : m_networks(nullptr), m_device(device)
     {
-        for (auto network : m_networks){
+    }
+
+    void init(std::array<DeepCFRModel, 2>* networks)
+    {
+        m_networks = networks;
+        m_stop = false;
+        for (auto& network : *m_networks){
             network->to(m_device);
         }
     }
@@ -170,7 +176,7 @@ private:
         torch::Tensor results;
         {
             torch::NoGradGuard no_grad;
-            results = m_networks[player]->forward(batched_cards, batched_bets);
+            results = m_networks->data()[player]->forward(batched_cards, batched_bets);
         }
 
         // --- 5. Move results back to CPU at once ---
@@ -185,7 +191,7 @@ private:
 
 
 
-    std::array<DeepCFRModel, 2>& m_networks;
+    std::array<DeepCFRModel, 2>* m_networks;
     torch::Device m_device;
 
     std::thread m_thread;
